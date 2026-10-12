@@ -3,7 +3,7 @@
 ## A. Byte-exact executables (~/Projects/u6-re)
 - [x] GAME.EXE byte-identical to shipped file (2026-10-13)
 - [x] Notes: rules added to ~/notes/c-to-go.md
-- [ ] END.EXE byte-identical (agent running)
+- [x] END.EXE byte-identical (2026-10-13, u6-re 06f25b3)
 - [ ] U.EXE byte-identical (agent running)
 
 ## B. Go port (~/Projects/u6-go), rules in ~/notes/c-to-go.md
