@@ -74,6 +74,9 @@ func New(dir string) (*Game, error) {
 	if err := g.gr.LoadPointers(); err != nil {
 		return nil, err
 	}
+	// the host hides its own pointer while it holds the mouse: the game's is drawn over the
+	// screen (the original showed the mouse driver's)
+	g.gr.ShowPointer(true)
 	if err := g.gr.LoadTiles(); err != nil {
 		return nil, err
 	}

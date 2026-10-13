@@ -157,7 +157,9 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	}
 	if g.StatusDisplay == cmdStatusParty {
 		add(false, skyPanel, image.Pt((host.ScreenWidth-skyPanel.Dx())/2, 0))
-		add(false, partyPanel, image.Pt(right-partyPanel.Dx(), margin))
+		party := partyPanel
+		party.Max.Y = party.Min.Y + min(int(g.PartySize), partyListRows)*partyRowHeight
+		add(false, party, image.Pt(right-party.Dx(), margin))
 	} else {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
