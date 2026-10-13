@@ -99,10 +99,10 @@ func (g *Game) playAreaSong() {
 	default:
 		n = sound.SongDungeon
 	}
-	if t := g.object(int(g.Party[g.Active])).Type(); (t == ObjShip || t == ObjSkiff) && !sound.Settings.NoShipMusic {
+	if t := g.object(int(g.Party[g.Active])).Type(); (t == ObjShip || t == ObjSkiff) {
 		n = sound.SongHornpipe
 	}
-	if g.InCombat != 0 && !sound.Settings.NoCombatMusic {
+	if g.InCombat != 0 {
 		n = sound.SongEngage
 	}
 	g.playSong(n)
@@ -240,15 +240,15 @@ func (g *Game) setTileAnimation(tile int, state byte) {
 	}
 }
 
-// quietForTalk silences the music for a conversation, or lowers it or lets it play on as
+// quietForTalk lowers the music for a conversation, or silences it or lets it play on as
 // the TalkMusic setting asks.
 func (g *Game) quietForTalk() {
 	switch sound.Settings.TalkMusic {
 	case sound.TalkMusicKeep:
-	case sound.TalkMusicLower:
-		sound.LowerMusic(true)
-	default:
+	case sound.TalkMusicStop:
 		g.playSong(0)
+	default:
+		sound.LowerMusic(true)
 	}
 }
 

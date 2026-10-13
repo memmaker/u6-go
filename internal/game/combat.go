@@ -146,9 +146,7 @@ func (g *Game) beginCombat() {
 	g.SavedMode = int8(g.NPCs[m].Mode)
 	g.NPCs[m].Mode = AICommand
 	g.gr.DrawTile(tileCombatOn, combatIconX, iconsY)
-	if !sound.Settings.NoCombatMusic {
-		g.playSong(songEngage)
-	}
+	g.playSong(songEngage)
 }
 
 // breakOff ends combat mode.

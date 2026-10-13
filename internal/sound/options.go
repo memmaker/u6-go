@@ -3,21 +3,11 @@ package sound
 import "math"
 
 // Options are the port's optional enhancements, after ScummVM's Nuvie; the zero value is
-// the original game. The command loads them from settings.json in the game folder.
+// the original game but for the lowered conversation music. The command loads them from settings.json in the game folder.
 type Options struct {
-	// SoftSpeaker passes the PC speaker through a gentle resonant low-pass, taking the
-	// edge off its square waves.
-	SoftSpeaker bool `json:"soft_speaker"`
-	// Speech plays the FM Towns voices (CHARnnn.SAM) where the conversation scripts mark
-	// them; it needs the FM Towns CONVERSE.A/B, the DOS scripts have no marks.
-	Speech bool `json:"speech"`
-	// TalkMusic is what the music does in conversations: "" stops it (as the original),
-	// "lower" plays it quieter, "keep" plays it on.
+	// TalkMusic is what the music does in conversations: "" or "lower" plays it quieter,
+	// "stop" stops it (as the original), "keep" plays it on.
 	TalkMusic string `json:"talk_music"`
-	// NoCombatMusic keeps the area's song in combat instead of ENGAGE.M.
-	NoCombatMusic bool `json:"no_combat_music"`
-	// NoShipMusic keeps the area's song on ships instead of HORNPIPE.M.
-	NoShipMusic bool `json:"no_ship_music"`
 	// ShowStealing asks before taking an item that belongs to someone.
 	ShowStealing bool `json:"show_stealing"`
 	// FreeBalloonMovement steers the balloon where the player goes instead of with the wind.
@@ -26,15 +16,22 @@ type Options struct {
 	DisplayedWindDir bool `json:"displayed_wind_dir"`
 	// SkipIntro starts at the main menu without the boot intro.
 	SkipIntro bool `json:"skip_intro"`
+	// SmoothLighting shades the dark in gradients instead of dithered tiles.
+	SmoothLighting bool `json:"smooth_lighting"`
+	// MapTileLighting lets glowing map tiles (lava, hearths) light their surroundings, as
+	// lamps and fires already do.
+	MapTileLighting bool `json:"map_tile_lighting"`
+	// SquarePixels shows square pixels instead of the CRT's 4:3 picture.
+	SquarePixels bool `json:"square_pixels"`
 }
 
 // Settings are the options in force; set them before Start.
 var Settings Options
 
-// The TalkMusic choices besides stopping.
+// The TalkMusic choices besides lowering.
 const (
-	TalkMusicLower = "lower"
-	TalkMusicKeep  = "keep"
+	TalkMusicStop = "stop"
+	TalkMusicKeep = "keep"
 )
 
 // loweredMusicGain is the music's level while lowered for a conversation.
@@ -49,7 +46,7 @@ func LowerMusic(on bool) {
 	mu.Unlock()
 }
 
-// The soft speaker filter: a resonant two-pole low-pass at the output rate.
+// The speaker cone filter: a resonant two-pole low-pass at the output rate.
 const (
 	softCutoffHz  = 4000
 	softResonance = 1.2 // the filter's Q: a little above a flat 0.707, a soft peak at the cutoff

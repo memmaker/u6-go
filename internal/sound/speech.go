@@ -25,11 +25,11 @@ const (
 var speech []float32
 
 // Speak queues sample number sample (from 1, as the scripts count) of character
-// character's library, if Settings.Speech is on and the file is there.
+// character's library, if the file is there.
 func Speak(character, sample int) {
 	mu.Lock()
 	defer mu.Unlock()
-	if !Settings.Speech || files == nil {
+	if files == nil {
 		return
 	}
 	pcm, err := loadSpeech(files, fmt.Sprintf("CHAR%d.SAM", character), sample-1)

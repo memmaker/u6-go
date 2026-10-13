@@ -176,11 +176,7 @@ func (b *beeper) emit(seconds float64, level float64, tone bool) {
 		if b.sub++; b.sub == oversample {
 			b.sub = 0
 			b.lowpass += (x - b.lowpass) / 2 // the cone is no ideal square
-			out := b.lowpass
-			if Settings.SoftSpeaker {
-				out = soften(out, &b.soft)
-			}
-			b.pcm = append(b.pcm, float32(out/pcmFullScale))
+			b.pcm = append(b.pcm, float32(soften(b.lowpass, &b.soft)/pcmFullScale))
 		}
 	}
 }
