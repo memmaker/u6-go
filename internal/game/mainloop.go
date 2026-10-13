@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"github.com/memmaker/u6-go/internal/sound"
 	"os"
 	"time"
 
@@ -25,8 +26,8 @@ const (
 	notInSoloMsg   = "Not in solo mode!\n"
 	notInCombatMsg = "Not in combat mode!\n"
 	notAllHereMsg  = "Not everyone is here.\n"
-	soundOnMsg     = "Sound On!\n"
-	soundOffMsg    = "Sound Off!\n"
+	soundOnMsg     = "Sound on\n"
+	soundOffMsg    = "Sound off\n"
 	versionMsg     = "Version 4.5\n"
 	combatMsg      = "Begin combat!\n"
 	breakOffMsg    = "Break off combat!\n"
@@ -63,6 +64,7 @@ func New(dir string) (*Game, error) {
 	g.initWorldMap()
 	g.initTurns()
 	g.lastHour = noHour
+	g.thrower = noObject
 	g.worldShown = true
 	g.StatusDisplay = cmdStatusParty
 	g.random.randomize(timeSeed(time.Now()))
@@ -117,7 +119,7 @@ func New(dir string) (*Game, error) {
 	if g.InCombat != 0 {
 		g.beginCombat()
 	}
-	// TODO(port): MUS_09A8 (start a song)
+	g.playAreaSong()
 	return g, nil
 }
 
@@ -315,10 +317,16 @@ func (g *Game) command(ch int) bool {
 			case cmdTalk:
 				g.talkTo(int(g.Active), g.Selection.obj, true)
 				g.playAreaSong()
-			default:
-				// TODO(port): C_27A1_0C67 look, C_27A1_14DA drop, C_27A1_18F5 get,
-				// C_27A1_1E8B move, C_27A1_6179 use
-				g.printf(whatMsg)
+			case cmdLook:
+				g.look()
+			case cmdDrop:
+				g.drop()
+			case cmdGet:
+				g.get()
+			case cmdMove:
+				g.move()
+			case cmdUse:
+				g.use()
 			}
 		} else {
 			g.printf(whatMsg)
@@ -327,7 +335,13 @@ func (g *Game) command(ch int) bool {
 		g.pendingCommand = cmdPass
 		g.endCommand()
 	case cmdRest:
-		// TODO(port): C_3200_055D (rest)
+		if !g.inVehicle() {
+			g.playSong(sound.SongStones)
+		}
+		g.rest()
+		if !g.inVehicle() {
+			g.playAreaSong()
+		}
 		g.endCommand()
 	case cmdSave:
 		g.printf(saveMsg)
@@ -351,12 +365,13 @@ func (g *Game) command(ch int) bool {
 		}
 		g.MoveFollowers(int(g.Party[g.Active]), true)
 	case keyCtrlZ:
-		// TODO(port): MUS_091A / MUS_09A8 (music)
 		if g.SoundOn != 0 {
+			g.playSong(0)
 			g.printf(soundOffMsg)
 			g.SoundOn = 0
 		} else {
 			g.SoundOn = 1
+			g.playAreaSong()
 			g.printf(soundOnMsg)
 		}
 	case keyCtrlH:

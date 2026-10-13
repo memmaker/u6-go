@@ -138,23 +138,48 @@ func TestPlayHeadless(t *testing.T) {
 	if end == start {
 		t.Error("the avatar did not move")
 	}
-	frame := g.Frame()
-	img := image.NewRGBA(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
-	level := func(v byte) uint8 { return uint8(int(v) * 255 / 63) }
-	for i, c := range frame.Pixels {
-		p := frame.Palette[int(c)*3:]
-		img.Set(i%host.ScreenWidth, i/host.ScreenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
-	}
 	out := t.TempDir()
 	if d := os.Getenv("U6_PNG_DIR"); d != "" {
 		out = d
 	}
-	file, err := os.Create(filepath.Join(out, "game.png"))
-	if err != nil {
-		t.Fatal(err)
+	snap := func(name string) {
+		frame := g.Frame()
+		img := image.NewRGBA(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
+		level := func(v byte) uint8 { return uint8(int(v) * 255 / 63) }
+		for i, c := range frame.Pixels {
+			p := frame.Palette[int(c)*3:]
+			img.Set(i%host.ScreenWidth, i/host.ScreenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
+		}
+		file, err := os.Create(filepath.Join(out, name+".png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer file.Close()
+		if err := png.Encode(file, img); err != nil {
+			t.Fatal(err)
+		}
 	}
-	defer file.Close()
-	if err := png.Encode(file, img); err != nil {
-		t.Fatal(err)
+	snap("game")
+	press := func(keys ...host.Key) {
+		for _, k := range keys {
+			host.KeyQueue = append(host.KeyQueue, k)
+			for range settle {
+				host.Step()
+			}
+		}
+	}
+	char := func(c byte) host.Key { return host.Key{Char: c} }
+	for _, step := range []struct {
+		name string
+		keys []host.Key
+	}{
+		{"look", []host.Key{char('l'), {Scan: host.ScanUp}}},
+		{"get", []host.Key{char('g'), {Scan: host.ScanLeft}}},
+		{"use", []host.Key{char('u'), {Scan: host.ScanDown}}},
+		{"drop", []host.Key{char('d'), {Scan: host.ScanEscape}}},
+		{"inventory", []host.Key{char('i')}},
+	} {
+		press(step.keys...)
+		snap(step.name)
 	}
 }

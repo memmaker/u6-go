@@ -85,6 +85,8 @@ type tables struct {
 	// schedulePointer is where each NPC's entries start in schedule (SchedPointer).
 	schedulePointer [npcCount + 1]uint16
 	schedule        [scheduleSlots]scheduleEntry
+	// lookNames are the names of LOOK.LZD.
+	lookNames []lookEntry
 }
 
 // animation states (StateAnimData)

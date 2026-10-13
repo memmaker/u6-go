@@ -1,5 +1,7 @@
 package game
 
+import "github.com/memmaker/u6-go/internal/sound"
+
 // The passing of time: spells running out, torches burning, the date, the moons and the
 // moongates, the wind and the light (seg_0A33), and the sky over the party list
 // (seg_2FC1).
@@ -185,7 +187,7 @@ func (g *Game) passTime(minutes int) {
 				}
 				if vanished {
 					g.printf(ringVanishedMsg, what)
-					// TODO(port): MUS_0065(12, 0)
+					g.sfx(sound.EffectSweep, 0)
 					g.DeleteObj(di)
 					g.promptFlag = true
 					vanished = false

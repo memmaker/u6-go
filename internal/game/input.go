@@ -30,8 +30,8 @@ const (
 	cmdInventoryDown   = 150
 	cmdNextMember      = 153
 	cmdPreviousMember  = 154
-	cmdSelectEquipment = 155
-	cmdSelectInventory = 156
+	cmdSelectInventory = 155
+	cmdSelectEquipment = 156
 	cmdSelectMap       = 157
 	cmdStatusContainer = 158
 	cmdCloseContainer  = 159
@@ -416,17 +416,16 @@ func (g *Game) mouseSelection() int {
 		g.selectedDark = t == tileHidden || t == tileDarkness
 	case g.StatusDisplay == cmdStatusEquipment:
 		g.Selection.x, g.Selection.y = -1, -1
-		// TODO(port): C_155D_1267, C_155D_130E (the equipment and inventory slots)
+		if g.pointInventory() {
+			return cmdSelectInventory
+		}
+		if g.pointEquipment() {
+			return cmdSelectEquipment
+		}
 	default:
 		g.Selection.x, g.Selection.y, g.Selection.obj = -1, -1, noObject
 	}
 	return 0
-}
-
-// objectAtForSelection returns the object at (x, y) a command would act on.
-// TODO(port): C_2337_08F1
-func (g *Game) objectAtForSelection(actor, x, y int) int {
-	return g.FindLoc(x, y, int(g.MapZ))
 }
 
 // clickPartyView returns the command of a click in the party list.
@@ -835,14 +834,3 @@ func (g *Game) getch() int {
 	}
 }
 
-// drawStatusCursor draws (mode 1), erases (mode 0) or points at (mode 2) the cursor in
-// the equipment and portrait views.
-// TODO(port): C_0C9C_1AE5
-func (g *Game) drawStatusCursor(mode int) {
-	if g.SelectMode != 2 {
-		return
-	}
-	if g.StatusDisplay != cmdStatusEquipment && g.StatusDisplay != cmdStatusPortrait {
-		return
-	}
-}

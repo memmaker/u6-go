@@ -208,6 +208,10 @@ type Game struct {
 	turns
 	status
 	talk
+	music
+	inventory
+	missileState
+	eggState
 	colours colours
 
 	random randomState

@@ -33,11 +33,11 @@ func (g *Game) RefreshStatus() {
 		case cmdStatusParty:
 			g.partyView(g.partyScroll)
 		case cmdStatusPortrait:
-			// TODO(port): C_155D_028A
+			g.portraitView(g.statusMember)
 		case cmdStatusEquipment:
-			// TODO(port): C_155D_1065
+			g.equipmentView()
 		case cmdStatusContainer:
-			// TODO(port): C_27A1_02D9
+			g.showCharacter(int(g.Party[g.statusMember]))
 		}
 		g.drawStatusCursor(1)
 	}

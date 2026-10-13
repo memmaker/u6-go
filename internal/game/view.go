@@ -486,7 +486,7 @@ const (
 // ShowObjects chains the objects in view on the view places.
 // C: seg_1184:36C2 (ShowObjects)
 func (g *Game) ShowObjects() {
-	// TODO(port): MUS_051E
+	g.soundCount = 0
 	hasMusic := false
 	for i := range g.objChain {
 		g.objChain[i] = byte(i + 1)
@@ -503,7 +503,7 @@ func (g *Game) ShowObjects() {
 		if t == ObjMusician2 {
 			hasMusic = true
 		}
-		// TODO(port): MUS_043B (the sounds of what is around)
+		g.addSoundSource(t, max(abs(o.Pos.X-mx), abs(o.Pos.Y-my)))
 		if o.Has(StatusInvisible) && (n >= npcCount || !g.isPlayerControlled(n)) {
 			continue
 		}
@@ -584,7 +584,10 @@ func (g *Game) ShowObjects() {
 	if g.erupting == 1 {
 		g.erupting = 0
 	}
-	// TODO(port): ShowObjects starting a bard's song (MUS_SongIndex, MUS_Song)
+	if hasMusic && !g.musicianInView {
+		g.melodyNote = 0
+		g.melody = g.rand(0, 1)
+	}
 	g.musicianInView = hasMusic
 }
 
@@ -688,7 +691,7 @@ func (g *Game) OtherAnimations() {
 	if g.worldShown {
 		g.animateTiles()
 		g.drawMap(true)
-		// TODO(port): MUS_0525
+		g.playSoundSources()
 	}
 	if g.cyclopsShake != 0 {
 		strength := g.cyclopsShake

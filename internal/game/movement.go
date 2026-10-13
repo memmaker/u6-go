@@ -1,5 +1,7 @@
 package game
 
+import "github.com/memmaker/u6-go/internal/sound"
+
 // Moving characters: where they can go, how they turn, the party walking and following,
 // and the turn scheduler (seg_1E0F).
 
@@ -409,11 +411,11 @@ func (g *Game) draggedUnderTurn(n int) bool {
 	}
 	npc := &g.NPCs[n]
 	if npc.Mode == AICommand {
-		g.printf(argghMsg, g.objectName(n))
+		g.printf(argghMsg, g.objectString(n))
 	}
 	if g.rand(1, 30) < int(npc.Strength) {
-		// TODO(port): MUS_0065(10, 0)
-		g.printf(g.objectName(n))
+		g.sfx(sound.EffectHiss, 0)
+		g.printf(g.objectString(n))
 		g.printf(regurgitated)
 		npc.Flags &^= flagDraggedUnder
 		g.viewChanged = true
@@ -422,17 +424,6 @@ func (g *Game) draggedUnderTurn(n int) bool {
 	g.loseHitPoints(n, g.rand(1, 15))
 	npc.MovePoints = 0
 	return true
-}
-
-// objectName is what an object is called in messages.
-// TODO(port): GetObjectString
-func (g *Game) objectName(n int) string {
-	for i := range int(g.PartySize) {
-		if int(g.Party[i]) == n {
-			return cString(g.Names[i][:])
-		}
-	}
-	return ""
 }
 
 // alreadyNear says whether (x, y) is next to one of the first count followers placed (and
@@ -638,7 +629,8 @@ func (g *Game) advance(dir int) {
 		g.moveBlocked = true
 	}
 	if g.moveBlocked {
-		// TODO(port): MUS_0065(1, 0x137), the bump sound
+		const bumpHz = 311
+		g.sfx(sound.EffectNote, bumpHz)
 		g.MapX, g.MapY = int16(o.Pos.X), int16(o.Pos.Y)
 		g.warnNoQuest = false
 		return

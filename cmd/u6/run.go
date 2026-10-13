@@ -1,8 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"github.com/memmaker/u6-go/internal/game"
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
 )
 
 // run plays the game from the files in dir.
@@ -11,6 +14,7 @@ func run(dir string) error {
 	if err := game.WriteCharacter(dir, game.DefaultCharacter()); err != nil {
 		return err
 	}
+	sound.Start(os.DirFS(dir))
 	g, err := game.New(dir)
 	if err != nil {
 		return err
@@ -20,5 +24,3 @@ func run(dir string) error {
 	return nil
 }
 
-// writeCover writes dir/COVER.PNG, the picture goplay shows on the game's floppy label.
-func writeCover(dir string) error { return nil }

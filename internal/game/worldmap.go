@@ -171,7 +171,3 @@ func (g *Game) enterArea() {
 	g.LoadNewRegions(int(g.MapX), int(g.MapY), int(g.MapZ))
 	g.refreshArea()
 }
-
-// hatchEggs creates the creatures of the eggs in the area.
-// TODO(port): EGG_hatchArea
-func (g *Game) hatchEggs() {}
