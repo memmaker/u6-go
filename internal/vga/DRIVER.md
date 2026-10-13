@@ -3,6 +3,7 @@
 GAME.EXE calls the driver through `D_ECB8` with the entry offset (gr.h `GR_xx`). Driver
 calls use the Pascal convention. Coordinates are pixels; "back buffer" is the 176x176
 picture (game `ScratchBuf`, `tGr._1c`) in which the map view is composed at (8,8)..(167,167).
+The port widens it to 336x208 for its full-screen view.
 
 | GR | offset | Go | arguments | semantics |
 |---|---|---|---|---|

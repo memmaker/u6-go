@@ -112,6 +112,16 @@ func TestTalkToTholden(t *testing.T) {
 	g.MoveObj(tholden, me.X+1, me.Y, me.Z)
 	g.NPCs[tholden].Mode = AIMotionless
 	steps(settle)
+	// the overlays for docs/ui
+	writePNG(t, g, "world.png")
+	g.dockOffset = iconsPanel.Dy()
+	writePNG(t, g, "dock.png")
+	g.dockOffset = 0
+	g.showLog = true
+	writePNG(t, g, "log.png")
+	g.showLog, g.showDate = false, true
+	writePNG(t, g, "date.png")
+	g.showDate = false
 
 	var transcript strings.Builder
 	// wait answers the paging prompts until the script asks for input
@@ -151,6 +161,7 @@ func TestTalkToTholden(t *testing.T) {
 	say("name")
 	say("job")
 	writePNG(t, g, "talk.png")
+	writePNG(t, g, "conversation.png")
 	say("bye")
 	// the farewell stays on the speech scroll after the log clip comes back
 	transcript.WriteString(clipText(g, clip{x0: speechX0, y0: speechY0, width: speechColumns, height: speechRows, bg: g.clips[clipMessage].bg}))

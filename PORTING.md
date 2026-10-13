@@ -30,3 +30,13 @@ names, idiomatic Go, obvious bugs may be fixed (mark them `// fix:`).
   parity can be audited; that comment is the only place hex labels may appear.
 - Constants get names (`const tileSize = 16`), with the original value written in decimal.
 - One small test per non-trivial parser or algorithm, against the real data files.
+
+## In-game UI (ui-redesign)
+
+The world view fills the screen; the panels are layered over it as scrolls
+(`internal/game/layout.go`, screenshots in `docs/ui/`). Hot keys:
+
+- Ctrl+D shows or hides the date and wind scroll.
+- Ctrl+L shows or hides the message log. Prompts show it while they wait.
+- Touching the bottom edge with the mouse slides in the command icons.
+- In conversations, Up/Down pick a topic and Enter asks it; typing still works.
