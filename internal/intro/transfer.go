@@ -150,13 +150,18 @@ func loadUltima5(save []byte) (importedCharacter, bool) {
 // convertAttribute scales an Ultima IV attribute (up to 99) to Ultima VI's.
 // C: seg_0263:01FD (convert_stat)
 func convertAttribute(v int) int {
+	const (
+		keptBelow   = 10 // attributes below this stay as they are
+		halvedBelow = 30 // from keptBelow on they grow at half the rate...
+		halvedTop   = 20 // ...reaching this; above, at a quarter of the rate
+	)
 	switch {
-	case v < 10:
+	case v < keptBelow:
 		return v
-	case v >= 30:
-		return (v-30)/4 + 20
+	case v >= halvedBelow:
+		return (v-halvedBelow)/4 + halvedTop
 	}
-	return (v-9)/2 + 10
+	return (v-(keptBelow-1))/2 + keptBelow
 }
 
 // convert makes the avatar of the imported character: Ultima IV attributes are scaled,

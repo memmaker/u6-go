@@ -39,6 +39,12 @@ const (
 // errShortObjects is a broken LZOBJBLK or LZDNGBLK.
 var errShortObjects = errors.New("intro: short initial object file")
 
+// Permissions of the directories and files written.
+const (
+	dirMode  = 0o755
+	fileMode = 0o644
+)
+
 // ensureSaveGame unpacks the initial objects into SAVEGAME when there is no OBJLIST, as
 // the installer did on the original disks: the 64 surface blocks of LZOBJBLK, the 5 dungeon
 // blocks of LZDNGBLK and the OBJLIST that follows them.
@@ -47,7 +53,7 @@ func (u *intro) ensureSaveGame() error {
 	if _, err := os.Stat(filepath.Join(dir, objlistName)); err == nil {
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		return err
 	}
 	split := func(raw []byte, first, count int) ([]byte, error) {
@@ -60,7 +66,7 @@ func (u *intro) ensureSaveGame() error {
 				return nil, errShortObjects
 			}
 			name := objblkPrefix + string(rune('A'+b%blocksPerRow)) + string(rune('A'+b/blocksPerRow))
-			if err := os.WriteFile(filepath.Join(dir, name), raw[:size], 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, name), raw[:size], fileMode); err != nil {
 				return nil, err
 			}
 			raw = raw[size:]
@@ -85,7 +91,7 @@ func (u *intro) ensureSaveGame() error {
 	if len(rest) < objlistSize {
 		return errShortObjects
 	}
-	return os.WriteFile(filepath.Join(dir, objlistName), rest[:objlistSize], 0o644)
+	return os.WriteFile(filepath.Join(dir, objlistName), rest[:objlistSize], fileMode)
 }
 
 // saveObjlist writes the new avatar into SAVEGAME/OBJLIST, starting a new saved game when
@@ -126,5 +132,5 @@ func (u *intro) saveObjlist() error {
 	b[hitPointsAt] = byte(c.hitPoints)
 	b[levelAt] = byte(c.level)
 	b[portraitAt] = byte(c.portrait + 1)
-	return os.WriteFile(path, b[:objlistSize], 0o644)
+	return os.WriteFile(path, b[:objlistSize], fileMode)
 }

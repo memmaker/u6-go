@@ -325,7 +325,10 @@ func (u *intro) flushKeys() {
 func isDigit(c int) bool { return c >= '0' && c <= '9' }
 func isAlpha(c int) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }
 func isAlnum(c int) bool { return isDigit(c) || isAlpha(c) }
-func isPunct(c int) bool { return c > ' ' && c < 127 && !isAlnum(c) }
+func isPunct(c int) bool { return c > ' ' && c < asciiDelete && !isAlnum(c) }
+
+const asciiDelete = 127
+
 func toUpper(c int) int {
 	if c >= 'a' && c <= 'z' {
 		return c - 'a' + 'A'

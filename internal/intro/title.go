@@ -7,49 +7,55 @@ import "github.com/memmaker/u6-go/internal/sound"
 
 // Pictures of INTRO.SHP.
 const (
-	dupreShape       = 0
-	ioloShape        = 1
-	shaminoShape     = 2
-	leftCrowdShape   = 3
-	rightCrowdShape  = 4
-	groundShape      = 5
-	nightShape       = 6
-	moongateShape    = 7
-	priestShape      = 8
-	avatarShape      = 9
-	emptyHandShape   = 10
-	daggerHandShape  = 11
-	candleShape      = 12
-	groundTop        = 112
-	avatarX, avatarY = 49, 68
-	candleX, candleY = 210, 132
-	priestX          = 144
-	handX, handY     = 222, 14
-	priestRaised     = 30
-	priestLow        = 141
-	moongateX        = 120
-	moongateUp       = 58
-	moongateDown     = 134
-	leftCrowdX       = -8
-	leftCrowdY       = 77
-	rightCrowdX      = 182
-	rightCrowdY      = 79
-	crowdNear        = 4
-	crowdFar         = 6
-	titlePassage     = 200
-	starCount        = 200
-	starsShuffled    = 193
-	starSwaps        = 512
-	starColour       = whiteColour
-	starfieldFirst   = 232
-	starfieldLast    = 239
-	starTwinkleMask  = 255
-	starTwinkleTaps  = 184
-	starTwinkleEvery = 20
-	starTwinkleStep  = 7
-	starTwinkleRun   = 5
-	starOffEvery     = 3
-	dotColour        = 173
+	dupreShape           = 0
+	ioloShape            = 1
+	shaminoShape         = 2
+	leftCrowdShape       = 3
+	rightCrowdShape      = 4
+	groundShape          = 5
+	nightShape           = 6
+	moongateShape        = 7
+	priestShape          = 8
+	avatarShape          = 9
+	emptyHandShape       = 10
+	daggerHandShape      = 11
+	candleShape          = 12
+	groundTop            = 112
+	avatarX, avatarY     = 49, 68
+	candleX, candleY     = 210, 132
+	priestX              = 144
+	handX, handY         = 222, 14
+	priestRaised         = 30
+	priestLow            = 141
+	moongateX            = 120
+	moongateUp           = 58
+	moongateDown         = 134
+	leftCrowdX           = -8
+	leftCrowdY           = 77
+	rightCrowdX          = 182
+	rightCrowdY          = 79
+	crowdNear            = 4
+	crowdFar             = 6
+	titlePassage         = 200
+	moongateSinksPassage = titlePassage + 17
+	tickWrap             = 1<<16 - 1 // the tick counter is 16 bits
+	minLingering         = 15        // range of the random pause the crowd lingers
+	maxLingering         = 40
+	priestSwayStart      = 70 // the priest's sway while rising...
+	priestSwayAbove      = 60 // ...jitters only above this height
+	starCount            = 200
+	starsShuffled        = 193
+	starSwaps            = 512
+	starColour           = whiteColour
+	starfieldFirst       = 232
+	starfieldLast        = 239
+	starTwinkleMask      = 255
+	starTwinkleTaps      = 184
+	starTwinkleEvery     = 20
+	starTwinkleStep      = 7
+	starTwinkleRun       = 5
+	starOffEvery         = 3
+	dotColour            = 173
 )
 
 // titleState is TITLE_main's starfield, its timer callback's state.
@@ -83,7 +89,7 @@ func (u *intro) twinkle() {
 			}
 		}
 	}
-	t.ticks = (t.ticks + 1) & 65535
+	t.ticks = (t.ticks + 1) & tickWrap
 	if t.ticks%starTwinkleEvery == 0 {
 		t.first = (t.first + starTwinkleStep) % starsShuffled
 		odd := t.run&1 != 0
@@ -161,7 +167,7 @@ func (u *intro) playTitle() {
 	fill(u.screen, 0)
 	fill(u.back, 0)
 	u.calibrateTimer()
-	lingering := randomBetween(15, 40)
+	lingering := randomBetween(minLingering, maxLingering)
 	lib := u.mustShapes("INTRO.SHP")
 	t := &u.title
 	if raw, err := u.readLZW("STARPOS.DAT"); err == nil && len(raw) >= starCount*6 {
@@ -261,11 +267,11 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 	u.showPassage(titlePassage + 5)
 	step := randomBetween(2, 5)
 	u.flushKeys()
-	sway := 70
+	sway := priestSwayStart
 	for priestY, last := priestLow, false; !last; {
 		last = priestY == priestRaised
 		x := u.rand()%8 + sway - 3
-		if priestY > 60 || sway == 0 {
+		if priestY > priestSwayAbove || sway == 0 {
 			x = sway
 		}
 		draw(0, 0, nightShape)
@@ -491,7 +497,7 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 			return
 		}
 	}
-	u.showPassage(titlePassage + 17)
+	u.showPassage(moongateSinksPassage)
 	step = randomBetween(1, 3)
 	u.flushKeys()
 	for moongateY, last := moongateUp, false; !last; {

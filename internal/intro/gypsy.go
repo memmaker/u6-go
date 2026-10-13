@@ -184,22 +184,25 @@ func (u *intro) noiseFill() {
 	}
 }
 
+// handPartKinds is the kind of vial part (the first index of handPartShapes) drawn over each
+// hand shape; other shapes get kind 0.
+var handPartKinds = map[int]int{
+	15: noVialPart, 37: noVialPart,
+	9: 0, 17: 0,
+	10: 1, 18: 1,
+	16: 2, 46: 2,
+	11: 3, 12: 3, 13: 3, 14: 3,
+}
+
+const noVialPart = -1 // a hand shape that shows no vial
+
 // drawHandPart draws the part of the hand that holds vial virtue.
 // C: seg_0406:05D3 (DrawPart)
 func (u *intro) drawHandPart(virtue, part, x, y int) {
 	g := &u.gypsy
-	kind := 0
-	switch part {
-	case 15, 37:
+	kind := handPartKinds[part]
+	if kind == noVialPart {
 		return
-	case 9, 17:
-		kind = 0
-	case 10, 18:
-		kind = 1
-	case 16, 46:
-		kind = 2
-	case 11, 12, 13, 14:
-		kind = 3
 	}
 	level := g.levels[virtue] - 1
 	base := vialShapes

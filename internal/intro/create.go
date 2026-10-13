@@ -195,6 +195,8 @@ const (
 	gypsyFaceShape   = 198
 	gypsyPortalShape = 199
 	creationPassage  = 100
+	gypsyFacePassage = creationPassage + 34
+	portalPassage    = creationPassage + 35
 	portalColour     = 117
 	gypsyMillis      = 2000
 	finalNoiseLeft   = 116
@@ -316,7 +318,7 @@ func (u *intro) createCharacter() (bool, error) {
 		g.shapes.draw(u.back, 0, 0, gypsyFaceShape)
 	}
 	face()
-	u.showPassage(creationPassage + 34)
+	u.showPassage(gypsyFacePassage)
 	u.fadeIn(u.back, u.screen)
 	for {
 		face()
@@ -332,7 +334,7 @@ func (u *intro) createCharacter() (bool, error) {
 	fill(u.screen, portalColour)
 	u.loadPalette(6)
 	g.shapes.draw(u.back, 0, 0, gypsyPortalShape)
-	u.showPassage(creationPassage + 35)
+	u.showPassage(portalPassage)
 	u.fadeIn(u.back, u.screen)
 	u.delayMilliseconds(gypsyMillis)
 	u.drawPassage()
