@@ -89,6 +89,8 @@ const (
 	keyPageDown  = extendedKey + host.ScanPageDown
 	keyF1        = extendedKey + host.ScanF1
 	keyF10       = extendedKey + host.ScanF10
+	keyF11       = extendedKey + host.ScanF11
+	keyF12       = extendedKey + host.ScanF12
 
 	scanKeypadFirst = host.ScanHome
 	scanKeypadLast  = host.ScanPageDown

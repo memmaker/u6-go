@@ -373,6 +373,15 @@ func (g *Game) command(ch int) bool {
 		if g.yesNo() {
 			g.restoreGame()
 		}
+	case cmdQuickSave:
+		g.quickSave()
+		g.endCommand()
+	case cmdQuickLoad:
+		g.quickLoad()
+	case cmdLoadLatest:
+		g.restoreGame()
+	case cmdSettings:
+		g.settingsPage()
 	case keyEscape, ' ', cmdPass:
 		g.printf(passMsg)
 		g.NPCs[g.Party[g.Active]].MovePoints = 0
@@ -382,15 +391,7 @@ func (g *Game) command(ch int) bool {
 		}
 		g.MoveFollowers(int(g.Party[g.Active]), true)
 	case keyCtrlZ:
-		if g.SoundOn != 0 {
-			g.playSong(0)
-			g.printf(soundOffMsg)
-			g.SoundOn = 0
-		} else {
-			g.SoundOn = 1
-			g.playAreaSong()
-			g.printf(soundOnMsg)
-		}
+		g.toggleSound()
 	case keyAltP:
 		g.gr.Palette = *g.basePalette
 	case keyCtrlV:
@@ -413,4 +414,17 @@ func (g *Game) command(ch int) bool {
 		g.endCommand()
 	}
 	return false
+}
+
+// toggleSound turns the sound off or on (Ctrl+Z).
+func (g *Game) toggleSound() {
+	if g.SoundOn != 0 {
+		g.playSong(0)
+		g.printf(soundOffMsg)
+		g.SoundOn = 0
+	} else {
+		g.SoundOn = 1
+		g.playAreaSong()
+		g.printf(soundOnMsg)
+	}
 }

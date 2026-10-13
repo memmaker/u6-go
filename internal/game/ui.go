@@ -37,8 +37,10 @@ var helpText = []string{
 	"Alt+key  set the default",
 	"Bottom   command dock",
 	"Ctrl+S   save, Ctrl+R restore",
-	"Ctrl+D   date",
-	"Ctrl+L   message log",
+	"Ctrl+O menu, Shift+F12 latest",
+	"F11 quick save, F12 quick load",
+	"Shift+F1-F9 window, drag items",
+	"Ctrl+D date, Ctrl+L log",
 	"Ctrl+F   party formation",
 	"Ctrl+Z   sound, Ctrl+Q quit",
 	"Ctrl+H,? this help",
@@ -195,6 +197,7 @@ func (g *Game) availableCommands() []menuItem {
 	add(party && !vehicle, "Formation", keyCtrlF)
 	add(true, "Pass", ' ')
 	add(true, "Save game", keyCtrlS)
+	add(true, "Game menu", keyCtrlO)
 	add(true, "Help", '?')
 	return items
 }

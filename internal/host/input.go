@@ -21,6 +21,8 @@ const (
 	ScanSpace     = 57
 	ScanF1        = 59
 	ScanF10       = 68
+	ScanF11       = 87
+	ScanF12       = 88
 	ScanHome      = 71
 	ScanUp        = 72
 	ScanPageUp    = 73
@@ -55,6 +57,7 @@ var specialKeys = map[ebiten.Key]Key{
 	ebiten.KeyArrowLeft: {ScanLeft, 0}, ebiten.KeyArrowRight: {ScanRight, 0}, ebiten.KeyEnd: {ScanEnd, 0},
 	ebiten.KeyArrowDown: {ScanDown, 0}, ebiten.KeyPageDown: {ScanPageDown, 0},
 	ebiten.KeyInsert: {ScanInsert, 0}, ebiten.KeyDelete: {ScanDelete, 0},
+	ebiten.KeyF11: {ScanF11, 0}, ebiten.KeyF12: {ScanF12, 0},
 }
 
 func init() {

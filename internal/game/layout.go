@@ -303,12 +303,21 @@ func (g *Game) hotKey(ch int) int {
 		g.showDate = !g.showDate
 	case keyCtrlL:
 		g.showLog = !g.showLog
+	case keyCtrlO, keyF11, keyF12:
+		if !g.atMainPrompt || g.SelectMode != 0 || g.MouseMode != 0 || g.InConversation {
+			return ch
+		}
+		return g.gameMenuKey(ch)
 	case keyCtrlH, '?', keyEnter:
 		if !g.atMainPrompt || g.SelectMode != 0 || g.MouseMode != 0 || g.InConversation {
 			return ch
 		}
 		if ch == keyEnter {
-			if key := g.commandMenu(); key != '?' {
+			switch key := g.commandMenu(); key {
+			case keyCtrlO:
+				return g.gameMenu()
+			case '?':
+			default:
 				return key
 			}
 		}
