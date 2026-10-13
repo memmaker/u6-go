@@ -1017,26 +1017,26 @@ func (g *Game) computeGravity() {
 			}
 			q := g.object(i).Pos
 			depth := (q.X-g.partyGravityX)*deltaX + (q.Y-g.partyGravityY)*deltaY
-			side := (q.X-g.partyGravityX)*deltaY - (q.Y-g.partyGravityY)*deltaX
+			lateral := (q.X-g.partyGravityX)*deltaY - (q.Y-g.partyGravityY)*deltaX
 			if g.isPlayerControlled(i) {
 				if depth > bestFront {
 					bestFront, g.partyFront = depth, i
 				}
-				if side > left {
-					left, g.partyLeft = side, i
+				if lateral > left {
+					left, g.partyLeft = lateral, i
 				}
-				if side < right {
-					right, g.partyRight = side, i
+				if lateral < right {
+					right, g.partyRight = lateral, i
 				}
 			} else {
 				if g.enemyFront < 0 {
 					g.enemyFront = i
 				}
-				if side > enemyLeft {
-					enemyLeft, g.enemyLeft = side, i
+				if lateral > enemyLeft {
+					enemyLeft, g.enemyLeft = lateral, i
 				}
-				if side < enemyRight {
-					enemyRight, g.enemyRight = side, i
+				if lateral < enemyRight {
+					enemyRight, g.enemyRight = lateral, i
 				}
 			}
 		}

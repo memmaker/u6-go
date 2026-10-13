@@ -785,12 +785,12 @@ func (g *Game) tryDiagonalMove(n, hDir, vDir int) bool {
 	newX, newY := p.X+dirStepX[dir], p.Y+dirStepY[dir]
 	g.allowPartySwap = true
 	g.avoidDamage = true
-	side := g.passable(n, newX, p.Y)
-	if !side {
-		side = g.passable(n, p.X, newY)
+	sidestep := g.passable(n, newX, p.Y)
+	if !sidestep {
+		sidestep = g.passable(n, p.X, newY)
 	}
 	g.allowPartySwap = false
-	if side && g.passable(n, newX, newY) {
+	if sidestep && g.passable(n, newX, newY) {
 		g.avoidDamage = false
 		g.openDoorUnder(n, 1)
 		g.MoveObj(n, newX, newY, int(g.MapZ))

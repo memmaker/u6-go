@@ -1337,9 +1337,9 @@ func (g *Game) holdLine(n int) bool {
 		deltaX, deltaY = fp.X-ox, fp.Y-oy
 		front = g.enemyFront
 	}
-	side := (p.X-ox)*deltaY - (p.Y-oy)*deltaX
-	right := side > 0
-	if side == 0 {
+	lateral := (p.X-ox)*deltaY - (p.Y-oy)*deltaX
+	right := lateral > 0
+	if lateral == 0 {
 		right = g.rand(0, 1) != 0
 	}
 	stepX, stepY := -1, 1
@@ -1503,9 +1503,9 @@ func (g *Game) flank(n int) {
 	align := g.alignment(n)
 	p := g.object(n).Pos
 	deltaX, deltaY := g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
-	side := (p.X-g.partyGravityX)*deltaY - (p.Y-g.partyGravityY)*deltaX
-	right := side > 0
-	if side == 0 {
+	lateral := (p.X-g.partyGravityX)*deltaY - (p.Y-g.partyGravityY)*deltaX
+	right := lateral > 0
+	if lateral == 0 {
 		right = g.rand(0, 1) != 0
 	}
 	sx, sy := deltaY, -deltaX

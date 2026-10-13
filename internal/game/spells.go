@@ -2330,13 +2330,13 @@ func (g *Game) wingStrike() {
 		if mx-nearbyRange > x || mx+nearbyRange < x || my-nearbyRange > y || my+nearbyRange < y {
 			continue
 		}
-		side := 1
+		wing := 1
 		if x-(mx-nearbyRange) > mx+nearbyRange-x {
-			side = 0
+			wing = 0
 		}
-		startX := mx - wingSide[side]*nearbyRange
-		wing0 := g.AddMapObj(shapeOf(ObjDragon, leftWing[side]), 0, 1, startX, y-1, z)
-		wing1 := g.AddMapObj(shapeOf(ObjDragon, rightWing[side]), 0, 1, startX, y, z)
+		startX := mx - wingSide[wing]*nearbyRange
+		wing0 := g.AddMapObj(shapeOf(ObjDragon, leftWing[wing]), 0, 1, startX, y-1, z)
+		wing1 := g.AddMapObj(shapeOf(ObjDragon, rightWing[wing]), 0, 1, startX, y, z)
 		// fix: the original flew dragons it could not make
 		if wing0 < 0 || wing1 < 0 {
 			if wing0 >= 0 {
@@ -2354,7 +2354,7 @@ func (g *Game) wingStrike() {
 			w0, w1 := g.object(wing0), g.object(wing1)
 			w0.SetFrame(w0.Frame() ^ 1)
 			w1.SetFrame(w1.Frame() ^ 1)
-			at := mx - (nearbyRange-i)*wingSide[side]
+			at := mx - (nearbyRange-i)*wingSide[wing]
 			g.MoveObj(wing0, at, y-1, z)
 			g.MoveObj(wing1, at, y, z)
 			g.computeView()
