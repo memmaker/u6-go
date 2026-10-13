@@ -93,6 +93,7 @@ func TestTalkToTholden(t *testing.T) {
 			started <- err
 			return
 		}
+		g.random.randomize(1) // the same view each run
 		started <- nil
 		g.Play()
 	})
@@ -102,6 +103,10 @@ func TestTalkToTholden(t *testing.T) {
 		t.Fatal(err)
 	}
 	const settle = 30
+	// the first view drawn, before the characters fidget at random
+	for g.gr.BackBuffer == [len(g.gr.BackBuffer)]byte{} && host.Step() {
+	}
+	compareClassicView(t, g)
 	steps := func(n int) {
 		for range n {
 			host.Step()
@@ -199,5 +204,38 @@ func writePNG(t *testing.T, g *Game, name string) {
 	defer file.Close()
 	if err := png.Encode(file, img); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// compareClassicView checks that the middle 11x11 tiles of the view are drawn as the
+// original drew its whole view: testdata/classic_view.bin is the main branch's back buffer
+// (before the frame went over it) when this test's game first drew it. The walls on the
+// original's right edge differ: they now join the walls beyond it, which it never looked at.
+func compareClassicView(t *testing.T, g *Game) {
+	want, err := os.ReadFile(filepath.Join("testdata", "classic_view.bin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const (
+		classicSize = classicViewTiles * tileSize
+		offsetX     = (viewCenterX - classicViewCenter) * tileSize
+		offsetY     = (viewCenterY - classicViewCenter) * tileSize
+		edge        = classicViewTiles - 1
+		joinRow     = 3 // the wall that meets the room's east wall
+	)
+	wallJoins := map[image.Point]bool{{edge, joinRow}: true, {edge, edge}: true}
+	bad := 0
+	for y := range classicSize {
+		for x := range classicSize {
+			if wallJoins[image.Pt(x/tileSize, y/tileSize)] {
+				continue
+			}
+			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*classicSize+x] {
+				bad++
+			}
+		}
+	}
+	if bad != 0 {
+		t.Errorf("%d pixels of the classic 11x11 view differ", bad)
 	}
 }

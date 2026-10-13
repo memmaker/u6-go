@@ -1228,7 +1228,7 @@ func (g *Game) redrawWorld() {
 		}
 	}
 	for i := range g.objChain {
-		g.objChain[i] = byte(i + 1)
+		g.objChain[i] = chainSlot((i + 1) % objChainSlots) // the last ends the free list
 	}
 	g.viewChanged = false
 	g.screenFade = true

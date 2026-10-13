@@ -80,14 +80,21 @@ const (
 	spellSlow        = 7
 )
 
+// objChainSlots is how many tiles the view chains on its places: the original's 256 ran
+// out in the port's bigger view, dropping objects and parts of them.
+const objChainSlots = 1024
+
+// chainSlot is a slot of objChain.
+type chainSlot uint16
+
 // view is the state of the view (seg_1100, the drawing parts of seg_1184 and seg_0A33).
 type view struct {
 	tileView   [viewTilesY][viewTilesX]int
-	objectView [viewTilesY][viewTilesX]byte
+	objectView [viewTilesY][viewTilesX]chainSlot
 	// objChain links the tiles drawn on a place (D_E5E0; slot 0 is the free list), the
 	// tile of each slot is objChainTile (D_D5DC)
-	objChain     [npcCount]byte
-	objChainTile [npcCount]int
+	objChain     [objChainSlots]chainSlot
+	objChainTile [objChainSlots]int
 	areaFlags    [areaSize * areaSize]byte
 	areaLight    [areaSize * areaSize]byte
 	// the queue of places whose light is computed (D_BBCC, D_BCCC, visited_w, visited_r)
@@ -508,9 +515,9 @@ func (g *Game) ShowObjects() {
 	g.soundCount = 0
 	hasMusic := false
 	for i := range g.objChain {
-		g.objChain[i] = byte(i + 1)
+		g.objChain[i] = chainSlot((i + 1) % objChainSlots) // the last ends the free list
 	}
-	g.objectView = [viewTilesY][viewTilesX]byte{}
+	g.objectView = [viewTilesY][viewTilesX]chainSlot{}
 	mx, my := int(g.MapX), int(g.MapY)
 	for n := g.SearchArea(mx-viewCenterX, my-viewCenterY, mx+viewCenterX+1, my+viewCenterY+1); n >= 0; n = g.NextArea() {
 		o := g.object(n)
