@@ -262,16 +262,16 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 	step := randomBetween(2, 5)
 	u.flushKeys()
 	sway := 70
-	for si, last := priestLow, false; !last; {
-		last = si == priestRaised
+	for priestY, last := priestLow, false; !last; {
+		last = priestY == priestRaised
 		x := u.rand()%8 + sway - 3
-		if si > 60 || sway == 0 {
+		if priestY > 60 || sway == 0 {
 			x = sway
 		}
 		draw(0, 0, nightShape)
 		u.drawCrowds(lib, 0, 0, crowdNear)
-		draw(x+priestX, si, priestShape)
-		draw(x+handX, si+handY, daggerHandShape)
+		draw(x+priestX, priestY, priestShape)
+		draw(x+handX, priestY+handY, daggerHandShape)
 		draw(avatarX, avatarY, avatarShape)
 		draw(0, groundTop, groundShape)
 		draw(candleX, candleY, candleShape)
@@ -280,12 +280,12 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 			sway = max(sway-step, 0)
 		}
 		if u.getKey() != 0 {
-			si = step + priestRaised
+			priestY = step + priestRaised
 		}
 		if u.escaped {
 			return
 		}
-		si = max(si-step, priestRaised)
+		priestY = max(priestY-step, priestRaised)
 	}
 	t.left, t.right, t.leftStep, t.rightStep = 0, 0, 1, 1
 	ritual := func(hand int, moongate int, dot bool) {
@@ -329,19 +329,19 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 	u.showPassage(titlePassage + 8)
 	step = randomBetween(2, 5)
 	u.flushKeys()
-	for si, last := moongateDown, false; !last; {
-		last = si == moongateUp
-		ritual(daggerHandShape, si, true)
+	for moongateY, last := moongateDown, false; !last; {
+		last = moongateY == moongateUp
+		ritual(daggerHandShape, moongateY, true)
 		u.drawPassage()
 		u.restoreScreen()
 		u.wander(3)
 		if u.getKey() != 0 {
-			si = step + moongateUp
+			moongateY = step + moongateUp
 		}
 		if u.escaped {
 			return
 		}
-		si = max(si-step, moongateUp)
+		moongateY = max(moongateY-step, moongateUp)
 	}
 	if u.waitKey(); u.escaped {
 		return
@@ -402,26 +402,26 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 	u.flushKeys()
 	sway = 0
 	crowdY := func() int { return crowdFar - u.rand()%4 }
-	for si, last := priestRaised, false; !last; {
-		last = si == priestLow
+	for priestY, last := priestRaised, false; !last; {
+		last = priestY == priestLow
 		sway += u.rand()%9 - 3
 		draw(0, 0, nightShape)
 		draw(moongateX, moongateUp, moongateShape)
 		u.drawCrowds(lib, t.left, t.right, crowdY())
-		draw(sway+priestX, si, priestShape)
-		draw(sway+handX, si+handY, emptyHandShape)
+		draw(sway+priestX, priestY, priestShape)
+		draw(sway+handX, priestY+handY, emptyHandShape)
 		draw(avatarX, avatarY, avatarShape)
 		draw(0, groundTop, groundShape)
 		draw(candleX, candleY, candleShape)
 		u.restoreScreen()
 		u.wander(4)
 		if u.getKey() != 0 {
-			si = priestLow - step
+			priestY = priestLow - step
 		}
 		if u.escaped {
 			return
 		}
-		si = min(si+step, priestLow)
+		priestY = min(priestY+step, priestLow)
 	}
 
 	// the companions come through the moongate
@@ -494,22 +494,22 @@ func (u *intro) titleScenes(lib shapes, lingering int) {
 	u.showPassage(titlePassage + 17)
 	step = randomBetween(1, 3)
 	u.flushKeys()
-	for si, last := moongateUp, false; !last; {
-		last = si == moongateDown
+	for moongateY, last := moongateUp, false; !last; {
+		last = moongateY == moongateDown
 		draw(0, 0, nightShape)
-		draw(moongateX, si, moongateShape)
+		draw(moongateX, moongateY, moongateShape)
 		u.drawCrowds(lib, t.left, t.right, crowdY())
 		draw(0, groundTop, groundShape)
 		u.drawPassage()
 		u.restoreScreen()
 		u.wander(4)
 		if u.getKey() != 0 {
-			si = moongateDown - step
+			moongateY = moongateDown - step
 		}
 		if u.escaped {
 			return
 		}
-		si = min(si+step, moongateDown)
+		moongateY = min(moongateY+step, moongateDown)
 	}
 	stones := func() {
 		draw(0, 0, nightShape)

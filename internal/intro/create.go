@@ -266,16 +266,16 @@ func (u *intro) createCharacter() (bool, error) {
 		}
 	}
 	step := randomBetween(2, 10)
-	for si, last := 0, false; !last; {
-		last = si == woodsScroll
-		woods.draw(u.back, u.back.left-si, 0, woodsShape)
-		woods.draw(u.back, u.back.left+screenWidth-si, 0, gypsyWagonShape)
+	for scroll, last := 0, false; !last; {
+		last = scroll == woodsScroll
+		woods.draw(u.back, u.back.left-scroll, 0, woodsShape)
+		woods.draw(u.back, u.back.left+screenWidth-scroll, 0, gypsyWagonShape)
 		u.waitRetrace()
 		u.copyRect(u.back, u.screen)
 		if u.pollInput() != 0 {
-			si = woodsScroll - step
+			scroll = woodsScroll - step
 		}
-		si = min(si+step, woodsScroll)
+		scroll = min(scroll+step, woodsScroll)
 	}
 	wagon := func() {
 		woods.draw(u.back, u.back.left-woodsScroll, 0, woodsShape)

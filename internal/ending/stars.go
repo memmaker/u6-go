@@ -90,9 +90,9 @@ func (e *ending) moveStars() {
 		if p := pixel(i); *p == f.colour[i] {
 			*p = 0
 		}
-		dx, dy := int(int8(f.x[i]-fieldCentreX)), int(int8(f.y[i]-fieldCentreY))
-		f.y[i] = uint8(int(f.y[i]) + sign(dy)*(abs(dy)>>speedShift+1))
-		f.x[i] = uint8(int(f.x[i]) + sign(dx)*(abs(dx)>>speedShift+1))
+		deltaX, deltaY := int(int8(f.x[i]-fieldCentreX)), int(int8(f.y[i]-fieldCentreY))
+		f.y[i] = uint8(int(f.y[i]) + sign(deltaY)*(abs(deltaY)>>speedShift+1))
+		f.x[i] = uint8(int(f.x[i]) + sign(deltaX)*(abs(deltaX)>>speedShift+1))
 		if f.y[i] >= fieldHeight || f.x[i] >= fieldWidth {
 			f.x[i] = next(&f.randX, fieldWidth)
 			f.y[i] = next(&f.randY, fieldHeight)

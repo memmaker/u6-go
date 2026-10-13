@@ -525,17 +525,17 @@ func (u *intro) introScenes() {
 	// the view turns to the window
 	u.showPassage(2)
 	step := randomBetween(2, 10)
-	for si, last := 0, false; !last; {
-		last = si == scrollWidth
-		if si >= treeFrom {
+	for scroll, last := 0, false; !last; {
+		last = scroll == scrollWidth
+		if scroll >= treeFrom {
 			const treeShift, treeSpan, treeX = 10, 36, 77
-			lib.draw(outside, (si-treeFrom)*treeShift/treeSpan+(scrollWidth-si)+treeX, 0, treeShape)
+			lib.draw(outside, (scroll-treeFrom)*treeShift/treeSpan+(scrollWidth-scroll)+treeX, 0, treeShape)
 		}
-		lib.draw(room, room.left-si, 0, roomShape)
-		lib.draw(outside, outside.left+scrollWidth-si, 0, outsideShape)
-		lib.draw(desk, desk.left-si*2, deskTop, deskShape)
+		lib.draw(room, room.left-scroll, 0, roomShape)
+		lib.draw(outside, outside.left+scrollWidth-scroll, 0, outsideShape)
+		lib.draw(desk, desk.left-scroll*2, deskTop, deskShape)
 		u.drawPassage()
-		if b.tv.right > 0 && si < stopScriptAt {
+		if b.tv.right > 0 && scroll < stopScriptAt {
 			u.runScript()
 		}
 		b.tv.right -= step
@@ -544,16 +544,16 @@ func (u *intro) introScenes() {
 			b.tvOffset -= b.tv.left
 			b.tv.left = 0
 		}
-		u.drawClock(u.back, lib, clockX-si)
+		u.drawClock(u.back, lib, clockX-scroll)
 		u.waitRetrace()
 		u.restoreScreen()
 		if u.getKey() != 0 {
-			si = scrollWidth - step
+			scroll = scrollWidth - step
 		}
 		if u.escaped {
 			return
 		}
-		si = min(si+step, scrollWidth)
+		scroll = min(scroll+step, scrollWidth)
 	}
 	if !u.stormScenes(room, outside) {
 		return
@@ -610,7 +610,7 @@ func (u *intro) stormScenes(stones, sky surface) bool {
 	u.initRain(&u.back, maxRaindrops, 0)
 	u.initClouds(&u.back, 5, lib)
 	u.showPassage(3)
-	si, frames, flash, bolt, stage := 0, 0, 0, 0, 0
+	scroll, frames, flash, bolt, stage := 0, 0, 0, 0, 0
 	flashShape, flashX, flashY := 0, 0, 0
 	paletteLoaded := false
 	var flashColour rgb
@@ -645,15 +645,15 @@ func (u *intro) stormScenes(stones, sky surface) bool {
 		for previous := bolt; bolt == previous; {
 			bolt = u.rand()%5 + 8
 		}
-		if stage == 3 || stage == 4 && si < stormBoltRadius {
+		if stage == 3 || stage == 4 && scroll < stormBoltRadius {
 			lib.draw(u.back, stormBoltX, stormBoltY, bolt+stormBoltShape)
 		}
 		u.drawRain()
 		if stage < 5 {
 			if flash != 0 && u.rand()&1 != 0 || stage == 3 {
-				lib.draw(u.back, stones.left-si, stones.top, stormStonesLitShape)
+				lib.draw(u.back, stones.left-scroll, stones.top, stormStonesLitShape)
 			} else {
-				lib.draw(u.back, stones.left-si, stones.top, stormStonesShape)
+				lib.draw(u.back, stones.left-scroll, stones.top, stormStonesShape)
 			}
 		}
 		switch stage {
@@ -663,12 +663,12 @@ func (u *intro) stormScenes(stones, sky surface) bool {
 		case 0:
 			lib.draw(u.back, 0, 0, stormFrameShape)
 		case 4:
-			lib.draw(u.back, -si, 0, stormFrameShape)
-			lib.draw(u.back, scrollWidth-si, 0, stormDoorShape)
-			lib.draw(u.back, scrollWidth-si+stormDoor2X, 0, stormDoor2Shape)
-			if si += scrollStep; si > scrollWidth {
+			lib.draw(u.back, -scroll, 0, stormFrameShape)
+			lib.draw(u.back, scrollWidth-scroll, 0, stormDoorShape)
+			lib.draw(u.back, scrollWidth-scroll+stormDoor2X, 0, stormDoor2Shape)
+			if scroll += scrollStep; scroll > scrollWidth {
 				stage = 5
-				si = 0
+				scroll = 0
 			}
 			u.drawPassage()
 		case 5:
@@ -676,11 +676,11 @@ func (u *intro) stormScenes(stones, sky surface) bool {
 			lib.draw(u.back, stormDoor2X, 0, stormDoor2Shape)
 			u.drawPassage()
 		case 6:
-			lib.draw(u.back, -si, 0, stormDoorShape)
-			lib.draw(u.back, si+stormDoor2X, 0, stormDoor2Shape)
-			if si += doorStep; si > stormDoorsOpen {
+			lib.draw(u.back, -scroll, 0, stormDoorShape)
+			lib.draw(u.back, scroll+stormDoor2X, 0, stormDoor2Shape)
+			if scroll += doorStep; scroll > stormDoorsOpen {
 				u.showPassage(8)
-				si = 0
+				scroll = 0
 				stage = 7
 			}
 		case 7:
@@ -701,10 +701,10 @@ func (u *intro) stormScenes(stones, sky surface) bool {
 			case 6:
 				u.showPassage(8)
 				stage++
-				si = 0
+				scroll = 0
 			case 0, 4:
 				stage++
-				si = 0
+				scroll = 0
 			case 1:
 				u.showPassage(4)
 				stage++
@@ -824,71 +824,71 @@ func (u *intro) moongateScenes() {
 	gate.bottom = gateAreaBottom
 	u.showPassage(10)
 	step := randomBetween(4, 10)
-	for si, last := gateBottomStart, false; !last; {
-		last = si == gateRisen
+	for gateY, last := gateBottomStart, false; !last; {
+		last = gateY == gateRisen
 		lib.draw(u.back, 0, 0, gateHillShape)
-		lib.draw(u.back, gateX, si, gateRisingShape)
+		lib.draw(u.back, gateX, gateY, gateRisingShape)
 		lib.draw(u.back, gateHill, gateHillY, gateStonesShape)
 		u.drawPassage()
 		u.restoreScreen()
 		if u.getKey() != 0 {
-			si = step + gateRisen
+			gateY = step + gateRisen
 		}
 		if u.escaped {
 			return
 		}
-		si = max(si-step, gateRisen)
+		gateY = max(gateY-step, gateRisen)
 	}
 	u.showPassage(11)
 	u.waitKey()
 	step = randomBetween(2, 8)
-	for si, last := armStart, false; !last; {
-		last = si == armRaised
+	for armY, last := armStart, false; !last; {
+		last = armY == armRaised
 		lib.draw(u.back, 0, 0, gateSkyShape)
 		lib.draw(u.back, groundX, groundY, gateGroundShape)
 		lib.draw(u.back, gateX, gateRisen, gateRisingShape)
-		lib.draw(gate, armX, si, gateArmShape)
+		lib.draw(gate, armX, armY, gateArmShape)
 		u.drawPassage()
 		u.restoreScreen()
 		if u.getKey() != 0 {
-			si = step + armRaised
+			armY = step + armRaised
 		}
 		if u.escaped {
 			return
 		}
-		si = max(si-step, armRaised)
+		armY = max(armY-step, armRaised)
 	}
 	step = randomBetween(4, 10)
-	for si, last := gateRisen, false; !last; {
-		last = si == gateSunk
+	for gateY, last := gateRisen, false; !last; {
+		last = gateY == gateSunk
 		lib.draw(u.back, 0, 0, gateSkyShape)
 		lib.draw(u.back, groundX, groundY, gateGroundShape)
-		lib.draw(u.back, gateX, si, gateRisingShape)
+		lib.draw(u.back, gateX, gateY, gateRisingShape)
 		lib.draw(gate, armX, armRest, gateArmShape)
 		u.drawPassage()
 		u.restoreScreen()
 		if u.getKey() != 0 {
-			si = gateSunk - step
+			gateY = gateSunk - step
 		}
-		si = min(si+step, gateSunk)
+		gateY = min(gateY+step, gateSunk)
 	}
 	if u.waitKey(); u.escaped {
 		return
 	}
 	// the view looks up
-	lookFrame := func(si int) {
-		lib.draw(u.back, 0, -si, gateSkyShape)
-		lib.draw(u.back, groundX, groundY-si, gateGroundShape)
-		lib.draw(gate, armX, armRest-si, gateArmShape)
-		u.back.top = screenHeight - 1 - si
+	lookFrame := func(lift int) {
+		lib.draw(u.back, 0, -lift, gateSkyShape)
+		lib.draw(u.back, groundX, groundY-lift, gateGroundShape)
+		lib.draw(gate, armX, armRest-lift, gateArmShape)
+		u.back.top = screenHeight - 1 - lift
 		fill(u.back, 0)
 		u.back.top = 0
-		lib.draw(u.back, figureX, screenHeight-si*2, gateFigureShape)
+		lib.draw(u.back, figureX, screenHeight-lift*2, gateFigureShape)
 	}
 	step = randomBetween(2, 8)
-	for si, last := 0, false; !last; {
-		last = si == lookUp
-		lookFrame(si)
+	for lift, last := 0, false; !last; {
+		last = lift == lookUp
+		lookFrame(lift)
 		u.restoreScreen()
 		if u.getKey() != 0 {
 			last = true
@@ -896,7 +896,7 @@ func (u *intro) moongateScenes() {
 		if u.escaped {
 			return
 		}
-		si = min(si+step, lookUp)
+		lift = min(lift+step, lookUp)
 	}
 	u.showPassage(12)
 	for {
@@ -912,9 +912,9 @@ func (u *intro) moongateScenes() {
 	}
 	fill(u.back, 0)
 	step = randomBetween(2, 8)
-	for si, last := lookUp, false; !last; {
-		last = si == 0
-		lookFrame(si)
+	for lift, last := lookUp, false; !last; {
+		last = lift == 0
+		lookFrame(lift)
 		u.restoreScreen()
 		if u.getKey() != 0 {
 			last = true
@@ -922,7 +922,7 @@ func (u *intro) moongateScenes() {
 		if u.escaped {
 			return
 		}
-		si = max(si-step, 0)
+		lift = max(lift-step, 0)
 	}
 	standing := func(armX, armY int) {
 		lib.draw(u.back, 0, 0, gateSkyShape)
@@ -964,10 +964,10 @@ func (u *intro) moongateScenes() {
 	saved := surface{right: gate.right - gate.left, bottom: gate.bottom - gate.top} // D_5BBC
 	newPicture(&saved)
 	step = randomBetween(1, 3)
-	for si, last := 0, false; !last; {
-		last = si == leapFrames
+	for leap, last := 0, false; !last; {
+		last = leap == leapFrames
 		standing(shaking(3)())
-		lib.draw(u.back, figureLeapX, figureLeapY-si, si/leapShapes+gateLeapShape)
+		lib.draw(u.back, figureLeapX, figureLeapY-leap, leap/leapShapes+gateLeapShape)
 		u.restoreScreen()
 		if u.getKey() != 0 {
 			last = true
@@ -975,7 +975,7 @@ func (u *intro) moongateScenes() {
 		if u.escaped {
 			return
 		}
-		si = min(si+step, leapFrames)
+		leap = min(leap+step, leapFrames)
 	}
 	standing(still())
 	u.copyRect(gate, saved)
@@ -994,17 +994,17 @@ func (u *intro) moongateScenes() {
 		return
 	}
 	step = randomBetween(2, 8)
-	for si, last := armRest, false; !last; {
-		last = si == armStart
-		standing(armX, si)
+	for armY, last := armRest, false; !last; {
+		last = armY == armStart
+		standing(armX, armY)
 		u.restoreScreen()
 		if u.getKey() != 0 {
-			si = armStart - step
+			armY = armStart - step
 		}
 		if u.escaped {
 			return
 		}
-		si = min(si+step, armStart)
+		armY = min(armY+step, armStart)
 	}
 	u.setDAC(gateGlowColour, glow)
 	fill(u.back, 0)

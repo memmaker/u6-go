@@ -217,82 +217,81 @@ func (u *intro) drawHandPart(virtue, part, x, y int) {
 // C: seg_0406:06F8 (DrawStep)
 func (u *intro) drawStep(virtue, n int, redraw bool) bool {
 	g := &u.gypsy
-	si := virtue
 	skip := false
 	g.pouring = false
 	drawArm := func(row int) {
-		g.shapes.draw(u.back, pour[pourArmX][si], gypsyTop+armReachY, pour[row][si]+armShapes)
+		g.shapes.draw(u.back, pour[pourArmX][virtue], gypsyTop+armReachY, pour[row][virtue]+armShapes)
 	}
 	drawLift := func(row int) {
-		g.shapes.draw(u.back, virtueOffsetX[si]+pour[pourVialX][si]+liftX, tableRow+gypsyTop+liftY, pour[row][si]+armShapes)
+		g.shapes.draw(u.back, virtueOffsetX[virtue]+pour[pourVialX][virtue]+liftX, tableRow+gypsyTop+liftY, pour[row][virtue]+armShapes)
 	}
 	var x, y, part int
 	n %= stepCycle
 	switch n {
 	case 0:
-		x, y, part = pour[pourVialX][si], tableRow, pour[pourHandShape][si]
+		x, y, part = pour[pourVialX][virtue], tableRow, pour[pourHandShape][virtue]
 	case 1, 15:
 		drawLift(pourArmShape)
-		x, y, part = pour[pourVialX][si], tableRow, pour[pourHandShape+1][si]
+		x, y, part = pour[pourVialX][virtue], tableRow, pour[pourHandShape+1][virtue]
 	case 2, 14:
 		drawLift(pourArmShape + 1)
-		x, y, part = pour[pourVialX][si], tableRow-liftY1, pour[pourHandShape+1][si]
+		x, y, part = pour[pourVialX][virtue], tableRow-liftY1, pour[pourHandShape+1][virtue]
 	case 3, 13:
 		drawLift(pourArmShape + 1)
-		x, y, part = pour[pourLiftedX][si], tableRow-liftY2, pour[pourHandShape+2][si]
+		x, y, part = pour[pourLiftedX][virtue], tableRow-liftY2, pour[pourHandShape+2][virtue]
 	case 4, 12:
 		drawArm(pourArmShape + 2)
-		x, y, part = pour[pourTiltX][si], pour[pourTiltY][si], pour[pourHandShape+3][si]
+		x, y, part = pour[pourTiltX][virtue], pour[pourTiltY][virtue], pour[pourHandShape+3][virtue]
 	case 5, 11:
 		drawArm(pourArmShape + 2)
-		x, y, part = pour[pourTiltX+1][si], pour[pourTiltY+1][si], pour[pourHandShape+4][si]
+		x, y, part = pour[pourTiltX+1][virtue], pour[pourTiltY+1][virtue], pour[pourHandShape+4][virtue]
 		if n == 11 && !redraw {
-			g.levels[si]--
+			g.levels[virtue]--
 		}
-		if g.levels[si] == 2 && n == 11 {
+		if g.levels[virtue] == 2 && n == 11 {
 			skip = true
 		}
-		if g.levels[si] == 3 {
+		if g.levels[virtue] == 3 {
 			g.pouring = true
 		}
 	case 6, 10:
 		drawArm(pourArmShape + 2)
-		x, y, part = pour[pourTiltX+2][si], pour[pourTiltY+2][si], pour[pourHandShape+5][si]
-		if (g.levels[si] == 1 || g.levels[si] == 2) && n == 10 {
+		x, y, part = pour[pourTiltX+2][virtue], pour[pourTiltY+2][virtue], pour[pourHandShape+5][virtue]
+		if (g.levels[virtue] == 1 || g.levels[virtue] == 2) && n == 10 {
 			skip = true
 		}
-		if g.levels[si] == 2 {
+		if g.levels[virtue] == 2 {
 			g.pouring = true
 		}
-		if g.levels[si] == 3 {
+		if g.levels[virtue] == 3 {
 			skip = true
 		}
 	case 7, 9:
 		drawArm(pourArmShape + 2)
-		x, y, part = pour[pourTiltX+3][si], pour[pourTiltY+3][si], pour[pourHandShape+6][si]
-		if g.levels[si] == 1 && n == 9 || g.levels[si] == 2 || g.levels[si] == 3 {
+		x, y, part = pour[pourTiltX+3][virtue], pour[pourTiltY+3][virtue], pour[pourHandShape+6][virtue]
+		if g.levels[virtue] == 1 && n == 9 || g.levels[virtue] == 2 || g.levels[virtue] == 3 {
 			skip = true
 		}
 	case 8:
 		drawArm(pourArmShape + 2)
-		x, y, part = pour[pourTiltX+3][si], pour[pourTiltY+3][si], pour[pourHandShape+6][si]
-		if g.levels[si] == 1 {
+		x, y, part = pour[pourTiltX+3][virtue], pour[pourTiltY+3][virtue], pour[pourHandShape+6][virtue]
+		if g.levels[virtue] == 1 {
 			g.pouring = true
 		}
-		if g.levels[si] == 2 || g.levels[si] == 3 {
+		if g.levels[virtue] == 2 || g.levels[virtue] == 3 {
 			skip = true
 		}
 	}
 	if n > 3 && n < 9 || n > 8 && n < 13 {
-		x -= virtueOffsetX[si]
+		x -= virtueOffsetX[virtue]
 	}
 	if skip {
 		return false
 	}
-	u.drawHandPart(si, part, x, y)
-	g.shapes.draw(u.back, virtueOffsetX[si]+x, gypsyTop+y, handShapes+part)
+	u.drawHandPart(virtue, part, x, y)
+	g.shapes.draw(u.back, virtueOffsetX[virtue]+x, gypsyTop+y, handShapes+part)
 	for v := range virtues {
-		if v == si {
+		if v == virtue {
 			continue
 		}
 		if g.levels[v] > 0 {
@@ -302,7 +301,7 @@ func (u *intro) drawStep(virtue, n int, redraw bool) bool {
 		g.shapes.draw(u.back, virtueOffsetX[v]+pour[pourVialX][v], tableRow+gypsyTop, pour[pourHandShape][v]+handShapes)
 	}
 	if n < 9 && g.pouring && !redraw {
-		u.addColour(virtueColours[si])
+		u.addColour(virtueColours[virtue])
 		g.pours++
 	}
 	if g.pours != 0 {
@@ -310,12 +309,12 @@ func (u *intro) drawStep(virtue, n int, redraw bool) bool {
 	}
 	g.shapes.draw(u.back, balanceX, gypsyTop+balanceY, handShapes+balanceShape)
 	if g.pouring {
-		left := vialFull - g.levels[si]
+		left := vialFull - g.levels[virtue]
 		base := vialShapes
-		if si > 5 {
+		if virtue > 5 {
 			base = handShapes
 		}
-		g.shapes.draw(u.back, pouredX[left][si], pouredY[left]+gypsyTop, pouredShape[left][si]+base)
+		g.shapes.draw(u.back, pouredX[left][virtue], pouredY[left]+gypsyTop, pouredShape[left][virtue]+base)
 	}
 	return true
 }

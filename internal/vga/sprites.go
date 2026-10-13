@@ -47,10 +47,10 @@ func (d *Driver) MakeRotatedSprite(slot, tile, angle, pivotX, pivotY int) {
 	sin, cos := sine[angle&(angleSteps-1)], sine[(angle+angleSteps/4)&(angleSteps-1)]
 	out := &d.sprites[slot]
 	i := 0
-	for dy := -halfPixels; dy <= halfPixels; dy += 2 {
-		for dx := -halfPixels; dx <= halfPixels; dx += 2 {
-			sx := dx*cos - dy*sin + pivotX*pivotScale
-			sy := dx*sin + dy*cos + pivotY*pivotScale
+	for offsetY := -halfPixels; offsetY <= halfPixels; offsetY += 2 {
+		for offsetX := -halfPixels; offsetX <= halfPixels; offsetX += 2 {
+			sx := offsetX*cos - offsetY*sin + pivotX*pivotScale
+			sy := offsetX*sin + offsetY*cos + pivotY*pivotScale
 			out[i] = transparent
 			if sx >= 0 && sx < tileSize<<sourceShift && sy >= 0 && sy < tileSize<<sourceShift {
 				out[i] = source[(sy>>sourceShift)*tileSize+(sx>>sourceShift)]
