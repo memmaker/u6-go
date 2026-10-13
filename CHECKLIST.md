@@ -21,12 +21,12 @@
 - [x] Sound/music (AdLib driver port, internal/sound)
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
 - [x] Port END.EXE: ending (internal/ending)
-- [ ] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
+- [x] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
 - [ ] Runs from original data files natively
 - [ ] Parity checks against DOSBox-X screenshots
 
 ## C. Publish
-- [ ] -import SRC (folders, zip, ISO/BIN/CUE, GOG installers, loose files) + COVER.PNG
-- [ ] wasm build works
+- [x] -import SRC (folders, zip, ISO/BIN/CUE, floppy images, GOG installers, loose files) + COVER.PNG
+- [x] wasm build works
 - [ ] Registered in goplay (games.js, deploy.sh, README table)
 - [ ] Deployed live and checked at https://ruzzoli.de/goplay/

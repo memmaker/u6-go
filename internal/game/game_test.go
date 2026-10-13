@@ -173,7 +173,7 @@ func TestPlayHeadless(t *testing.T) {
 		name string
 		keys []host.Key
 	}{
-		{"look", []host.Key{char('l'), {Scan: host.ScanUp}}},
+		{"look", []host.Key{char('l'), {Scan: host.ScanUp}, {Scan: host.ScanEnter, Char: '\r'}}},
 		{"get", []host.Key{char('g'), {Scan: host.ScanLeft}}},
 		{"use", []host.Key{char('u'), {Scan: host.ScanDown}}},
 		{"drop", []host.Key{char('d'), {Scan: host.ScanEscape}}},
