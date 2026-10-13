@@ -610,7 +610,7 @@ func (g *Game) executeOp(op byte, n int) int {
 		g.NPCs[npc].Mode = mode
 		if mode == AISleep {
 			g.NPCs[npc].Status |= Asleep
-			// TODO(port): SetTypeUnconscious (seg_2337:05B4)
+			g.setUnconscious(npc)
 		}
 		if mode != AIPlay && g.object(npc).Type() == ObjMusician2 {
 			g.setType(npc, ObjMusician)
@@ -653,7 +653,7 @@ func (g *Game) executeOp(op byte, n int) int {
 		for body >= 0 && g.object(body).Type() != ObjDeadBody {
 			body = g.link[body]
 		}
-		// TODO(port): C_1944_1A42 (resurrect body)
+		g.resurrect(body)
 	case opHeal:
 		npc := g.npcNumber(g.parseFactor())
 		g.NPCs[npc].HitPoints = byte(g.maxHitPoints(npc))
@@ -673,7 +673,7 @@ func (g *Game) executeOp(op byte, n int) int {
 				// TODO(port): C_3200_0467 (rest member i)
 			}
 		}
-		// TODO(port): C_2FC1_19A1 (redraw the world)
+		g.redrawWorld()
 		g.allowNPCTeleport = true
 		if g.Hour == restUntilHour {
 			g.passTime(minutesPerHour)
@@ -706,8 +706,8 @@ func (g *Game) executeOp(op byte, n int) int {
 	case opShowConverse:
 		g.showCharacter(g.npcNumber(g.parseFactor()))
 	case opGetHorse:
-		g.npcNumber(g.parseFactor())
-		// TODO(port): C_27A1_5431 (make a horse for the npc at the party)
+		npc := g.npcNumber(g.parseFactor())
+		g.mount(npc, int(g.MapX), int(g.MapY), directionFrame(ObjMountedHorse, g.NPCs[npc].Direction()), false)
 	default:
 		g.printf("Unknown command.\n")
 		return -1

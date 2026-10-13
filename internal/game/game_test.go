@@ -174,12 +174,109 @@ func TestPlayHeadless(t *testing.T) {
 		keys []host.Key
 	}{
 		{"look", []host.Key{char('l'), {Scan: host.ScanUp}, {Scan: host.ScanEnter, Char: '\r'}}},
-		{"get", []host.Key{char('g'), {Scan: host.ScanLeft}}},
-		{"use", []host.Key{char('u'), {Scan: host.ScanDown}}},
 		{"drop", []host.Key{char('d'), {Scan: host.ScanEscape}}},
 		{"inventory", []host.Key{char('i')}},
 	} {
 		press(step.keys...)
 		snap(step.name)
+		if step.name == "look" {
+			press(host.Key{Scan: host.ScanEscape})
+			testGetAndUse(t, g, press, snap)
+		}
+	}
+	testFight(t, g, press, snap)
+}
+
+// testGetAndUse gets gold and lights a candle with the target cursor, first with the
+// keys, then with the mouse.
+func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(string)) {
+	p := g.object(int(g.Party[g.Active])).Pos
+	click := func(dx, dy int) {
+		// The left quarter of a tile: where the drawn tile and the pointer's tile agree.
+		const mapLeft, inTile = 8, 4
+		host.MouseX = mapLeft + (p.X+dx-int(g.MapX)+viewCenter)*tileSize + inTile
+		host.MouseY = mapLeft + (p.Y+dy-int(g.MapY)+viewCenter)*tileSize + inTile
+		for _, down := range []bool{true, false} {
+			host.MouseLeft = down
+			for range 30 {
+				host.Step()
+			}
+		}
+	}
+	for _, mouse := range []bool{false, true} {
+		suffix := map[bool]string{false: "", true: "_mouse"}[mouse]
+		gold := g.AddMapObj(shapeOf(ObjGold, 0), StatusOwned, 5, p.X-1, p.Y, p.Z)
+		candle := g.AddMapObj(shapeOf(ObjCandle, 0), 0, 1, p.X, p.Y+1, p.Z)
+		g.refreshArea()
+		if mouse {
+			press(host.Key{Char: 'g'})
+			click(-1, 0)
+		} else {
+			press(host.Key{Char: 'g'}, host.Key{Scan: host.ScanLeft})
+		}
+		snap("get" + suffix)
+		if o := g.object(gold); o.Shape != 0 && o.CoordUse() == OnMap {
+			t.Errorf("get%s: the gold is still on the map", suffix)
+		}
+		if mouse {
+			press(host.Key{Char: 'u'})
+			click(0, 1)
+		} else {
+			press(host.Key{Char: 'u'}, host.Key{Scan: host.ScanDown})
+		}
+		snap("use" + suffix)
+		if g.object(candle).Frame() == 0 {
+			t.Errorf("use%s: the candle is not lit: %v sel %d candle %d", suffix, *g.object(candle), g.Selection.obj, candle)
+		}
+		g.DeleteObj(candle)
+	}
+}
+
+// testFight puts a hostile rat next to the party and attacks it until it dies.
+func testFight(t *testing.T, g *Game, press func(...host.Key), snap func(string)) {
+	p := g.object(int(g.Party[g.Active])).Pos
+	rat := g.generate(int(ObjGiantRat), p.X+1, p.Y, p.Z)
+	g.refreshArea()
+	positions := func() []Coord {
+		var c []Coord
+		for i := range int(g.PartySize) {
+			c = append(c, g.object(int(g.Party[i])).Pos)
+		}
+		return c
+	}
+	before := positions()
+	if g.InCombat == 0 {
+		press(host.Key{Char: 'B'})
+	}
+	snap("fight_begin")
+	for round := 0; round < 40 && g.object(rat).Shape != 0 && g.object(rat).Type() == ObjGiantRat && !g.NPCs[rat].Has(Dead); round++ {
+		r := g.object(rat).Pos
+		var dir host.Key
+		switch {
+		case r.X > p.X:
+			dir = host.Key{Scan: host.ScanRight}
+		case r.X < p.X:
+			dir = host.Key{Scan: host.ScanLeft}
+		case r.Y > p.Y:
+			dir = host.Key{Scan: host.ScanDown}
+		default:
+			dir = host.Key{Scan: host.ScanUp}
+		}
+		press(host.Key{Char: 'a'}, dir)
+		p = g.object(int(g.Party[g.Active])).Pos
+	}
+	snap("fight_end")
+	if g.object(rat).Shape != 0 && g.object(rat).Type() == ObjGiantRat && !g.NPCs[rat].Has(Dead) {
+		t.Errorf("the rat survived: %v %v", *g.object(rat), g.NPCs[rat].Status)
+	}
+	moved := 0
+	for i, c := range positions() {
+		if c != before[i] {
+			moved++
+		}
+	}
+	t.Logf("%d party members moved during the fight", moved)
+	if moved == 0 {
+		t.Error("no AI moves happened")
 	}
 }

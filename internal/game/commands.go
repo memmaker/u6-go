@@ -386,7 +386,7 @@ func (g *Game) reportCrime() {
 			npc.Status&alignmentMask != alignNeutral {
 			continue
 		}
-		distance := g.combatRange(o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY))
+		distance := g.distance(n, int(g.MapX), int(g.MapY))
 		if o.Type() == ObjGuard {
 			if distance < guardsHear {
 				npc.Mode = AIArrest

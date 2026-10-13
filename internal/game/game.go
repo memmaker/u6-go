@@ -263,6 +263,8 @@ type Game struct {
 	inventory
 	missileState
 	eggState
+	combat
+	paths pathfinder
 	colours colours
 
 	random randomState
@@ -274,7 +276,8 @@ type Game struct {
 func (g *Game) object(n int) *Object { return &g.Objects[n] }
 
 // isPlayerControlled says whether n is a party member (IsPlrControl).
-func (g *Game) isPlayerControlled(n int) bool { return g.NPCs[n].Has(PlayerControl) }
+// fix: C reads past the NPC table for ordinary objects.
+func (g *Game) isPlayerControlled(n int) bool { return n < len(g.NPCs) && g.NPCs[n].Has(PlayerControl) }
 
 // inVehicle says whether the party is travelling in a vehicle (IN_VEHICLE).
 func (g *Game) inVehicle() bool { return g.Active == g.PartySize }
@@ -284,6 +287,14 @@ func (g *Game) tileFrame(n int) int {
 	o := &g.Objects[n]
 	return int(g.BaseTile[o.Type()]) + o.Frame()
 }
+
+// The four main directions.
+const (
+	dirNorth = 0
+	dirEast  = 2
+	dirSouth = 4
+	dirWest  = 6
+)
 
 // Direction steps (DirIncrX/DirIncrY), north first, clockwise.
 var (

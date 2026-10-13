@@ -1,9 +1,8 @@
 # GAME.EXE port status
 
 Every function defined in `u6-re/src/*.c`, with its Go name in `internal/game`.
-"ported" means the Go function follows the C; "TODO" means a stub marked `// TODO(port): <C name>` or not written yet.
-Ported: 280. TODO: 196.
-
+"ported" means a Go function carries its `// C:` comment and no `TODO(port)` names it; "TODO" means it is missing or a `TODO(port)` still names it.
+Ported: 339. TODO: 137.
 
 ## seg_0903.c
 
@@ -17,7 +16,7 @@ Ported: 280. TODO: 196.
 | C_0903_07C4 | TODO |  |
 | PaletteAnimation (C_0903_0820) | ported | paletteAnimation |
 | C_0903_09BB | TODO |  |
-| C_0903_0A1E | TODO |  |
+| C_0903_0A1E | ported | goToEnding |
 | C_0903_0AE6 | TODO |  |
 | cfg_parse (C_0903_0B46) | TODO |  |
 
@@ -33,7 +32,7 @@ Ported: 280. TODO: 196.
 | C_0A33_09CE | ported | drawMap |
 | OtherAnimations (C_0A33_0CBC) | ported | OtherAnimations |
 | C_0A33_0D06 | ported | updateViewNow |
-| TerrainDamage (C_0A33_0D1D) | TODO | terrainDamage |
+| TerrainDamage (C_0A33_0D1D) | ported | terrainDamage |
 | C_0A33_0FEB | ported | checkStepOn |
 | C_0A33_117A | ported | erupt |
 | C_0A33_121A | ported | updateMoongates |
@@ -43,7 +42,7 @@ Ported: 280. TODO: 196.
 | SetActive (C_0A33_1B36) | ported | SetActive |
 | SetPartyMode (C_0A33_1BB2) | ported | SetPartyMode |
 | __GetHex (C_0A33_1C4C) | TODO |  |
-| C_0A33_1CB4 | ported | Play |
+| C_0A33_1CB4 | ported | Play, switchMember, command |
 
 ## seg_0C9C.c
 
@@ -70,7 +69,7 @@ Ported: 280. TODO: 196.
 | mkMouseSelection (C_0C9C_1107) | ported | mouseSelection |
 | do_CMD_91 (C_0C9C_121F) | ported | clickPartyView |
 | do_CMD_90 (C_0C9C_12B7) | ported | clickPortraitView |
-| do_CMD_92 (C_0C9C_131D) | ported | clickEquipmentView |
+| do_CMD_92 (C_0C9C_131D) | TODO | clickEquipmentView |
 | do_CMD_A1 (C_0C9C_15EB) | TODO |  |
 | setDefaultCommand (C_0C9C_166D) | ported | setDefaultCommand |
 | mkMouseCommand (C_0C9C_1714) | ported | mouseCommand |
@@ -78,9 +77,9 @@ Ported: 280. TODO: 196.
 | C_0C9C_1991 | TODO |  |
 | C_0C9C_19D6 | TODO |  |
 | C_0C9C_1AE5 | ported | drawStatusCursor |
-| C_0C9C_1D59 | ported | readCommand |
+| C_0C9C_1D59 | TODO | readCommand, selectTarget, statusKey |
 | C_0C9C_2A16 | TODO |  |
-| CON_getch (C_0C9C_2A59) | ported | getch |
+| CON_getch (C_0C9C_2A59) | TODO | getch |
 | CON_gets (C_0C9C_2D3A) | ported | gets |
 | CON_createClip (C_0C9C_2E09) | ported | createClip |
 | CON_setClip (C_0C9C_2E54) | ported | setClip |
@@ -104,10 +103,10 @@ Ported: 280. TODO: 196.
 | C_101C_054C | ported | enterArea |
 | PartyEnter (C_101C_0572) | ported | partyEnter |
 | PartyExit (C_101C_077E) | ported | partyExit |
-| PartyTeleport (C_101C_0828) | ported | partyTeleport |
+| PartyTeleport (C_101C_0828) | TODO | partyTeleport |
 | C_101C_089E | ported | climb |
-| GateTravel (C_101C_0A3A) | ported | gateTravel |
-| C_101C_0ACC | TODO |  |
+| GateTravel (C_101C_0A3A) | TODO | gateTravel |
+| C_101C_0ACC | ported | resurrectParty |
 | getChunkIdxAt (C_101C_0CF7) | ported | chunkAt |
 | GetTileAtXYZ (C_101C_0DC9) | ported | GetTileAtXYZ |
 
@@ -119,7 +118,7 @@ Ported: 280. TODO: 196.
 | __1100_009F | TODO |  |
 | __SetVisited (C_1100_00CF) | ported | queue |
 | C_1100_0131 | ported | computeLight |
-| C_1100_0306 | ported | computeView |
+| C_1100_0306 | ported | computeView, wallSeen |
 
 ## seg_1184.c
 
@@ -151,8 +150,8 @@ Ported: 280. TODO: 196.
 | C_1184_16D5 | ported | unlinkFromArea |
 | DeleteObj (C_1184_17A5) | ported | DeleteObj |
 | C_1184_19AA | ported | forgetFarObjects |
-| C_1184_1B3A | TODO |  |
-| C_1184_1C52 | TODO |  |
+| C_1184_1B3A | ported | dropBody |
+| C_1184_1C52 | ported | raiseBody |
 | C_1184_1D2E | ported | isHeldBy |
 | C_1184_1D60 | ported | lastHeld |
 | MoveObj (C_1184_1DAF) | ported | MoveObj |
@@ -165,13 +164,13 @@ Ported: 280. TODO: 196.
 | TransferObj (C_1184_257D) | TODO |  |
 | C_1184_26E2 | ported | deleteTmpFiles |
 | C_1184_2722 | ported | writeBlock |
-| C_1184_2888 | ported | unloadObjects |
+| C_1184_2888 | ported | unloadObjects, unloadRegion |
 | C_1184_29C4 | ported | compareListOrder |
 | C_1184_2B27 | ported | moveHeldAfterHolders |
-| C_1184_2DEF | ported | readBlock |
+| C_1184_2DEF | ported | readBlock, loadRegion |
 | C_1184_2ECC | ported | rebuildAreaObjects |
-| C_1184_2FB3 | ported | unloadObjects |
-| C_1184_30A6 | ported | readBlock |
+| C_1184_2FB3 | ported | unloadLevel |
+| C_1184_30A6 | ported | loadLevel |
 | LoadNewRegions (C_1184_3176) | ported | LoadNewRegions |
 | C_1184_33CA | ported | commitObjects |
 | ShowObject (C_1184_347C) | ported | showObject |
@@ -194,14 +193,14 @@ Ported: 280. TODO: 196.
 | GetWeight (C_155D_0661) | ported | weightOf |
 | Encumbrance (C_155D_0707) | ported | encumbrance |
 | C_155D_0748 | ported | weighInventory |
-| C_155D_07E0 | ported | weighInventory |
+| C_155D_07E0 | TODO |  |
 | C_155D_08F4 | ported | drawEquipment |
 | C_155D_0CB6 | ported | roundWeight |
 | C_155D_0CF5 | ported | drawInventory |
 | C_155D_1022 | ported | refreshInventory |
 | C_155D_1065 | ported | equipmentView |
 | C_155D_120A | ported | scrollInventory |
-| C_155D_123E | ported | scrollInventory |
+| C_155D_123E | TODO |  |
 | C_155D_1267 | ported | pointInventory |
 | C_155D_130E | ported | pointEquipment |
 | C_155D_13F4 | ported | slotOf |
@@ -231,7 +230,7 @@ Ported: 280. TODO: 196.
 | C_1703_1494 | ported | indexedAddress |
 | parse_statement (C_1703_1C45) | ported | parseStatement |
 | C_1703_1D01 | ported | matchKeywords |
-| TalkDriver (C_1703_1E23) | ported | talkDriver |
+| TalkDriver (C_1703_1E23) | ported | talkDriver, converse |
 
 ## seg_1944.c
 
@@ -250,7 +249,7 @@ Ported: 280. TODO: 196.
 | SPELL_RefreshPage (C_1944_0773) | TODO |  |
 | C_1944_0A43 | ported | heldOfQuality |
 | C_1944_0AA9 | TODO |  |
-| C_1944_0AD0 | TODO |  |
+| C_1944_0AD0 | ported | sleepSpell |
 | C_1944_0B32 | TODO |  |
 | C_1944_0B85 | TODO |  |
 | C_1944_0BF4 | TODO |  |
@@ -263,7 +262,7 @@ Ported: 280. TODO: 196.
 | C_1944_11BB | TODO |  |
 | C_1944_1232 | TODO |  |
 | C_1944_12FC | TODO |  |
-| C_1944_1A42 | TODO |  |
+| C_1944_1A42 | ported | resurrect |
 | C_1944_1C51 | TODO |  |
 | __1944_1DAB | TODO |  |
 | C_1944_1DF4 | TODO |  |
@@ -308,39 +307,39 @@ Ported: 280. TODO: 196.
 | C_1E0F_0FA9 | ported | draggedUnderTurn |
 | C_1E0F_1056 | ported | alreadyNear |
 | MoveFollowers (C_1E0F_1193) | ported | MoveFollowers |
-| Board (C_1E0F_14BE) | TODO |  |
-| Unboard (C_1E0F_1745) | TODO |  |
-| C_1E0F_184D | ported | travelThrough |
+| Board (C_1E0F_14BE) | ported | board |
+| Unboard (C_1E0F_1745) | ported | unboard |
+| C_1E0F_184D | TODO | enterGates, travelThrough |
 | C_1E0F_1B0E | ported | advance |
 | C_1E0F_2001 | ported | openDoorUnder |
-| C_1E0F_2125 | TODO |  |
-| C_1E0F_2184 | TODO |  |
-| __AtDestination (C_1E0F_2276) | TODO | atDestination |
-| C_1E0F_25F9 | TODO |  |
-| C_1E0F_291C | TODO | leavePath |
-| C_1E0F_2A74 | TODO |  |
-| __ResetPath (C_1E0F_2C9D) | TODO |  |
-| C_1E0F_2D37 | TODO |  |
-| C_1E0F_31C7 | TODO |  |
+| C_1E0F_2125 | ported | plateNear |
+| C_1E0F_2184 | ported | furnitureAt |
+| __AtDestination (C_1E0F_2276) | ported | atDestination |
+| C_1E0F_25F9 | ported | tracePath |
+| C_1E0F_291C | ported | sendHome |
+| C_1E0F_2A74 | ported | visit |
+| __ResetPath (C_1E0F_2C9D) | ported | reversePath |
+| C_1E0F_2D37 | ported | findPath |
+| C_1E0F_31C7 | ported | randomBias |
 | SubTerrainMov (C_1E0F_31F7) | ported | subTerrainMove |
 | TryStraightMove (C_1E0F_32D6) | ported | TryStraightMove |
-| C_1E0F_33C4 | TODO |  |
+| C_1E0F_33C4 | ported | loiter |
 | __TryDiagMove (C_1E0F_3470) | ported | tryDiagonalMove |
 | TryMoveTo (C_1E0F_35A7) | ported | TryMoveTo |
-| C_1E0F_37DB | TODO |  |
-| __DoOnPath (C_1E0F_387D) | TODO |  |
-| C_1E0F_39B3 | TODO |  |
-| C_1E0F_3B60 | TODO |  |
-| C_1E0F_3D8D | TODO |  |
-| C_1E0F_3E08 | TODO |  |
-| __NewPathIndex (C_1E0F_3E27) | TODO |  |
-| C_1E0F_3E6A | TODO | npcTurn |
-| C_1E0F_4265 | TODO |  |
-| __ComputeResistance (C_1E0F_436A) | TODO |  |
-| C_1E0F_464A | TODO | teleportNPCs |
-| C_1E0F_4746 | TODO | placeScheduledNPCs |
-| C_1E0F_4AFA | TODO |  |
-| C_1E0F_4B6A | TODO | updateLeaders |
+| C_1E0F_37DB | ported | wander |
+| __DoOnPath (C_1E0F_387D) | ported | followPath |
+| C_1E0F_39B3 | ported | approachParty |
+| C_1E0F_3B60 | ported | arrest |
+| C_1E0F_3D8D | ported | stealGold |
+| C_1E0F_3E08 | ported | talkToParty |
+| __NewPathIndex (C_1E0F_3E27) | ported | newPathSlot |
+| C_1E0F_3E6A | ported | npcTurn |
+| C_1E0F_4265 | ported | addResistance |
+| __ComputeResistance (C_1E0F_436A) | ported | computeResistance |
+| C_1E0F_464A | ported | schedulePaths |
+| C_1E0F_4746 | ported | computeGravity |
+| C_1E0F_4AFA | ported | avatarDied |
+| C_1E0F_4B6A | ported | checkActiveMember |
 | C_1E0F_4E0A | ported | runTurns |
 | C_1E0F_512A | ported | startTurns |
 | C_1E0F_5165 | ported | followSchedules |
@@ -349,71 +348,71 @@ Ported: 280. TODO: 196.
 
 | C function | status | Go |
 |---|---|---|
-| COMBAT_getCathesus (C_2337_000B) | ported | combatRange |
-| COMBAT_stopCharm (C_2337_005E) | TODO | stopCharm |
-| COMBAT_begin (C_2337_00C8) | TODO | beginCombat |
-| COMBAT_breakOff (C_2337_01BC) | TODO |  |
+| COMBAT_getCathesus (C_2337_000B) | ported | distance |
+| COMBAT_stopCharm (C_2337_005E) | ported | stopCharm |
+| COMBAT_begin (C_2337_00C8) | ported | beginCombat |
+| COMBAT_breakOff (C_2337_01BC) | ported | breakOff |
 | COMBAT_TryTeleport (C_2337_02DC) | ported | tryTeleport |
 | GetStr (C_2337_03E7) | ported | strengthOf |
 | GetDex (C_2337_0411) | ported | dexterityOf |
 | GetInt (C_2337_0458) | ported | intelligenceOf |
-| COMBAT_TestIntel (C_2337_0482) | TODO |  |
+| COMBAT_TestIntel (C_2337_0482) | ported | testIntelligence |
 | ComputeLevel (__2337_04BE) | TODO |  |
 | GetLevel (C_2337_04E1) | TODO |  |
-| AddXP (C_2337_04F4) | TODO |  |
+| AddXP (C_2337_04F4) | ported | addExperience |
 | MaxHP (C_2337_0529) | ported | maxHitPoints |
 | MaxMagic (C_2337_0559) | ported | maxMagic |
 | SetTypeUnconscious (C_2337_05B4) | ported | setUnconscious |
 | COMBAT_canSee (C_2337_0837) | ported | canSee |
 | C_2337_08F1 | ported | objectAtForSelection |
 | GetArmorPoints (C_2337_0983) | ported | armorPoints |
-| __GetProtection (C_2337_09BF) | TODO |  |
-| __GetWeaponRange (C_2337_0A14) | TODO |  |
-| C_2337_0A4E | TODO |  |
+| __GetProtection (C_2337_09BF) | ported | protection |
+| __GetWeaponRange (C_2337_0A14) | ported | weaponRange |
+| C_2337_0A4E | ported | interferes |
 | COMBAT_Missile (C_2337_0B3F) | ported | throw |
-| C_2337_0B99 | TODO |  |
+| C_2337_0B99 | ported | rangedAttack |
 | GetDamagePoints (C_2337_10E4) | ported | damagePoints |
-| CloneObject (C_2337_115F) | TODO |  |
-| COMBAT_showHit (C_2337_121F) | TODO |  |
-| LooseHP (C_2337_12F5) | TODO | loseHitPoints |
-| __AttackTest (C_2337_18CF) | TODO |  |
+| CloneObject (C_2337_115F) | ported | cloneObject |
+| COMBAT_showHit (C_2337_121F) | ported | showHit |
+| LooseHP (C_2337_12F5) | ported | loseHitPoints, kill, divideSlime, showHitPoints |
+| __AttackTest (C_2337_18CF) | ported | hits |
 | COMBAT_displaySeverity (C_2337_198F) | ported | displaySeverity |
-| C_2337_1A99 | TODO |  |
+| C_2337_1A99 | ported | pickItem |
 | C_2337_1B0E | ported | reportCrime |
-| C_2337_1C1E | TODO |  |
-| __DoHit (C_2337_1D20) | TODO |  |
+| C_2337_1C1E | ported | provoke |
+| __DoHit (C_2337_1D20) | ported | doHit |
 | COMBAT_getHead (C_2337_205C) | ported | combatHead |
-| __TryHit (C_2337_214D) | TODO |  |
-| C_2337_27C5 | TODO |  |
-| C_2337_2875 | TODO |  |
-| COMBAT_attack (C_2337_2AA9) | TODO |  |
-| COMBAT_range (C_2337_2BEE) | TODO |  |
-| COMBAT_pickOpponent (C_2337_2D6E) | TODO |  |
-| COMBAT_AI_Assault (C_2337_2F3E) | TODO |  |
-| C_2337_310E | TODO |  |
-| COMBAT_AI_Front (C_2337_3464) | TODO |  |
-| COMBAT_AI_Rear (C_2337_34C9) | TODO |  |
-| COMBAT_AI_Flank (C_2337_37F2) | TODO |  |
-| COMBAT_AI_Bersek (C_2337_3C3A) | TODO |  |
-| COMBAT_AI_Retreat (C_2337_3ED2) | TODO |  |
-| COMBAT_AI_Like (C_2337_407F) | TODO |  |
-| COMBAT_AI_Unfriendly (C_2337_41B7) | TODO |  |
-| COMBAT_AI_Immobile (C_2337_42EE) | TODO |  |
-| __TryGrowVine (C_2337_43D2) | TODO |  |
-| COMBAT_AI_Tangle (C_2337_44F6) | TODO |  |
+| __TryHit (C_2337_214D) | ported | tryHit |
+| C_2337_27C5 | ported | listWeapons |
+| C_2337_2875 | ported | attackWithNext |
+| COMBAT_attack (C_2337_2AA9) | ported | attack |
+| COMBAT_range (C_2337_2BEE) | ported | combatRange |
+| COMBAT_pickOpponent (C_2337_2D6E) | ported | pickOpponent |
+| COMBAT_AI_Assault (C_2337_2F3E) | ported | assault |
+| C_2337_310E | ported | holdLine |
+| COMBAT_AI_Front (C_2337_3464) | ported | front |
+| COMBAT_AI_Rear (C_2337_34C9) | ported | rear |
+| COMBAT_AI_Flank (C_2337_37F2) | ported | flank |
+| COMBAT_AI_Bersek (C_2337_3C3A) | ported | berserk |
+| COMBAT_AI_Retreat (C_2337_3ED2) | ported | retreat |
+| COMBAT_AI_Like (C_2337_407F) | ported | like |
+| COMBAT_AI_Unfriendly (C_2337_41B7) | ported | unfriendly |
+| COMBAT_AI_Immobile (C_2337_42EE) | ported | immobile |
+| __TryGrowVine (C_2337_43D2) | ported | growTangle |
+| COMBAT_AI_Tangle (C_2337_44F6) | ported | tangle |
 
 ## seg_27a1.c
 
 | C function | status | Go |
 |---|---|---|
-| C_27A1_0008 | TODO |  |
-| C_27A1_0028 | TODO |  |
+| C_27A1_0008 | ported | memberUser |
+| C_27A1_0028 | ported | userX |
 | C_27A1_0051 | TODO |  |
 | C_27A1_0082 | ported | isContainer |
 | C_27A1_00A9 | ported | canPutInto |
 | C_27A1_012C | TODO |  |
 | IsOkToGet (C_27A1_0153) | ported | okToGet |
-| SetOkToGet (C_27A1_019E) | ported | setOkToGet |
+| SetOkToGet (C_27A1_019E) | TODO | setOkToGet |
 | C_27A1_01DE | TODO |  |
 | C_27A1_0205 | ported | parseNumber |
 | C_27A1_02D9 | ported | showCharacter |
@@ -426,7 +425,7 @@ Ported: 280. TODO: 196.
 | C_27A1_08D3 | ported | isClosed |
 | C_27A1_0919 | ported | objectBelow |
 | C_27A1_09A1 | ported | search |
-| C_27A1_0C67 | ported | look |
+| C_27A1_0C67 | TODO | look |
 | C_27A1_1330 | ported | supports |
 | C_27A1_13BE | ported | howMany |
 | C_27A1_14DA | ported | drop |
@@ -438,7 +437,7 @@ Ported: 280. TODO: 196.
 | C_27A1_2A44 | ported | useDoor |
 | C_27A1_2BBC | ported | useChest |
 | C_27A1_2D34 | ported | skillFails |
-| C_27A1_2D61 | ported | skillFails |
+| C_27A1_2D61 | TODO |  |
 | C_27A1_2D8E | ported | useKey |
 | C_27A1_2FD1 | ported | lightTorch |
 | C_27A1_319F | ported | useGem |
@@ -451,14 +450,14 @@ Ported: 280. TODO: 196.
 | __27A1_3617 | TODO |  |
 | __27A1_363C | TODO |  |
 | C_27A1_3661 | ported | fillBucket |
-| C_27A1_36E7 | ported | fillBucket |
+| C_27A1_36E7 | TODO |  |
 | C_27A1_376D | ported | churn |
 | C_27A1_37D3 | ported | fill |
 | C_27A1_3832 | ported | drinkPotion |
 | C_27A1_3A35 | ported | fireCannon |
 | C_27A1_3B59 | ported | lightKeg |
-| AfterExplosion (C_27A1_3BE1) | TODO |  |
-| Detonate (C_27A1_3D2B) | TODO | detonate |
+| AfterExplosion (C_27A1_3BE1) | ported | afterExplosion |
+| Detonate (C_27A1_3D2B) | ported | detonate |
 | __SearchTypeAt (C_27A1_3E21) | ported | typeAt |
 | C_27A1_3E59 | ported | thingOnBridge |
 | C_27A1_3E9A | ported | characterAt |
@@ -467,7 +466,7 @@ Ported: 280. TODO: 196.
 | C_27A1_3F47 | ported | moveBridge |
 | C_27A1_433D | ported | turnCrank |
 | C_27A1_4479 | ported | switchLever |
-| C_27A1_4672 | ported | switchLever |
+| C_27A1_4672 | TODO |  |
 | C_27A1_47E0 | TODO |  |
 | C_27A1_47F3 | ported | buildBalloon |
 | C_27A1_49C3 | ported | inflateBalloon |
@@ -477,16 +476,16 @@ Ported: 280. TODO: 196.
 | C_27A1_4E6F | ported | drink |
 | C_27A1_4E9B | ported | wish |
 | C_27A1_4FC6 | ported | dig |
-| C_27A1_51C4 | TODO |  |
+| C_27A1_51C4 | ported | landNear |
 | C_27A1_5289 | ported | useVehicle |
-| C_27A1_5431 | TODO |  |
+| C_27A1_5431 | ported | mount |
 | C_27A1_5503 | ported | mountHorse |
 | C_27A1_55F0 | ported | dismount |
 | C_27A1_5789 | ported | useOrb |
-| C_27A1_5935 | ported | gazeCrystalBall |
+| C_27A1_5935 | TODO | gazeCrystalBall |
 | C_27A1_5A97 | ported | lookThrough |
 | C_27A1_5BCF | ported | blowHorn |
-| C_27A1_5DF2 | ported | usePassthrough |
+| C_27A1_5DF2 | TODO | usePassthrough |
 | C_27A1_5F43 | ported | eat |
 | C_27A1_5FAC | TODO |  |
 | C_27A1_60BD | TODO |  |
@@ -532,9 +531,9 @@ Ported: 280. TODO: 196.
 | C_2FC1_032B | ported | redrawForeground |
 | C_2FC1_131E | TODO |  |
 | C_2FC1_13B0 | TODO |  |
-| ShakeScreen (C_2FC1_18BD) | TODO | shakeScreen |
+| ShakeScreen (C_2FC1_18BD) | ported | shakeScreen |
 | C_2FC1_193C | TODO |  |
-| C_2FC1_19A1 | TODO |  |
+| C_2FC1_19A1 | ported | redrawWorld |
 | C_2FC1_19C5 | ported | drawSky |
 | C_2FC1_1BCE | TODO |  |
 | C_2FC1_1C19 | ported | drawPortrait |
@@ -555,7 +554,7 @@ Ported: 280. TODO: 196.
 | C_3200_0226 | ported | othersNear |
 | C_3200_02C4 | ported | noRoom |
 | HasNightEncounter (C_3200_0309) | ported | nightAmbush |
-| C_3200_0467 | ported | heal |
+| C_3200_0467 | TODO | heal |
 | C_3200_0514 | TODO |  |
 | C_3200_055D | ported | rest |
 

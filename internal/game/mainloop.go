@@ -65,6 +65,7 @@ func New(dir string) (*Game, error) {
 	g.initTurns()
 	g.lastHour = noHour
 	g.thrower = noObject
+	g.lastTarget = noObject
 	g.worldShown = true
 	g.StatusDisplay = cmdStatusParty
 	g.random.randomize(timeSeed(time.Now()))
@@ -126,10 +127,6 @@ func New(dir string) (*Game, error) {
 // Frame returns the screen for the host.
 func (g *Game) Frame() *host.Frame { return g.gr.Frame() }
 
-// beginCombat puts the party in combat mode.
-// TODO(port): COMBAT_begin
-func (g *Game) beginCombat() {}
-
 // commandKeys are the letters of the commands that ask for a target, with how the target
 // is picked: the select mode and range.
 var commandKeys = map[int]struct{ command, mode, rng int }{
@@ -156,8 +153,13 @@ func (g *Game) Play() {
 			g.SelectMode = k.mode
 			g.AimX, g.AimY = viewCenter, viewCenter
 			g.SelectRange = k.rng
-			if ch == cmdAttack {
-				// TODO(port): aim at the last target (D_04A7)
+			if ch == cmdAttack && g.lastTarget >= 0 {
+				p := g.object(g.lastTarget).Pos
+				g.AimX = p.X&byteMask - int(g.MapX) + viewCenter
+				g.AimY = p.Y&byteMask - int(g.MapY) + viewCenter
+				if g.AimX < 0 || g.AimX >= viewTiles || g.AimY < 0 || g.AimY >= viewTiles {
+					g.AimX, g.AimY = viewCenter, viewCenter
+				}
 			}
 			if ch == cmdDrop {
 				g.statusCursorX, g.statusCursorY = 3, 0
@@ -283,7 +285,7 @@ func (g *Game) command(ch int) bool {
 		g.printf(exitToDOSMsg)
 		return g.yesNo()
 	case cmdAttack:
-		// TODO(port): COMBAT_attack
+		g.attack()
 		g.pendingCommand = cmdPass
 	case cmdCombat:
 		switch {
@@ -291,8 +293,7 @@ func (g *Game) command(ch int) bool {
 			g.printf(notInSoloMsg)
 		case g.InCombat != 0:
 			g.printf(breakOffMsg)
-			// TODO(port): COMBAT_breakOff
-			g.InCombat = 0
+			g.breakOff()
 		case g.inVehicle():
 			g.printf(notOnShipMsg)
 		default:
@@ -396,7 +397,7 @@ func (g *Game) command(ch int) bool {
 		const hour = 60
 		g.passTime(hour)
 		g.allowNPCTeleport = true
-		g.teleportNPCs()
+		g.schedulePaths()
 		g.allowNPCTeleport = false
 	default:
 		g.printf(whatMsg)

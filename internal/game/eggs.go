@@ -502,7 +502,6 @@ type eggState struct {
 // shaminoNear says whether Shamino is in the party, alive and near (SHAMINO_COMMENT).
 func (g *Game) shaminoNear() bool {
 	const shamino, earshot = 3, 6
-	p := g.object(shamino).Pos
 	return g.isPlayerControlled(shamino) && !g.NPCs[shamino].Has(Dead) &&
-		g.combatRange(p.X, p.Y, int(g.MapX), int(g.MapY)) < earshot
+		g.distance(shamino, int(g.MapX), int(g.MapY)) < earshot
 }

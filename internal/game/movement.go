@@ -56,7 +56,11 @@ func (g *Game) passable(n, x, y int) bool {
 	g.steppedOnDamage = false
 	const doubleBoth = tileDoubleWidth | tileDoubleHeight
 	big := g.TileFlag[g.tileFrame(n)]&doubleBoth == doubleBoth
-	active := int(g.Party[g.Active])
+	// fix: while the party is raised Active is -1 and C reads before the party table.
+	active := noObject
+	if int(g.Active) < len(g.Party) {
+		active = int(g.Party[g.Active])
+	}
 	o := g.object(n)
 	t := o.Type()
 	cls := monsterClass(t)
@@ -857,9 +861,9 @@ func (g *Game) TryMoveTo(n, x, y int) bool {
 // commands, and makes that one active.
 // C: seg_1E0F:4E0A (C_1E0F_4E0A)
 func (g *Game) runTurns() {
-	g.updateLeaders()
-	g.placeScheduledNPCs()
-	g.teleportNPCs()
+	g.checkActiveMember()
+	g.computeGravity()
+	g.schedulePaths()
 	n := int(g.Party[g.Active])
 	if g.NPCs[n].Mode > AIFollow && g.NPCs[n].Mode < AIGuard2 {
 		g.NPCs[n].Leader = byte(n)
@@ -888,7 +892,7 @@ func (g *Game) runTurns() {
 				}
 				if (o.Pos.X-areaX)&mask > areaSize-1 || (o.Pos.Y-areaY)&mask > areaSize-1 {
 					if npc.Mode >= AIOnPath && npc.Mode <= AIPathLost {
-						g.leavePath(i)
+						g.sendHome(i)
 					}
 					if npc.Mode >= AIOnPath && npc.Mode < AIPathLost {
 						g.PathObject[npc.Leader] = 0
@@ -925,7 +929,7 @@ func (g *Game) runTurns() {
 		if !g.draggedUnderTurn(n) {
 			if mode := g.NPCs[n].Mode; mode != AICommand && mode != AIFollow {
 				g.npcTurn(n)
-				g.updateLeaders()
+				g.checkActiveMember()
 				if mode := g.NPCs[n].Mode; mode > AIFollow && mode < AIGuard2 {
 					g.NPCs[n].Leader = byte(n)
 				}
@@ -950,30 +954,6 @@ func (g *Game) runTurns() {
 	}
 }
 
-// npcTurn is the turn of a character the computer moves.
-// TODO(port): C_1E0F_3E6A (the AI); for now the character waits.
-func (g *Game) npcTurn(n int) { g.NPCs[n].MovePoints = 0 }
-
-// updateLeaders works out who leads each group of creatures.
-// TODO(port): C_1E0F_4B6A
-func (g *Game) updateLeaders() {}
-
-// placeScheduledNPCs puts NPCs where their schedule says when the party arrives.
-// TODO(port): C_1E0F_4746
-func (g *Game) placeScheduledNPCs() {}
-
-// teleportNPCs moves NPCs far from the party to their schedule's place.
-// TODO(port): C_1E0F_464A
-func (g *Game) teleportNPCs() {}
-
-// leavePath ends the path of an NPC leaving the area.
-// TODO(port): C_1E0F_291C
-func (g *Game) leavePath(n int) {}
-
-// atDestination starts what an NPC does where its schedule took it.
-// TODO(port): __AtDestination (C_1E0F_2276)
-func (g *Game) atDestination(n int) {}
-
 // initTurns readies the characters for the first turn.
 // C: seg_1E0F:512A (C_1E0F_512A)
 func (g *Game) startTurns() {
@@ -988,7 +968,7 @@ func (g *Game) startTurns() {
 	if g.SoloMember < 0 {
 		g.soloLeader = int(g.Active)
 	}
-	g.placeScheduledNPCs()
+	g.computeGravity()
 }
 
 // followSchedules sends the NPCs whose schedule changes this hour on their way.

@@ -291,38 +291,42 @@ func toggleLit(frame int) int {
 // trap springs the trap of n.
 // C: seg_27A1:28A3 (C_27A1_28A3)
 func (g *Game) trap(n int) {
+	var victim, x, y int
+	if g.object(n).CoordUse() == OnMap {
+		victim = g.user()
+		x, y = g.userX(n), g.userY(n)
+	} else {
+		victim = g.memberUser(g.statusMember)
+		x, y = g.userX(victim), g.userY(victim)
+	}
+	const damage = 20
 	switch g.rand(0, 3) {
 	case 0:
 		g.printf("Acid!\n")
-		victim := int(g.Party[0])
-		if !g.inVehicle() {
-			if g.object(n).CoordUse() == OnMap {
-				victim = int(g.Party[g.Active])
-			} else {
-				victim = int(g.Party[g.statusMember])
-			}
-		}
-		const acidMax = 20
-		g.loseHitPoints(victim, g.rand(1, acidMax))
+		g.loseHitPoints(victim, g.rand(1, damage))
 		g.putch('\n')
 		g.displaySeverity(victim)
 	case 1:
 		g.printf("Poison!\n")
-		victim := int(g.Party[g.Active])
-		if g.object(n).CoordUse() != OnMap {
-			victim = int(g.Party[g.statusMember])
-		}
-		if g.inVehicle() {
-			victim = int(g.Party[0])
-		}
 		g.NPCs[victim].Status |= Poisoned
-		// TODO(port): COMBAT_showHit
+		g.showHit(victim)
 	case 2:
 		g.printf("Bomb!\n")
-		// TODO(port): Explosion (TIL_17E) and its damage
+		for _, i := range append([]int(nil), g.explosion(x, y, tileBombBlast)...) {
+			if i < npcCount {
+				g.loseHitPoints(i, g.rand(1, damage))
+				g.putch('\n')
+				g.displaySeverity(i)
+			}
+		}
 	case 3:
 		g.printf("Gas!\n")
-		// TODO(port): Explosion (TIL_17C) and its poison
+		for _, i := range append([]int(nil), g.explosion(x, y, tileGasCloud)...) {
+			if i < npcCount {
+				g.NPCs[i].Status |= Poisoned
+				g.showHit(i)
+			}
+		}
 	}
 	g.DeleteObj(g.heldOfQuality(n, ObjEffect, trapSpell))
 	if g.StatusDisplay == cmdStatusParty || g.StatusDisplay == cmdStatusPortrait {
@@ -646,11 +650,31 @@ func (g *Game) carrierStrong(n, extra int) bool {
 }
 
 // user is the character that uses things: the ship in a vehicle (C_27A1_0008).
-func (g *Game) user() int {
+func (g *Game) user() int { return g.memberUser(int(g.Active)) }
+
+// memberUser is party member i, or the ship in a vehicle.
+// C: seg_27A1:0008 (C_27A1_0008)
+func (g *Game) memberUser(i int) int {
 	if g.inVehicle() {
 		return int(g.Party[0])
 	}
-	return int(g.Party[g.Active])
+	return int(g.Party[i])
+}
+
+// userX, userY are where object n is, or where the vehicle is.
+// C: seg_27A1:0028 (C_27A1_0028), seg_27A1:0051 (C_27A1_0051)
+func (g *Game) userX(n int) int {
+	if g.inVehicle() {
+		return g.object(0).Pos.X
+	}
+	return g.object(n).Pos.X
+}
+
+func (g *Game) userY(n int) int {
+	if g.inVehicle() {
+		return g.object(0).Pos.Y
+	}
+	return g.object(n).Pos.Y
 }
 
 // fillBucket fills a bucket at a well or a cow.
@@ -755,7 +779,7 @@ func (g *Game) drinkPotion(n int) {
 	case potionPoison:
 		if !classHas(monsterClass(g.object(sel.obj).Type()), immunePoison) {
 			npc.Status |= Poisoned
-			// TODO(port): COMBAT_showHit
+			g.showHit(sel.obj)
 		} else {
 			noEffect()
 		}
@@ -809,8 +833,15 @@ func (g *Game) fireCannon(n int) {
 	}
 	x += cannonStepX[f] * d
 	y += cannonStepY[f] * d
-	g.throw(n, &x, &y, reach-1, cannonBall)
-	// TODO(port): Explosion (TIL_189) where the ball lands and its damage (LooseHP)
+	if !g.throw(n, &x, &y, reach-1, cannonBall) {
+		g.missileX += cannonStepX[f]
+		g.missileY += cannonStepY[f]
+		g.explosion(g.missileX, g.missileY, tileFireBolt)
+	}
+	const blastDamage = 60
+	if hit := g.FindLoc(g.missileX, g.missileY, int(g.MapZ)); hit >= 0 && quantityType(g.object(hit).Type()) == countSingle {
+		g.loseHitPoints(hit, g.rand(1, blastDamage))
+	}
 }
 
 // lightKeg lights powder keg n.
@@ -1397,18 +1428,6 @@ func (g *Game) dig() {
 	}
 }
 
-// useVehicle boards or leaves a ship, skiff, raft or balloon.
-// C: seg_27A1:5289 (C_27A1_5289)
-func (g *Game) useVehicle(n int) {
-	n = g.combatHead(n)
-	if g.SoloMember != -1 {
-		g.printf("Not in solo mode!\n")
-		return
-	}
-	// TODO(port): C_27A1_5289 boarding and leaving (Board, Unboard, C_27A1_51C4, the deed)
-	g.printf("\n%s\n", notPossibleMsg)
-}
-
 // mountHorse puts the active character on horse n.
 // C: seg_27A1:5503 (C_27A1_5503)
 func (g *Game) mountHorse(n int) {
@@ -1427,8 +1446,11 @@ func (g *Game) mountHorse(n int) {
 	case g.object(actor).Type() == ObjMountedHorse:
 		g.printf("\nYou're already on a horse!\n")
 	default:
-		// TODO(port): C_27A1_5431 (mounting: the rider takes the horse's place)
-		g.printf("\n%s\n", notPossibleMsg)
+		o := g.object(n)
+		x, y, frame := o.Pos.X, o.Pos.Y, o.Frame()
+		g.setType(n, ObjGold)
+		g.DeleteObj(n)
+		g.mount(actor, x, y, frame, true)
 	}
 }
 
@@ -1697,8 +1719,32 @@ func (g *Game) setUnconscious(n int) {
 			o.Shape = shapeOf(ObjectType(shape&typeMask), 0)
 		}
 	} else if dead {
-		// TODO(port): SetTypeUnconscious, a dead creature without a body (insects, vanishing,
-		// slime, blood)
+		if cls >= 0 {
+			if cls == classGazer {
+				g.generate(int(ObjInsects), o.Pos.X, o.Pos.Y, int(g.MapZ))
+			}
+			if classHas(cls, disappears) || classHas(cls, vanishes) {
+				g.DeleteObj(n)
+				if classHas(cls, vanishes) && closeEnough(viewCenter, o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY)) {
+					g.drawMap(true)
+					g.ShowObjects()
+					g.screenFade = true
+					g.drawMap(true)
+				}
+			}
+		}
+		if t == ObjSlime {
+			g.updateSlimeFrames()
+		}
+		if t == ObjDragon {
+			g.DeleteObj(n)
+		}
+	}
+	if dead && (cls >= 0 && classHas(cls, bleeds) || t == ObjFarmer2 || t == ObjMusician2) {
+		if b := g.AddMapObj(shapeOf(ObjBlood, 0), StatusLocal, 0, o.Pos.X, o.Pos.Y, int(g.MapZ)); b >= 0 {
+			const bloodFrames = 2
+			g.object(b).SetFrame(g.rand(0, bloodFrames))
+		}
 	}
 	g.viewChanged = true
 }
@@ -1710,7 +1756,7 @@ const ladderDown = 1
 // C: seg_101C:089E (C_101C_089E)
 func (g *Game) climb(n int) {
 	if g.InCombat != 0 {
-		// TODO(port): COMBAT_breakOff
+		g.breakOff()
 	}
 	o := g.object(n)
 	step := 1
@@ -1797,7 +1843,7 @@ func (g *Game) partyEnter(animation int) {
 						}
 					case !g.TryMoveTo(n, mx, my):
 						const nextTo = 2
-						if g.combatRange(p.X, p.Y, mx, my) < nextTo {
+						if g.distance(n, mx, my) < nextTo {
 							g.MoveObj(n, mx, my, mz)
 						} else {
 							g.TryStraightMove(n, g.rand(0, 3)<<1, true)
@@ -1875,7 +1921,7 @@ func (g *Game) partyTeleport(x, y, z, animation int) {
 // C: seg_101C:0A3A (GateTravel)
 func (g *Game) gateTravel(dest int) {
 	if g.InCombat != 0 {
-		// TODO(port): COMBAT_breakOff
+		g.breakOff()
 	}
 	if s := g.Moonstones[dest]; s != [3]int16{} {
 		g.partyTeleport(int(s[0]), int(s[1]), int(s[2]), 1)

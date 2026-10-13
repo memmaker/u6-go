@@ -490,10 +490,23 @@ func (g *Game) clickEquipmentView() int {
 	if g.InConversation {
 		return 0
 	}
-	if g.PointerY >= 88 && !(g.statusMember != 0 && g.PointerX >= 240 && g.PointerX < 256 && g.PointerY < 104) {
+	if g.statusMember != 0 && g.PointerX >= 240 && g.PointerX < 256 && g.PointerY >= 88 && g.PointerY < 104 {
+		n := g.Party[g.statusMember]
+		npc := &g.NPCs[n]
+		npc.CombatMode++
+		if npc.CombatMode == AIAssault+1 {
+			npc.CombatMode = AICommand
+		}
+		if g.InCombat != 0 && int(g.Active) != g.statusMember && !g.object(int(n)).Has(StatusCharmed) {
+			npc.Mode = npc.CombatMode
+		}
+		g.refreshCombatMode()
+		return 0
+	}
+	if g.PointerY >= 88 {
 		return g.statusButton(cmdStatusPortrait)
 	}
-	// TODO(port): do_CMD_92 combat mode button, inventory scrolling, containers, ready
+	// TODO(port): do_CMD_92 inventory scrolling, containers, ready
 	return 0
 }
 
@@ -709,16 +722,6 @@ var rangeTable = [8][8]int{
 	{5, 5, 5, 6, 7, 7, 8, 8},
 	{6, 6, 6, 7, 7, 8, 8, 8},
 	{7, 7, 7, 7, 8, 8, 8, 8},
-}
-
-// combatRange is the distance used for ranges.
-// C: seg_2337 (COMBAT_getCathesus)
-func (g *Game) combatRange(x0, y0, x1, y1 int) int {
-	dx, dy := abs(x0-x1), abs(y0-y1)
-	if dx >= len(rangeTable) || dy >= len(rangeTable) {
-		return len(rangeTable)
-	}
-	return rangeTable[dy][dx]
 }
 
 // statusKey turns the keys of the status area into commands.

@@ -1,5 +1,7 @@
 package game
 
+import "github.com/memmaker/u6-go/internal/sound"
+
 // The map view: the 11x11 tiles around the party (Tile_11x11), the objects drawn on each
 // (Obj_11x11, chains through D_E5E0), and drawing them on the back buffer.
 
@@ -710,9 +712,19 @@ func (g *Game) updateViewNow() {
 	}
 }
 
-// shakeScreen shakes the view.
-// TODO(port): ShakeScreen
-func (g *Game) shakeScreen(duration, amplitude int) {}
+// shakeScreen shakes the view: the map is drawn off screen and copied at random offsets.
+// C: seg_2FC1:18BD (ShakeScreen)
+func (g *Game) shakeScreen(duration, amplitude int) {
+	const viewOrigin, viewSize = 16, 144
+	g.drawMap(false)
+	for range duration {
+		x := g.rand(viewOrigin-amplitude, viewOrigin+amplitude)
+		y := g.rand(viewOrigin-amplitude, viewOrigin+amplitude)
+		g.gr.CopyBackBufferToScreen(x, y, x+viewSize, y+viewSize, viewOrigin, viewOrigin)
+		g.sfx(sound.EffectRumble, 0)
+	}
+	g.OtherAnimations()
+}
 
 // Palette animation: the fire and water colours cycle, colour 255 pulses.
 const (

@@ -428,22 +428,6 @@ func (g *Game) drawSky() {
 	g.changeWind(true)
 }
 
-// detonate blows up a powder keg or a fumarole.
-// TODO(port): Detonate
-func (g *Game) detonate(n int) {}
-
-// stopCharm ends a charm.
-// TODO(port): COMBAT_stopCharm
-func (g *Game) stopCharm(n int) { g.object(n).Status &^= StatusCharmed }
-
-// loseHitPoints hurts a character.
-// TODO(port): LooseHP
-func (g *Game) loseHitPoints(n, hp int) {
-	npc := &g.NPCs[n]
-	npc.HitPoints = byte(max(int(npc.HitPoints)-hp, 0))
-	g.StatusDirty = true
-}
-
 // checkStepOn hurts a character standing on something harmful.
 // C: seg_0A33:0FEB (C_0A33_0FEB)
 func (g *Game) checkStepOn(n int) {
@@ -485,8 +469,3 @@ func (g *Game) checkStepOn(n int) {
 	}
 }
 
-// terrainDamage hurts a character on a web, swamp, fire or field.
-// TODO(port): TerrainDamage
-func (g *Game) terrainDamage(n, tile int) {
-	g.NPCs[n].Flags |= flagSkipTest
-}
