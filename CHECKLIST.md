@@ -4,7 +4,7 @@
 - [x] GAME.EXE byte-identical to shipped file (2026-10-13)
 - [x] Notes: rules added to ~/notes/c-to-go.md
 - [x] END.EXE byte-identical (2026-10-13, u6-re 06f25b3)
-- [ ] U.EXE byte-identical (agent running)
+- [x] U.EXE byte-identical (2026-10-13, u6-re 49b8dd5)
 
 ## B. Go port (~/Projects/u6-go), rules in ~/notes/c-to-go.md
 - [x] Repo skeleton: go.mod, cmd/u6, host (Ebiten lockstep), gameimport (-import)
