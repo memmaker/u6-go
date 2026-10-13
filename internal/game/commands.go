@@ -724,6 +724,12 @@ func (g *Game) drop() {
 	g.refreshInventory(g.container)
 }
 
+// confirmStealing asks whether to take an object that belongs to someone.
+func (g *Game) confirmStealing() bool {
+	g.printf("\nStealing! Take it? ")
+	return g.yesNo()
+}
+
 // get puts the selected object of the map in the active character's pack.
 // C: seg_27A1:18F5 (C_27A1_18F5)
 func (g *Game) get() {
@@ -766,6 +772,7 @@ func (g *Game) get() {
 		g.printf("\n%s\n", notPossibleMsg)
 	case int(g.NPCs[actor].Strength)*carryPerStrength < weight+g.weightInven+g.weightEquip:
 		g.printf(tooHeavyMsg)
+	case sound.Settings.ShowStealing && !g.okToGet(sel.obj) && g.MapZ == 0 && !g.confirmStealing():
 	default:
 		g.subMove(actor, 3)
 		switch {

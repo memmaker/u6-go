@@ -411,7 +411,7 @@ func (u *intro) playIntro() {
 	u.calibrateTimer()
 	u.installTimer()
 	u.getKey()
-	if !u.escaped {
+	if !u.escaped && !sound.Settings.SkipIntro {
 		u.introScenes()
 		u.fadeOut(u.screen, 0)
 		fill(u.screen, 0)

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
 	"github.com/memmaker/u6-go/internal/vga"
 )
 
@@ -164,7 +165,7 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	} else {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
-	if g.showDate {
+	if g.showDate || sound.Settings.DisplayedWindDir && g.windBorne() {
 		add(true, datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
 	}
 	if log := g.logPanel(); g.logShown() {
@@ -175,6 +176,12 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(false, iconsPanel, image.Pt((g.screenWidth-iconsPanel.Dx())/2, g.screenHeight-g.dockOffset))
 	}
 	return scrolls, panels
+}
+
+// windBorne says whether the party travels by a vehicle the wind drives.
+func (g *Game) windBorne() bool {
+	t := g.object(int(g.Party[g.Active])).Type()
+	return t == ObjShip || t == ObjRaft || t == ObjBalloon2
 }
 
 // logShown says whether the message log is shown: toggled, or while the game asks something.

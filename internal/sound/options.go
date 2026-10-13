@@ -18,6 +18,14 @@ type Options struct {
 	NoCombatMusic bool `json:"no_combat_music"`
 	// NoShipMusic keeps the area's song on ships instead of HORNPIPE.M.
 	NoShipMusic bool `json:"no_ship_music"`
+	// ShowStealing asks before taking an item that belongs to someone.
+	ShowStealing bool `json:"show_stealing"`
+	// FreeBalloonMovement steers the balloon where the player goes instead of with the wind.
+	FreeBalloonMovement bool `json:"free_balloon_movement"`
+	// DisplayedWindDir keeps the date and wind shown while aboard a ship, raft or balloon.
+	DisplayedWindDir bool `json:"displayed_wind_dir"`
+	// SkipIntro starts at the main menu without the boot intro.
+	SkipIntro bool `json:"skip_intro"`
 }
 
 // Settings are the options in force; set them before Start.

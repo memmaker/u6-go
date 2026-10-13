@@ -580,7 +580,7 @@ func (g *Game) advance(dir int) {
 		g.printf("Hic!\n")
 		dir = g.rand(0, 7)
 	}
-	if t := o.Type(); t == ObjRaft || t == ObjBalloon2 {
+	if t := o.Type(); t == ObjRaft || t == ObjBalloon2 && !sound.Settings.FreeBalloonMovement {
 		flow := dir
 		dir = int(g.WindDir) ^ 4
 		if g.WindDir < 0 {
