@@ -693,12 +693,7 @@ func (g *Game) enterGates() {
 		}
 		t := g.object(n).Type()
 		if (t == ObjMoongate || t == ObjRedGate) && g.locPart == 0 || t == ObjMineShaft || t == ObjHole {
-			if g.SoloMember != -1 {
-				soloRefused = true
-				break
-			}
-			// TODO(port): C_1E0F_184D moongate, red gate and dungeon travel (GateTravel,
-			// PartyTeleport, C_101C_089E, Shamino's comment)
+			soloRefused = !g.travelThrough(n)
 			break
 		}
 	}
@@ -741,7 +736,9 @@ func (g *Game) openDoorUnder(n, step int) {
 			g.computeView()
 			return
 		case t == ObjPassthrough || t == ObjPassthrough2:
-			// TODO(port): C_27A1_5DF2 (opening a passthrough)
+			g.TextOn = false
+			g.usePassthrough(si)
+			g.TextOn = true
 		}
 	}
 }

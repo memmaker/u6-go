@@ -336,7 +336,7 @@ func (g *Game) leaveParty(n int) int {
 	p := g.object(n).Pos
 	for i := g.FindInv(n); i >= 0; i = g.FindInv(n) {
 		g.MoveObj(i, p.X, p.Y, int(g.MapZ))
-		// TODO(port): SetOkToGet (seg_27A1:019E)
+		g.setOkToGet(i)
 	}
 	g.MoveObj(n, p.X, p.Y, int(g.MapZ))
 	return partyChangeDone
