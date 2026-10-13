@@ -1,6 +1,8 @@
 package game
 
 import (
+	"image"
+
 	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/vga"
 )
@@ -326,6 +328,14 @@ func (g *Game) mouseCommand() int {
 			break
 		}
 		dir := g.mouseDirection()
+		if g.mouseTriggered && dir != -1 && g.mouseButtons&leftButton != 0 && g.mouseSelection() == cmdSelectMap {
+			// the port: a click on a thing opens its menu
+			cmd = g.contextMenu(image.Pt(host.MouseX, host.MouseY))
+			if cmd == 0 {
+				cmd = cmdSpellNothing
+			}
+			break
+		}
 		if dir == -1 {
 			if g.mouseTriggered {
 				cmd = cmdPass
@@ -573,6 +583,10 @@ func (g *Game) readCommand() int {
 	g.linesLeft = g.current.height
 	for ch == 0 {
 		g.serveMouse()
+		if dir, ok := g.walkStep(); ok && g.atMainPrompt {
+			g.AdvanceDir = dir
+			return cmdAdvance
+		}
 		buttons := 0
 		if g.mouse.left {
 			buttons |= leftButton
@@ -822,6 +836,9 @@ func (g *Game) statusKey(ch int) int {
 		}
 		return 0, false
 	}
+	if ch == keyEscape && (g.StatusDisplay == cmdStatusEquipment || g.StatusDisplay == cmdStatusPortrait || g.StatusDisplay == cmdStatusContainer) {
+		return cmdStatusParty // the port: Esc closes the inventory
+	}
 	switch g.StatusDisplay {
 	case cmdStatusEquipment, cmdStatusPortrait:
 		other := cmdStatusPortrait
@@ -845,6 +862,9 @@ func (g *Game) statusKey(ch int) int {
 			return 0
 		}
 		if m, ok := member(ch); ok {
+			if m == g.statusMember {
+				return cmdStatusParty // the port: the member's key again closes the inventory
+			}
 			g.Selection.obj = m
 			return g.StatusDisplay
 		}

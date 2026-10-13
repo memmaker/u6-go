@@ -390,15 +390,6 @@ func (g *Game) command(ch int) bool {
 			g.playAreaSong()
 			g.printf(soundOnMsg)
 		}
-	case keyCtrlH:
-		g.printf("Help ")
-		g.Help = !g.Help
-		if g.Help {
-			g.printf("on")
-		} else {
-			g.printf("off")
-		}
-		g.printf("!\n")
 	case keyAltP:
 		g.gr.Palette = *g.basePalette
 	case keyCtrlV:

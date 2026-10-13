@@ -167,6 +167,9 @@ func (g *Game) putch0(ch int) {
 	if g.speechSkips(ch) {
 		return
 	}
+	if c == &g.clips[clipMessage] && !g.InConversation {
+		g.toastChar(ch)
+	}
 	if g.skipNewline && c.attr&clipScroll != 0 {
 		if ch == '\n' {
 			return

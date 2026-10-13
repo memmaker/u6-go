@@ -110,6 +110,14 @@ type layout struct {
 	talkChoice   int
 	talkTop      int // the first row of options shown; they scroll
 	optionPicked bool
+	// popup is the help scroll or a menu shown, toasts the messages shown at the bottom
+	// left and toastLine the log's line being printed
+	popup     *popup
+	toasts    []toast
+	toastLine []byte
+	// walkTo is the map place Walk here walks to while walking
+	walkTo  image.Point
+	walking bool
 }
 
 // panel is a canvas rectangle shown with its corner at a screen point.
@@ -166,7 +174,7 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	if g.showDate {
 		add(true, datePanel, image.Pt((host.ScreenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
 	}
-	if log := g.logPanel(); !log.Empty() && (g.showLog || g.prompting && !g.atMainPrompt) {
+	if log := g.logPanel(); g.logShown() {
 		at := image.Pt(right-tileSize-margin-scrollPadding-log.Dx(), host.ScreenHeight-margin-scrollPadding-log.Dy())
 		add(true, log, at)
 	}
@@ -174,6 +182,11 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(false, iconsPanel, image.Pt((host.ScreenWidth-iconsPanel.Dx())/2, host.ScreenHeight-g.dockOffset))
 	}
 	return scrolls, panels
+}
+
+// logShown says whether the message log is shown: toggled, or while the game asks something.
+func (g *Game) logShown() bool {
+	return !g.logPanel().Empty() && (g.showLog || g.prompting && !g.atMainPrompt)
 }
 
 // logPanel is the part of the message clip with text: at the command prompt, not its
@@ -204,6 +217,7 @@ func (g *Game) Frame() *host.Frame {
 			copy(g.shown[sy*host.ScreenWidth+p.at.X:(sy+1)*host.ScreenWidth], row)
 		}
 	}
+	g.drawOverlays()
 	frame := g.gr.Frame()
 	frame.Pixels = g.shown[:]
 	return frame
@@ -280,13 +294,24 @@ func (g *Game) pointOption(at image.Point, clicked bool) {
 	g.optionPicked = g.optionPicked || clicked
 }
 
-// hotKey toggles the date or the log for the port's hot keys and returns 0 for them.
+// hotKey toggles the date or the log for the port's hot keys and returns 0 for them; at the
+// command prompt it shows the help, or the Enter menu and returns the key of its pick.
 func (g *Game) hotKey(ch int) int {
 	switch ch {
 	case keyCtrlD:
 		g.showDate = !g.showDate
 	case keyCtrlL:
 		g.showLog = !g.showLog
+	case keyCtrlH, '?', keyEnter:
+		if !g.atMainPrompt || g.SelectMode != 0 || g.MouseMode != 0 || g.InConversation {
+			return ch
+		}
+		if ch == keyEnter {
+			if key := g.commandMenu(); key != '?' {
+				return key
+			}
+		}
+		g.showHelp()
 	default:
 		return ch
 	}

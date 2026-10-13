@@ -130,6 +130,7 @@ func TestTalkToTholden(t *testing.T) {
 	g.showLog, g.showDate = false, true
 	writePNG(t, g, "date.png")
 	g.showDate = false
+	writeUIPNGs(t, g, steps, settle)
 
 	var transcript strings.Builder
 	// wait answers the paging prompts until the script asks for input
@@ -259,4 +260,53 @@ func compareClassicTiles(t *testing.T, g *Game) {
 			}
 		}
 	}
+}
+
+// writeUIPNGs drives the port's overlays and writes them for docs/ui: the help, the Enter
+// menu, a click's context menu on Tholden, the toasts of a Look and a dock tooltip.
+func writeUIPNGs(t *testing.T, g *Game, steps func(int), settle int) {
+	enter := host.Key{Scan: host.ScanEnter, Char: keyEnter}
+	host.PushChar('?')
+	steps(settle)
+	writePNG(t, g, "help.png")
+	host.PushChar(' ')
+	steps(settle)
+	host.KeyQueue = append(host.KeyQueue, enter)
+	steps(settle)
+	writePNG(t, g, "menu.png")
+	host.KeyQueue = append(host.KeyQueue, host.Key{Scan: host.ScanEscape, Char: keyEscape})
+	steps(settle)
+	if g.popup != nil {
+		t.Fatal("Esc left the menu open")
+	}
+	// click Tholden, right of the party
+	host.MouseX, host.MouseY = mapCentreX+tileSize-viewCropX, mapCentreY-viewCropY
+	host.MouseLeft = true
+	steps(settle)
+	host.MouseLeft = false
+	steps(settle)
+	if g.popup == nil {
+		t.Fatal("no context menu on Tholden")
+	}
+	writePNG(t, g, "context.png")
+	host.KeyQueue = append(host.KeyQueue, enter) // Look
+	steps(settle)
+	host.PushChar(' ') // past the portrait
+	steps(settle)
+	writePNG(t, g, "toasts.png")
+	if len(g.toasts) == 0 {
+		t.Error("Look left no toast")
+	}
+	g.toasts = nil
+	// over the dock's Talk icon
+	talk := cmdTalk - cmdAttack
+	host.MouseX = (host.ScreenWidth-iconsPanel.Dx())/2 + iconsX - iconsPanel.Min.X + talk*tileSize + tileSize/2
+	host.MouseY = host.ScreenHeight - 1
+	steps(settle)
+	writePNG(t, g, "tooltip.png")
+	if g.dockTooltip() != "Talk" {
+		t.Errorf("tooltip %q, want Talk", g.dockTooltip())
+	}
+	host.MouseX, host.MouseY = host.ScreenWidth/2, host.ScreenHeight/2
+	steps(settle)
 }
