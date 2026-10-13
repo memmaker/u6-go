@@ -214,7 +214,7 @@ func (g *Game) refreshPage() {
 	}
 	g.pageLength = row
 	for c := cornerLeft; c <= cornerRight; c++ {
-		x := (c*2 + partyClipX0) * tileSize
+		x := (c*2 + partyClipX0) * cellSize
 		if g.corners[c] != noCorner {
 			g.gr.DrawTile(tileStatusSlot+c, x, cornerY)
 		} else {
