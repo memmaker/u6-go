@@ -17,6 +17,10 @@ func TestQuickSaveAndLoad(t *testing.T) {
 		if g.NPCs[avatar].HitPoints != saved {
 			t.Errorf("hit points %d after quick load, quick saved %d", g.NPCs[avatar].HitPoints, saved)
 		}
+		g.popup = g.centredPopup([]string{"Save", "Load", "Quick save", "Quick load", "Load latest", "Settings", "Quit"})
+		g.popup.choice = 0
+		writePNG(t, g, "gamemenu.png")
+		g.popup = nil
 		if got := g.gameMenuKey(keyF11); got != cmdQuickSave {
 			t.Errorf("F11: %d", got)
 		}

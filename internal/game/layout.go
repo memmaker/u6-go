@@ -111,12 +111,21 @@ type layout struct {
 	// walkTo is the map place Walk here walks to while walking
 	walkTo  image.Point
 	walking bool
+	// windows are the inventory windows open, pointedWindow the one under the pointer;
+	// dragging is set while draggedTile is carried by the pointer, queuedTargets are the
+	// targets the commands of a drag take
+	windows       []*inventoryWindow
+	pointedWindow *inventoryWindow
+	dragging      bool
+	draggedTile   int
+	queuedTargets []selection
 }
 
 // panel is a canvas rectangle shown with its corner at a screen point.
 type panel struct {
-	from image.Rectangle
-	at   image.Point
+	from   image.Rectangle
+	at     image.Point
+	window *inventoryWindow // shown instead of the canvas
 }
 
 func (p panel) onScreen() image.Rectangle { return p.from.Sub(p.from.Min).Add(p.at) }
@@ -139,7 +148,7 @@ func (g *Game) copyView(x0, y0, x1, y1, toX, toY int) {
 // panels returns the scrolls and then the panels shown over the world, the topmost last.
 func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	add := func(scroll bool, from image.Rectangle, at image.Point) {
-		p := panel{from, at}
+		p := panel{from: from, at: at}
 		if scroll {
 			scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
 		}
@@ -164,6 +173,11 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(false, party, image.Pt(right-party.Dx(), margin))
 	} else {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
+	}
+	for _, w := range g.windows {
+		p := panel{statusPanel, w.at, w}
+		scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
+		panels = append(panels, p)
 	}
 	if g.showDate || sound.Settings.DisplayedWindDir && g.windBorne() {
 		add(true, datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
@@ -214,6 +228,12 @@ func (g *Game) Frame() *host.Frame {
 				continue
 			}
 			row := g.gr.Screen[y*vga.ScreenWidth+p.from.Min.X : y*vga.ScreenWidth+p.from.Max.X]
+			if p.window != nil {
+				if p.window.pixels == nil {
+					break
+				}
+				row = p.window.pixels[(y-p.from.Min.Y)*p.from.Dx():][:p.from.Dx()]
+			}
 			copy(g.shown[sy*g.screenWidth+p.at.X:(sy+1)*g.screenWidth], row)
 		}
 	}
@@ -267,9 +287,11 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 		g.dockOffset = max(g.dockOffset-dockSlide, 0)
 	}
 	_, panels := g.panels()
+	g.pointedWindow = nil
 	for i := len(panels) - 1; i >= 0; i-- {
 		p := panels[i]
 		if pt := image.Pt(x, y); pt.In(p.onScreen()) {
+			g.pointedWindow = p.window
 			at := pt.Sub(p.at).Add(p.from.Min)
 			if p.from == optionsPanel {
 				g.scrollOptions(-host.TakeWheel())
@@ -299,6 +321,10 @@ func (g *Game) pointOption(at image.Point, clicked bool) {
 // hotKey toggles the date or the log for the port's hot keys and returns 0 for them; at the
 // command prompt it shows the help, or the Enter menu and returns the key of its pick.
 func (g *Game) hotKey(ch int) int {
+	if member := ch - keyF1; host.ShiftDown && member >= 0 && member < int(g.PartySize) && !g.InConversation {
+		g.toggleWindow(member) // Shift+F1..F9: the member's inventory window
+		return 0
+	}
 	switch ch {
 	case keyCtrlD:
 		g.showDate = !g.showDate

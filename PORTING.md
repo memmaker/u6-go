@@ -46,3 +46,14 @@ The world view fills the screen; the panels are layered over it as scrolls
   Triangle (the Avatar in front, widening rows behind). It lasts for the session.
 - Touching the bottom edge with the mouse slides in the command icons.
 - In conversations, the arrow keys pick a topic (the mouse wheel and Up/Down scroll a long list) and Enter asks it; typing still works.
+- Ctrl+O opens the game menu (after Nuvie's): Save, Load, Quick save, Quick load, Load
+  latest, Settings (the toggles of `settings` in `internal/game/gamemenu.go`; other options
+  append theirs there), Quit. F11 quick saves without asking (a copy of SAVEGAME in
+  QUICKSAV), F12 quick loads it, Shift+F12 loads the latest save (`docs/ui/gamemenu.png`).
+- Shift+F1..F9 opens or closes a party member's inventory window; several can be open and
+  each moves by dragging its name row (`internal/game/windows.go`, `docs/ui/windows.png`).
+  A click in a window turns the status area to that member first.
+- Things are dragged with the mouse, each drag running the command that does the same:
+  map → an inventory is Get (by the active member), inventory → map is Drop (the active
+  member's things), onto another member's window is Move, onto a container in the grid is
+  Move into it, onto the doll is Ready, a worn thing onto the grid is Unready.

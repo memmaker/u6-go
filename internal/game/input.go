@@ -126,7 +126,7 @@ type input struct {
 		left, right bool
 	}
 	// Selection is the target picked for a command.
-	Selection struct{ x, y, obj int }
+	Selection selection
 	// selectedDark says the selected tile cannot be seen (D_B6DF)
 	selectedDark bool
 	// repeatTarget makes the next getch return cmdSelected for the default command
@@ -598,7 +598,16 @@ func (g *Game) readCommand() int {
 			g.PointerX, g.PointerY = g.mouse.x, g.mouse.y
 			g.pointerOverUI = g.mouse.overUI
 			g.mouseButtons = buttons
-			ch = g.mouseCommand()
+			if g.mouseTriggered && g.MouseMode == 0 {
+				g.focusWindow()
+			}
+			dragged := false
+			if g.mouseTriggered && buttons == leftButton && g.atMainPrompt && g.MouseMode == 0 && !g.InConversation {
+				ch, dragged = g.drag()
+			}
+			if !dragged {
+				ch = g.mouseCommand()
+			}
 			if g.mouseTriggered {
 				g.mousePressCommand = ch
 			} else if g.mousePressCommand != ch {
@@ -889,6 +898,10 @@ func (g *Game) statusKey(ch int) int {
 func (g *Game) getch() int {
 	if g.repeatTarget {
 		g.repeatTarget = false
+		return cmdSelected
+	}
+	if len(g.queuedTargets) > 0 { // the port: the targets of a drag
+		g.Selection, g.queuedTargets = g.queuedTargets[0], g.queuedTargets[1:]
 		return cmdSelected
 	}
 	for {

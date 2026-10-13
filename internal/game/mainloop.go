@@ -350,6 +350,7 @@ func (g *Game) command(ch int) bool {
 		}
 		g.MouseMode = 0
 		g.pendingCommand = cmdPass
+		g.queuedTargets = nil
 		g.endCommand()
 	case cmdRest:
 		if !g.inVehicle() {

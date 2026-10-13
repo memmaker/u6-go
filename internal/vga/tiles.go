@@ -217,6 +217,11 @@ func (d *Driver) DrawTile(tile, x, y int) {
 	drawTile(d.Screen[:], ScreenWidth, d.Tile(tile), x, y)
 }
 
+// DrawTileOn draws a tile on a picture of the given width, as DrawTile does on the screen.
+func (d *Driver) DrawTileOn(pixels []byte, width, tile, x, y int) {
+	drawTile(pixels, width, d.Tile(tile), x, y)
+}
+
 // DrawTileOffscreen draws a tile on the back buffer with its top left corner at (x, y). When
 // bits 11-12 of the tile value are set, only the tile's black (colour 0) pixels are drawn, in
 // colour 11, 12 or 9.

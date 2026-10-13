@@ -347,6 +347,7 @@ func (g *Game) drawOverlays() {
 		at := image.Pt(host.MouseX-r.Dx()/2, g.screenHeight-g.dockOffset-margin-scrollPadding-r.Dy())
 		g.drawPopup(g.placePopup([]string{name}, at))
 	}
+	g.drawDragged()
 	if g.popup != nil {
 		g.drawPopup(g.popup)
 	}

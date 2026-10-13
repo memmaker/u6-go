@@ -52,6 +52,7 @@ func (g *Game) RefreshStatus() {
 		g.drawStatusCursor(1)
 	}
 	g.StatusDirty = false
+	g.refreshWindows()
 }
 
 // partyView draws the sky and the party column from member first.
