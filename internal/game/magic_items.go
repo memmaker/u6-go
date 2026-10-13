@@ -1,7 +1,6 @@
 package game
 
 import (
-	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/sound"
 )
 
@@ -71,7 +70,7 @@ func (g *Game) vortex() {
 	g.drawStatusCursor(0)
 	g.SelectMode = 0
 	g.drawMap(false)
-	g.gr.Vortex(g.world[:], host.ScreenWidth, host.ScreenHeight, viewCropX, viewCropY)
+	g.gr.Vortex(g.world[:], g.screenWidth, g.screenHeight, g.viewPixels().Min.X, g.viewPixels().Min.Y)
 	g.redrawWorld()
 	g.screenFade = true
 	g.drawMap(true)
@@ -181,7 +180,7 @@ func (g *Game) peer() {
 	g.areaLight = [areaSize * areaSize]byte{}
 	top, left, bottom, right := 0, 0, peerSize, peerSize
 	if underground {
-		g.computeLight(g.ViewX+viewCenterX, g.ViewY+viewCenterY, peerSize, lightPeer)
+		g.computeLight(g.ViewX+g.viewCenterX, g.ViewY+g.viewCenterY, peerSize, lightPeer)
 	} else if g.MapZ == 0 {
 		const (
 			edge        = 1024      // the width of the surface
@@ -241,14 +240,14 @@ func (g *Game) peer() {
 		}
 	}
 	g.gr.SetColor(white)
-	partyX := (g.ViewX+viewCenterX)*peerCell + peerOrigin
-	partyY := (g.ViewY+viewCenterY)*peerCell + peerOrigin
+	partyX := (g.ViewX+g.viewCenterX)*peerCell + peerOrigin
+	partyY := (g.ViewY+g.viewCenterY)*peerCell + peerOrigin
 	g.gr.FillRect(partyX, partyY, partyX+peerCell-1, partyY+peerCell-1)
 	g.gr.SetColor(black)
 	g.gr.Offscreen = false
 	// centred on the screen
 	g.copyView(peerOrigin, peerOrigin, peerOrigin+peerPixels-1, peerOrigin+peerPixels-1,
-		viewCropX+(host.ScreenWidth-peerPixels)/2, viewCropY+(host.ScreenHeight-peerPixels)/2)
+		g.viewPixels().Min.X+(g.screenWidth-peerPixels)/2, g.viewPixels().Min.Y+(g.screenHeight-peerPixels)/2)
 	g.animatePrompt = false
 	g.getch()
 	g.animatePrompt = true
@@ -318,13 +317,13 @@ func (g *Game) hailStorm(x, y int) int {
 	const fewestStones, mostStones = 10, 30
 	stones := g.rand(fewestStones, mostStones)
 	g.gr.MakeRotatedSprite(hailSprite, tileHail, 0, hailPivot, hailPivot)
-	empty := emptyClip
+	empty := g.emptyClip()
 	r := empty
-	viewX := (int(g.MapX) - viewCenterX) * tileSize
-	viewY := (int(g.MapY) - viewCenterY) * tileSize
+	viewX := (int(g.MapX) - g.viewCenterX) * tileSize
+	viewY := (int(g.MapY) - g.viewCenterY) * tileSize
 	inView := func(i int) (int, int, bool) {
 		sx, sy := fromX[i]-viewX, fromY[i]-viewY
-		return sx, sy, sx > hailMargin && sx < viewPixelEndX-hailMargin-1 && sy > hailMargin && sy < viewPixelEndY-hailMargin-1
+		return sx, sy, sx > hailMargin && sx < g.viewPixels().Max.X-hailMargin-1 && sy > hailMargin && sy < g.viewPixels().Max.Y-hailMargin-1
 	}
 	for stones != 0 || falling {
 		noise := 0
@@ -385,9 +384,9 @@ func (g *Game) hailStorm(x, y int) int {
 				g.hideNextHit = true
 				xp += g.loseHitPoints(n, 1)
 				noise = -1
-				sx := (tx-(int(g.MapX)-viewCenterX))*tileSize + halfTile
-				sy := (ty-(int(g.MapY)-viewCenterY))*tileSize + halfTile
-				if sx >= viewPixelStartX && sx < viewPixelEndX && sy >= viewPixelStartY && sy < viewPixelEndY {
+				sx := (tx-(int(g.MapX)-g.viewCenterX))*tileSize + halfTile
+				sy := (ty-(int(g.MapY)-g.viewCenterY))*tileSize + halfTile
+				if sx >= g.viewPixels().Min.X && sx < g.viewPixels().Max.X && sy >= g.viewPixels().Min.Y && sy < g.viewPixels().Max.Y {
 					g.gr.SaveUnderSprite(hitSprite, sx, sy)
 					g.gr.DrawTileOffscreen(tileHit, sx-halfTile, sy-halfTile)
 					g.copyView(sx-halfTile, sy-halfTile, sx+halfTile-1, sy+halfTile-1, sx-halfTile, sy-halfTile)

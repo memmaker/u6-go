@@ -66,6 +66,7 @@ func New(dir string) (*Game, error) {
 	g := &Game{dir: dir, files: files, gr: vga.New(files), colours: defaultColours}
 	g.initConsole()
 	g.initInput()
+	g.fitView()
 	g.initWorldMap()
 	g.initTurns()
 	g.lastHour = noHour
@@ -166,14 +167,14 @@ func (g *Game) Play() {
 			g.drawStatusCursor(0)
 			g.selectByTab = false
 			g.SelectMode = k.mode
-			g.AimX, g.AimY = viewCenterX, viewCenterY
+			g.AimX, g.AimY = g.viewCenterX, g.viewCenterY
 			g.SelectRange = k.rng
 			if ch == cmdAttack && g.lastTarget >= 0 {
 				p := g.object(g.lastTarget).Pos
-				g.AimX = p.X&byteMask - int(g.MapX) + viewCenterX
-				g.AimY = p.Y&byteMask - int(g.MapY) + viewCenterY
-				if g.AimX < 0 || g.AimX >= viewTilesX || g.AimY < 0 || g.AimY >= viewTilesY {
-					g.AimX, g.AimY = viewCenterX, viewCenterY
+				g.AimX = p.X&byteMask - int(g.MapX) + g.viewCenterX
+				g.AimY = p.Y&byteMask - int(g.MapY) + g.viewCenterY
+				if g.AimX < 0 || g.AimX >= g.viewTilesX || g.AimY < 0 || g.AimY >= g.viewTilesY {
+					g.AimX, g.AimY = g.viewCenterX, g.viewCenterY
 				}
 			}
 			if ch == cmdDrop {

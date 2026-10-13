@@ -2,7 +2,11 @@ package game
 
 // Flying missiles and what they hit (Missiles in seg_2FC1, parts of seg_2337).
 
-import "github.com/memmaker/u6-go/internal/sound"
+import (
+	"image"
+
+	"github.com/memmaker/u6-go/internal/sound"
+)
 
 // missileAngles are the angles (128 per turn) of a sprite flying from the centre to each
 // place 7 tiles around, by y then x (D_2A5C).
@@ -80,42 +84,49 @@ type missileState struct {
 }
 
 // clipRect is the part of the view to copy to the screen (D_ECBC).
-type clipRect struct{ x0, x1, y0, y1 int }
+type clipRect struct {
+	x0, x1, y0, y1 int
+	// view is the shown part of the back buffer
+	view image.Rectangle
+}
 
 // grow adds the 16x16 square around (x, y), kept inside the view.
 // C: seg_2FC1:017F (C_2FC1_017F)
 func (r *clipRect) grow(x, y int) {
 	if x < tileSize {
-		r.x0 = viewPixelStartX
+		r.x0 = r.view.Min.X
 	} else if x-halfTile < r.x0 {
 		r.x0 = x - halfTile
 	}
 	if y < tileSize {
-		r.y0 = viewPixelStartY
+		r.y0 = r.view.Min.Y
 	} else if y-halfTile < r.y0 {
 		r.y0 = y - halfTile
 	}
-	if x > viewPixelEndX-1-halfTile {
-		r.x1 = viewPixelEndX - 1
+	if x > r.view.Max.X-1-halfTile {
+		r.x1 = r.view.Max.X - 1
 	} else if x+halfTile > r.x1 {
 		r.x1 = x + halfTile
 	}
-	if y > viewPixelEndY-1-halfTile {
-		r.y1 = viewPixelEndY - 1
+	if y > r.view.Max.Y-1-halfTile {
+		r.y1 = r.view.Max.Y - 1
 	} else if y+halfTile > r.y1 {
 		r.y1 = y + halfTile
 	}
 }
 
 // emptyClip is a clipRect that holds nothing yet.
-var emptyClip = clipRect{viewPixelEndX, viewPixelStartX - 1, viewPixelEndY, viewPixelStartY - 1}
+func (g *Game) emptyClip() clipRect {
+	v := g.viewPixels()
+	return clipRect{v.Max.X, v.Min.X - 1, v.Max.Y, v.Min.Y - 1, v}
+}
 
 // redrawForeground draws again the foreground tiles and the darkness over the sprites in
 // the rectangle.
 // C: seg_2FC1:032B (C_2FC1_032B)
 func (g *Game) redrawForeground(x0, y0, x1, y1 int) {
-	for i := x0 / tileSize; i <= x1/tileSize && i < viewTilesX; i++ {
-		for j := y0 / tileSize; j <= y1/tileSize && j < viewTilesY; j++ {
+	for i := x0 / tileSize; i <= x1/tileSize && i < g.viewTilesX; i++ {
+		for j := y0 / tileSize; j <= y1/tileSize && j < g.viewTilesY; j++ {
 			for k := g.objectView[j][i]; k != 0; k = g.objChain[k] {
 				if tile := g.objChainTile[k]; tile != 0 && g.isForeground(tile&tileNumberMask) {
 					g.gr.DrawTileOffscreen(tile&tileNumberMask, i*tileSize, j*tileSize)
@@ -204,7 +215,7 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 	}
 	for i := 0; i < deltaMax; i++ {
 		shown := false
-		r := emptyClip
+		r := g.emptyClip()
 		for d := 0; d < count; d++ {
 			if deltaX[d] <= i {
 				if i != 0 {
@@ -220,9 +231,9 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 			curX[d] += incX[d][dir]
 			curY[d] += incY[d][dir]
 			if tile != 0 && refresh != 0 && i%refresh == 0 {
-				nx := curX[d] - (int(g.MapX)-viewCenterX)*tileSize
-				ny := curY[d] - (int(g.MapY)-viewCenterY)*tileSize
-				if nx >= viewPixelStartX && nx < viewPixelEndX && ny >= viewPixelStartY && ny < viewPixelEndY {
+				nx := curX[d] - (int(g.MapX)-g.viewCenterX)*tileSize
+				ny := curY[d] - (int(g.MapY)-g.viewCenterY)*tileSize
+				if nx >= g.viewPixels().Min.X && nx < g.viewPixels().Max.X && ny >= g.viewPixels().Min.Y && ny < g.viewPixels().Max.Y {
 					if !shown {
 						if d == 0 {
 							switch {

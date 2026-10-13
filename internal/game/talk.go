@@ -247,8 +247,8 @@ func (g *Game) isOnScreen(n int) bool {
 		return true
 	}
 	p := g.object(n).Pos
-	x, y := p.X-(int(g.MapX)-viewCenterX), p.Y-(int(g.MapY)-viewCenterY)
-	if x <= 0 || x >= viewTilesX-1 || y <= 0 || y >= viewTilesY-1 {
+	x, y := p.X-(int(g.MapX)-g.viewCenterX), p.Y-(int(g.MapY)-g.viewCenterY)
+	if x <= 0 || x >= g.viewTilesX-1 || y <= 0 || y >= g.viewTilesY-1 {
 		return false
 	}
 	if g.objectView[y][x] != 0 || g.tileView[y][x] >= firstObjectTile {

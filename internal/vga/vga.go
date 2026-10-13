@@ -18,10 +18,11 @@ const (
 	ScreenHeight = host.ScreenHeight
 	// CanvasHeight is the height of the screen picture: the shown 320x200 and room below it.
 	CanvasHeight = 2 * ScreenHeight
-	// BackBufferWidth and BackBufferHeight are the size of the back buffer: 21x13 tiles of
-	// 16 pixels, the port's map view (the original's was 11x11 tiles).
-	BackBufferWidth  = 336
-	BackBufferHeight = 208
+	// BackBufferWidth and BackBufferHeight are the size of the back buffer, where the game
+	// draws the port's map view: 21x13 tiles of 16 pixels on a 320x200 screen (the
+	// original's was 11x11 tiles), up to a tile more than the widest and tallest screen.
+	BackBufferWidth  = (host.MaxScreenWidth/tileSize + 1) * tileSize
+	BackBufferHeight = (host.MaxScreenHeight/tileSize + 1) * tileSize
 	// packedTileStride is the row length the packed tile positions in MAPTILES.VGA count in,
 	// the original's 176 pixel back buffer.
 	packedTileStride = 176

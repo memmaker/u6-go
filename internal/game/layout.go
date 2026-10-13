@@ -15,14 +15,6 @@ import (
 // pointer back onto the canvas.
 
 const (
-	// the back buffer's pixels left out at each side of the shown view
-	viewCropX = (vga.BackBufferWidth - host.ScreenWidth) / 2
-	viewCropY = (vga.BackBufferHeight - host.ScreenHeight) / 2
-	// the part of the back buffer that is shown
-	viewPixelStartX = viewCropX
-	viewPixelEndX   = viewCropX + host.ScreenWidth
-	viewPixelStartY = viewCropY
-	viewPixelEndY   = viewCropY + host.ScreenHeight
 	// lightFirst and lightLast bound the area places whose light and sight are computed: the
 	// view, a tile around it and the lamps near it
 	lightFirst = 4
@@ -88,9 +80,9 @@ func cellRect(x, y, columns, rows int) image.Rectangle {
 // layout is the state of the port's screen layout.
 type layout struct {
 	// world is the shown part of the map view, copied from the back buffer
-	world [host.ScreenWidth * host.ScreenHeight]byte
+	world []byte
 	// shown is the composed screen Frame returns
-	shown [host.ScreenWidth * host.ScreenHeight]byte
+	shown []byte
 	paper *vga.Pixmap
 	// showDate and showLog are toggled by the hot keys
 	showDate, showLog bool
@@ -131,12 +123,13 @@ func (p panel) onScreen() image.Rectangle { return p.from.Sub(p.from.Min).Add(p.
 // copyView copies the back buffer's rectangle from (x0, y0) to (x1, y1) (inclusive) to the
 // world picture, its corner at back buffer place (toX, toY).
 func (g *Game) copyView(x0, y0, x1, y1, toX, toY int) {
+	cropX, cropY := g.viewCrop()
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
-			sx, sy := toX+x-x0-viewCropX, toY+y-y0-viewCropY
+			sx, sy := toX+x-x0-cropX, toY+y-y0-cropY
 			if x >= 0 && y >= 0 && x < vga.BackBufferWidth && y < vga.BackBufferHeight &&
-				sx >= 0 && sy >= 0 && sx < host.ScreenWidth && sy < host.ScreenHeight {
-				g.world[sy*host.ScreenWidth+sx] = g.gr.BackBuffer[y*vga.BackBufferWidth+x]
+				sx >= 0 && sy >= 0 && sx < g.screenWidth && sy < g.screenHeight {
+				g.world[sy*g.screenWidth+sx] = g.gr.BackBuffer[y*vga.BackBufferWidth+x]
 			}
 		}
 	}
@@ -151,7 +144,7 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		}
 		panels = append(panels, p)
 	}
-	right := host.ScreenWidth - margin
+	right := g.screenWidth - margin
 	if g.InConversation {
 		at := image.Pt(margin+scrollPadding, margin+scrollPadding)
 		add(true, speechPanel, at)
@@ -159,12 +152,12 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 			add(false, g.talkPortrait, at)
 		}
 		if len(g.talkOptions) > 0 {
-			add(true, optionsPanel, image.Pt(at.X, host.ScreenHeight-margin-scrollPadding-optionsPanel.Dy()))
+			add(true, optionsPanel, image.Pt(at.X, g.screenHeight-margin-scrollPadding-optionsPanel.Dy()))
 		}
 		return scrolls, panels
 	}
 	if g.StatusDisplay == cmdStatusParty {
-		add(false, skyPanel, image.Pt((host.ScreenWidth-skyPanel.Dx())/2, 0))
+		add(false, skyPanel, image.Pt((g.screenWidth-skyPanel.Dx())/2, 0))
 		party := partyPanel
 		party.Max.Y = party.Min.Y + min(int(g.PartySize), partyListRows)*partyRowHeight
 		add(false, party, image.Pt(right-party.Dx(), margin))
@@ -172,14 +165,14 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
 	if g.showDate {
-		add(true, datePanel, image.Pt((host.ScreenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
+		add(true, datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
 	}
 	if log := g.logPanel(); g.logShown() {
-		at := image.Pt(right-tileSize-margin-scrollPadding-log.Dx(), host.ScreenHeight-margin-scrollPadding-log.Dy())
+		at := image.Pt(right-tileSize-margin-scrollPadding-log.Dx(), g.screenHeight-margin-scrollPadding-log.Dy())
 		add(true, log, at)
 	}
 	if g.dockOffset > 0 {
-		add(false, iconsPanel, image.Pt((host.ScreenWidth-iconsPanel.Dx())/2, host.ScreenHeight-g.dockOffset))
+		add(false, iconsPanel, image.Pt((g.screenWidth-iconsPanel.Dx())/2, g.screenHeight-g.dockOffset))
 	}
 	return scrolls, panels
 }
@@ -202,7 +195,7 @@ func (g *Game) logPanel() image.Rectangle {
 
 // Frame composes the screen for the host: the world with the panels over it.
 func (g *Game) Frame() *host.Frame {
-	g.shown = g.world
+	copy(g.shown, g.world)
 	scrolls, panels := g.panels()
 	for _, s := range scrolls {
 		g.drawScroll(s)
@@ -210,16 +203,16 @@ func (g *Game) Frame() *host.Frame {
 	for _, p := range panels {
 		for y := p.from.Min.Y; y < p.from.Max.Y; y++ {
 			sy := y - p.from.Min.Y + p.at.Y
-			if sy < 0 || sy >= host.ScreenHeight {
+			if sy < 0 || sy >= g.screenHeight {
 				continue
 			}
 			row := g.gr.Screen[y*vga.ScreenWidth+p.from.Min.X : y*vga.ScreenWidth+p.from.Max.X]
-			copy(g.shown[sy*host.ScreenWidth+p.at.X:(sy+1)*host.ScreenWidth], row)
+			copy(g.shown[sy*g.screenWidth+p.at.X:(sy+1)*g.screenWidth], row)
 		}
 	}
 	g.drawOverlays()
 	frame := g.gr.Frame()
-	frame.Pixels = g.shown[:]
+	frame.Pixels, frame.Width, frame.Height = g.shown, g.screenWidth, g.screenHeight
 	return frame
 }
 
@@ -230,7 +223,7 @@ func (g *Game) drawScroll(r image.Rectangle) {
 	}
 	left, top := scrollInner.Min.X-scrollSource.Min.X, scrollInner.Min.Y-scrollSource.Min.Y
 	right, bottom := scrollSource.Max.X-scrollInner.Max.X, scrollSource.Max.Y-scrollInner.Max.Y
-	r = r.Intersect(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
+	r = r.Intersect(image.Rect(0, 0, g.screenWidth, g.screenHeight))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		var from int
 		switch {
@@ -251,7 +244,7 @@ func (g *Game) drawScroll(r image.Rectangle) {
 			default:
 				fromX = scrollInner.Min.X + (x-r.Min.X-left)%scrollInner.Dx()
 			}
-			g.shown[y*host.ScreenWidth+x] = g.paper.Pixels[from*g.paper.Width+fromX]
+			g.shown[y*g.screenWidth+x] = g.paper.Pixels[from*g.paper.Width+fromX]
 		}
 	}
 }
@@ -260,7 +253,7 @@ func (g *Game) drawScroll(r image.Rectangle) {
 // the back buffer. It also slides the dock, and highlights and picks conversation options.
 func (g *Game) pointAt(x, y int) (int, int, bool) {
 	dockHeight := iconsPanel.Dy()
-	if y >= host.ScreenHeight-1 || g.dockOffset > 0 && y >= host.ScreenHeight-dockHeight {
+	if y >= g.screenHeight-1 || g.dockOffset > 0 && y >= g.screenHeight-dockHeight {
 		g.dockOffset = min(g.dockOffset+dockSlide, dockHeight)
 	} else {
 		g.dockOffset = max(g.dockOffset-dockSlide, 0)
@@ -277,7 +270,8 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 			return at.X, at.Y, true
 		}
 	}
-	return x + viewCropX, y + viewCropY, false
+	cropX, cropY := g.viewCrop()
+	return x + cropX, y + cropY, false
 }
 
 // pointOption highlights the option at canvas point at, and picks it on a click.

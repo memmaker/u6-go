@@ -147,16 +147,14 @@ func (in *input) initInput() {
 	in.pendingCommand = cmdPass
 	in.mouseMapX, in.mouseMapY = -1, -1
 	in.mouseTileX, in.mouseTileY = -1, -1
-	in.pointerCentreX, in.pointerCentreY = mapCentreX, mapCentreY
 	in.statusCursorX = 3
 }
 
-// mapCentreX, mapCentreY is the centre of the map view on the back buffer, where the
-// pointer's map coordinates are counted.
-const (
-	mapCentreX = viewCenterX*tileSize + tileSize/2
-	mapCentreY = viewCenterY*tileSize + tileSize/2
-)
+// mapCentre is the centre of the map view on the back buffer, where the pointer's map
+// coordinates are counted.
+func (g *Game) mapCentre() (int, int) {
+	return g.viewCenterX*tileSize + tileSize/2, g.viewCenterY*tileSize + tileSize/2
+}
 
 const (
 	tileSize   = 16
@@ -403,8 +401,8 @@ func (g *Game) mouseDirection() int {
 		g.mouseMapX == mx && abs(g.mouseMapY-my) < 2 ||
 		g.mouseMapY == my && abs(g.mouseMapX-mx) < 2 ||
 		tx != g.mouseTileX || ty != g.mouseTileY {
-		g.mouseMapX = tx + mx - viewCenterX
-		g.mouseMapY = ty + my - viewCenterY
+		g.mouseMapX = tx + mx - g.viewCenterX
+		g.mouseMapY = ty + my - g.viewCenterY
 		g.mouseTileX, g.mouseTileY = tx, ty
 	}
 	return dir
@@ -419,10 +417,10 @@ func (g *Game) mouseSelection() int {
 	switch {
 	case !g.pointerOverUI:
 		tx, ty := g.PointerX/tileSize, g.PointerY/tileSize
-		g.Selection.x = tx + int(g.MapX) - viewCenterX
-		g.Selection.y = ty + int(g.MapY) - viewCenterY
+		g.Selection.x = tx + int(g.MapX) - g.viewCenterX
+		g.Selection.y = ty + int(g.MapY) - g.viewCenterY
 		// fix: the original reads past the view for points on its border
-		tx, ty = min(tx, viewTilesX-1), min(ty, viewTilesY-1)
+		tx, ty = min(tx, g.viewTilesX-1), min(ty, g.viewTilesY-1)
 		if g.objectView[ty][tx] != 0 || g.tileView[ty][tx] >= firstObjectTile {
 			g.Selection.obj = g.objectAtForSelection(int(g.Party[g.Active]), g.Selection.x, g.Selection.y)
 			return cmdSelectMap
@@ -669,7 +667,7 @@ func (g *Game) readCommand() int {
 				g.SelectMode = 1
 			}
 			if g.SelectMode != 0 {
-				g.AimX, g.AimY = viewCenterX, viewCenterY
+				g.AimX, g.AimY = g.viewCenterX, g.viewCenterY
 				g.SelectRange = 7
 				g.selectByTab = true
 				g.drawMap(true)
@@ -737,7 +735,7 @@ func (g *Game) selectTarget(ch int) int {
 	case ch == cmdAdvance:
 		if g.SelectMode == 1 {
 			x, y := g.AimX+dirStepX[g.AdvanceDir], g.AimY+dirStepY[g.AdvanceDir]
-			if x >= 0 && x < viewTilesX && y >= 0 && y < viewTilesY && g.combatRange(x, y, viewCenterX, viewCenterY) <= g.SelectRange {
+			if x >= 0 && x < g.viewTilesX && y >= 0 && y < g.viewTilesY && g.combatRange(x, y, g.viewCenterX, g.viewCenterY) <= g.SelectRange {
 				g.AimX, g.AimY = x, y
 				g.drawMap(true)
 			} else if g.SelectRange == -1 {

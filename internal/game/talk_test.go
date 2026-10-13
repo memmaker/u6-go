@@ -191,11 +191,11 @@ func TestTalkToTholden(t *testing.T) {
 
 func writePNG(t *testing.T, g *Game, name string) {
 	frame := g.Frame()
-	img := image.NewRGBA(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
+	img := image.NewRGBA(image.Rect(0, 0, g.screenWidth, g.screenHeight))
 	level := func(v byte) uint8 { return uint8(int(v) * 255 / 63) }
 	for i, c := range frame.Pixels {
 		p := frame.Palette[int(c)*3:]
-		img.Set(i%host.ScreenWidth, i/host.ScreenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
+		img.Set(i%g.screenWidth, i/g.screenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
 	}
 	out := t.TempDir()
 	if d := os.Getenv("U6_PNG_DIR"); d != "" {
@@ -224,9 +224,9 @@ func compareClassicView(t *testing.T, g *Game) {
 		firstColumn = 1
 		firstRow    = 8
 		width       = (classicViewTiles - 2*firstColumn) * tileSize
-		offsetX     = (viewCenterX - classicViewCenter + firstColumn) * tileSize
-		offsetY     = (viewCenterY - classicViewCenter + firstRow) * tileSize
 	)
+	offsetX := (g.viewCenterX - classicViewCenter + firstColumn) * tileSize
+	offsetY := (g.viewCenterY - classicViewCenter + firstRow) * tileSize
 	bad := 0
 	for y := range len(want) / width {
 		for x := range width {
@@ -254,7 +254,7 @@ func compareClassicTiles(t *testing.T, g *Game) {
 	}
 	for y := range classicViewTiles {
 		for x := range classicViewTiles {
-			vx, vy := viewCenterX-classicViewCenter+x, viewCenterY-classicViewCenter+y
+			vx, vy := g.viewCenterX-classicViewCenter+x, g.viewCenterY-classicViewCenter+y
 			if want, got := classic[y][x], g.tileView[vy][vx]; want != got {
 				t.Errorf("tile (%d,%d) of the view is %d, the original shows %d", vx, vy, got, want)
 			}
@@ -280,7 +280,8 @@ func writeUIPNGs(t *testing.T, g *Game, steps func(int), settle int) {
 		t.Fatal("Esc left the menu open")
 	}
 	// click Tholden, right of the party
-	host.MouseX, host.MouseY = mapCentreX+tileSize-viewCropX, mapCentreY-viewCropY
+	centreX, centreY := g.mapCentre()
+	host.MouseX, host.MouseY = centreX+tileSize-g.viewPixels().Min.X, centreY-g.viewPixels().Min.Y
 	host.MouseLeft = true
 	steps(settle)
 	host.MouseLeft = false
@@ -300,13 +301,13 @@ func writeUIPNGs(t *testing.T, g *Game, steps func(int), settle int) {
 	g.toasts = nil
 	// over the dock's Talk icon
 	talk := cmdTalk - cmdAttack
-	host.MouseX = (host.ScreenWidth-iconsPanel.Dx())/2 + iconsX - iconsPanel.Min.X + talk*tileSize + tileSize/2
-	host.MouseY = host.ScreenHeight - 1
+	host.MouseX = (g.screenWidth-iconsPanel.Dx())/2 + iconsX - iconsPanel.Min.X + talk*tileSize + tileSize/2
+	host.MouseY = g.screenHeight - 1
 	steps(settle)
 	writePNG(t, g, "tooltip.png")
 	if g.dockTooltip() != "Talk" {
 		t.Errorf("tooltip %q, want Talk", g.dockTooltip())
 	}
-	host.MouseX, host.MouseY = host.ScreenWidth/2, host.ScreenHeight/2
+	host.MouseX, host.MouseY = g.screenWidth/2, g.screenHeight/2
 	steps(settle)
 }

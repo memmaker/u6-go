@@ -48,7 +48,7 @@ func (g *Game) formationPlace(place, x, y, facing int, front image.Point) (int, 
 
 // chooseFormation offers the formations on a scroll, the current one highlighted.
 func (g *Game) chooseFormation() {
-	p := centredPopup(formationNames[:])
+	p := g.centredPopup(formationNames[:])
 	p.choice = int(g.formation)
 	if i := g.runPopup(p); i != noChoice {
 		g.formation = formation(i)

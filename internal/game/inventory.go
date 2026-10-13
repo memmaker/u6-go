@@ -1038,13 +1038,13 @@ func (g *Game) magicalHalo(n, on int) {
 	if o.CoordUse() != OnMap {
 		return
 	}
-	deltaX := (o.Pos.X - int(g.MapX) + viewCenterX) & coordMask
-	deltaY := (o.Pos.Y - int(g.MapY) + viewCenterY) & coordMask
+	deltaX := (o.Pos.X - int(g.MapX) + g.viewCenterX) & coordMask
+	deltaY := (o.Pos.Y - int(g.MapY) + g.viewCenterY) & coordMask
 	tile := g.tileFrame(n) + haloOff
 	if on != 0 {
 		tile = g.tileFrame(n) + haloOn
 	}
-	if deltaX < viewTilesX && deltaY < viewTilesY {
+	if deltaX < g.viewTilesX && deltaY < g.viewTilesY {
 		const overlay = 2
 		g.showObject(tile, deltaX, deltaY, overlay)
 		g.screenFade = true

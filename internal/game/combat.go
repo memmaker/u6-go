@@ -419,8 +419,8 @@ func (g *Game) cloneObject(src, dst int) {
 func (g *Game) showHit(n int) {
 	if !g.hideNextHit {
 		p := g.object(n).Pos
-		x, y := p.X-int(g.MapX)+viewCenterX, p.Y-int(g.MapY)+viewCenterY
-		if x >= 0 && x < viewTilesX && y >= 0 && y < viewTilesY {
+		x, y := p.X-int(g.MapX)+g.viewCenterX, p.Y-int(g.MapY)+g.viewCenterY
+		if x >= 0 && x < g.viewTilesX && y >= 0 && y < g.viewTilesY {
 			g.ShowObjects()
 			g.showObject(tileHit, x, y, 1)
 			g.drawMap(true)
@@ -1130,8 +1130,8 @@ func (g *Game) attackWithNext() {
 	if g.weaponIndex < g.weaponCount {
 		g.SelectMode = 1
 		g.SelectRange = g.weaponRange(g.weapons[g.weaponIndex])
-		if g.combatRange(g.AimX, g.AimY, viewCenterX, viewCenterY) > g.SelectRange {
-			g.AimX, g.AimY = viewCenterX, viewCenterY
+		if g.combatRange(g.AimX, g.AimY, g.viewCenterX, g.viewCenterY) > g.SelectRange {
+			g.AimX, g.AimY = g.viewCenterX, g.viewCenterY
 		}
 		g.printf(attackWithMsg, g.objectString(g.weapons[g.weaponIndex]))
 	} else {
@@ -1161,8 +1161,8 @@ func (g *Game) attack() {
 		w = g.weapons[g.weaponIndex]
 	}
 	g.SelectRange = g.weaponRange(w)
-	if g.combatRange(g.AimX, g.AimY, viewCenterX, viewCenterY) > g.SelectRange {
-		g.AimX, g.AimY = viewCenterX, viewCenterY
+	if g.combatRange(g.AimX, g.AimY, g.viewCenterX, g.viewCenterY) > g.SelectRange {
+		g.AimX, g.AimY = g.viewCenterX, g.viewCenterY
 	}
 	ch := g.getch()
 	g.lastTarget = g.Selection.obj
@@ -1484,7 +1484,7 @@ func fleeing(m AIMode) bool { return m == AIRetreat || m == AIShy || m == AIFlee
 
 // inView says whether (x, y) is within margin tiles of the visible map view.
 func (g *Game) inView(margin, x, y int) bool {
-	return abs(x-int(g.MapX)) <= viewCenterX+margin && abs(y-int(g.MapY)) <= viewCenterY+margin
+	return abs(x-int(g.MapX)) <= g.viewCenterX+margin && abs(y-int(g.MapY)) <= g.viewCenterY+margin
 }
 
 // onScreen says whether (x, y) is in the map view.

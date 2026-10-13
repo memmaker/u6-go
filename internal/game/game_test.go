@@ -145,11 +145,11 @@ func TestPlayHeadless(t *testing.T) {
 	}
 	snap := func(name string) {
 		frame := g.Frame()
-		img := image.NewRGBA(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
+		img := image.NewRGBA(image.Rect(0, 0, g.screenWidth, g.screenHeight))
 		level := func(v byte) uint8 { return uint8(int(v) * 255 / 63) }
 		for i, c := range frame.Pixels {
 			p := frame.Palette[int(c)*3:]
-			img.Set(i%host.ScreenWidth, i/host.ScreenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
+			img.Set(i%g.screenWidth, i/g.screenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
 		}
 		file, err := os.Create(filepath.Join(out, name+".png"))
 		if err != nil {
@@ -194,8 +194,8 @@ func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(str
 	p := g.object(int(g.Party[g.Active])).Pos
 	click := func(dx, dy int) {
 		const inTile = 4
-		host.MouseX = (p.X+dx-int(g.MapX)+viewCenterX)*tileSize + inTile - viewCropX
-		host.MouseY = (p.Y+dy-int(g.MapY)+viewCenterY)*tileSize + inTile - viewCropY
+		host.MouseX = (p.X+dx-int(g.MapX)+g.viewCenterX)*tileSize + inTile - g.viewPixels().Min.X
+		host.MouseY = (p.Y+dy-int(g.MapY)+g.viewCenterY)*tileSize + inTile - g.viewPixels().Min.Y
 		for _, down := range []bool{true, false} {
 			host.MouseLeft = down
 			for range 30 {

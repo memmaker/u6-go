@@ -1873,8 +1873,9 @@ func (g *Game) telekinesis(targeted bool) {
 	g.magicalHalo(n, 1)
 	p := g.object(n).Pos
 	g.MouseMode = 0
-	g.pointerCentreX = (p.X-int(g.MapX))*tileSize + mapCentreX
-	g.pointerCentreY = (p.Y-int(g.MapY))*tileSize + mapCentreY
+	centreX, centreY := g.mapCentre()
+	g.pointerCentreX = (p.X-int(g.MapX))*tileSize + centreX
+	g.pointerCentreY = (p.Y-int(g.MapY))*tileSize + centreY
 	g.printf("Direction-")
 	if g.getch() != cmdAdvance {
 		g.printf("nowhere\n")
@@ -1891,7 +1892,7 @@ func (g *Game) telekinesis(targeted bool) {
 			g.computeView()
 		}
 	}
-	g.pointerCentreX, g.pointerCentreY = mapCentreX, mapCentreY
+	g.pointerCentreX, g.pointerCentreY = g.mapCentre()
 	g.updatePointerShape()
 }
 

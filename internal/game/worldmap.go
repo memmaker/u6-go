@@ -30,15 +30,16 @@ const (
 	dungeonMask = dungeonCoordMask
 	// areaAlign rounds the area's corner to a chunk
 	areaAlign = coordMask &^ (chunkTiles - 1)
-	// areaMargin is how far the area starts before the party
-	areaMargin = 16
+	// areaMargin is how far the area starts before the party (the original's 16, grown
+	// with areaSize)
+	areaMargin = 28
 )
 
 // worldMap is the state of the map module (seg_101C).
 type worldMap struct {
 	mapData []byte // MAP
 	chunks  []byte // CHUNKS
-	// AreaTiles are the tiles of the 40x40 area around the party, AreaX, AreaY its top
+	// AreaTiles are the tiles of the area around the party, AreaX, AreaY its top
 	// left corner, ViewX, ViewY the view's place in it.
 	AreaTiles    [areaSize * areaSize]byte
 	AreaX, AreaY int
@@ -126,9 +127,9 @@ func (w *worldMap) GetTileAtXYZ(x, y, z int) int {
 func (g *Game) refreshArea() {
 	mx, my := int(g.MapX), int(g.MapY)
 	g.AreaX = (mx - areaMargin) & areaAlign
-	g.ViewX = (mx - g.AreaX - viewCenterX) & (levelChunks - 1)
+	g.ViewX = (mx - g.AreaX - g.viewCenterX) & (levelChunks - 1)
 	g.AreaY = (my - areaMargin) & areaAlign
-	g.ViewY = (my - g.AreaY - viewCenterY) & (levelChunks - 1)
+	g.ViewY = (my - g.AreaY - g.viewCenterY) & (levelChunks - 1)
 	if g.MapZ != 0 {
 		g.coordMask = dungeonMask
 	} else {

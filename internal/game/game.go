@@ -32,16 +32,15 @@ const (
 	pathSlots = 8
 	pathSteps = 32
 
-	// the view of the map: 21x13 tiles around the party, filling the screen
-	viewTilesX  = 21
-	viewTilesY  = 13
-	viewCenterX = 10
-	viewCenterY = 6
+	// maxViewTiles bounds the view of the map, the tiles around the party that fill the
+	// screen (fitView): 21x13 on a 320x200 screen, more on a wider or taller one
+	maxViewTiles = vga.BackBufferWidth / tileSize
 	// the original's view was 11x11 tiles; the rules that measured "on screen" by it still do
 	classicViewTiles  = 11
 	classicViewCenter = 5
-	// AreaTiles and friends hold 40x40 tiles around the view
-	areaSize = 40
+	// AreaTiles and friends hold areaSize x areaSize tiles around the view: the original's
+	// 40, grown to keep the widest view (and the light around it) inside
+	areaSize = 64
 )
 
 // ObjectType is the type of an object, the low 10 bits of its shape (OBJ_xxx).

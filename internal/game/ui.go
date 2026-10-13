@@ -76,19 +76,19 @@ type menuItem struct {
 }
 
 // placePopup makes a popup of lines with its text's corner at at, kept on the screen.
-func placePopup(lines []string, at image.Point) *popup {
+func (g *Game) placePopup(lines []string, at image.Point) *popup {
 	p := &popup{lines: lines, choice: noChoice}
 	r := p.textRect()
 	edge := margin + scrollPadding
-	p.at.X = min(max(at.X, edge), host.ScreenWidth-edge-r.Dx())
-	p.at.Y = min(max(at.Y, edge), host.ScreenHeight-edge-r.Dy())
+	p.at.X = min(max(at.X, edge), g.screenWidth-edge-r.Dx())
+	p.at.Y = min(max(at.Y, edge), g.screenHeight-edge-r.Dy())
 	return p
 }
 
 // centredPopup makes a popup of lines in the middle of the screen.
-func centredPopup(lines []string) *popup {
+func (g *Game) centredPopup(lines []string) *popup {
 	r := (&popup{lines: lines}).textRect()
-	return placePopup(lines, image.Pt((host.ScreenWidth-r.Dx())/2, (host.ScreenHeight-r.Dy())/2))
+	return g.placePopup(lines, image.Pt((g.screenWidth-r.Dx())/2, (g.screenHeight-r.Dy())/2))
 }
 
 // waitRelease waits until no mouse button is held.
@@ -142,7 +142,7 @@ func (g *Game) runMenu(items []menuItem, at image.Point) int {
 	for i, it := range items {
 		names[i] = it.name
 	}
-	p := placePopup(names, at)
+	p := g.placePopup(names, at)
 	p.choice = 0
 	if i := g.runPopup(p); i != noChoice {
 		return items[i].key
@@ -151,7 +151,7 @@ func (g *Game) runMenu(items []menuItem, at image.Point) int {
 }
 
 // showHelp shows the help scroll until a key or a click.
-func (g *Game) showHelp() { g.runPopup(centredPopup(helpText)) }
+func (g *Game) showHelp() { g.runPopup(g.centredPopup(helpText)) }
 
 // commandMenu is the Enter menu: the commands that do something now. It returns the key of
 // the one picked, as if it was typed.
@@ -161,7 +161,7 @@ func (g *Game) commandMenu() int {
 	for i, it := range items {
 		names[i] = it.name
 	}
-	return g.runMenu(items, centredPopup(names).at)
+	return g.runMenu(items, g.centredPopup(names).at)
 }
 
 // availableCommands are the commands the game would not refuse at once, checked as the
@@ -301,8 +301,8 @@ func (g *Game) drawText(s string, x, y int, fg byte) {
 		for row, bits := range g.gr.Font[s[i]] {
 			for col := range cellSize {
 				px, py := x+i*cellSize+col, y+row
-				if bits&(highBit>>col) != 0 && px >= 0 && py >= 0 && px < host.ScreenWidth && py < host.ScreenHeight {
-					g.shown[py*host.ScreenWidth+px] = fg
+				if bits&(highBit>>col) != 0 && px >= 0 && py >= 0 && px < g.screenWidth && py < g.screenHeight {
+					g.shown[py*g.screenWidth+px] = fg
 				}
 			}
 		}
@@ -331,7 +331,7 @@ func (g *Game) drawOverlays() {
 		g.toasts = g.toasts[1:]
 	}
 	if !g.logShown() && !g.InConversation {
-		y := host.ScreenHeight - margin - g.dockOffset
+		y := g.screenHeight - margin - g.dockOffset
 		for i := len(g.toasts) - 1; i >= 0; i-- {
 			p := &popup{lines: g.toasts[i].lines, choice: noChoice}
 			y -= p.textRect().Dy() + 2*scrollPadding
@@ -341,8 +341,8 @@ func (g *Game) drawOverlays() {
 	}
 	if name := g.dockTooltip(); name != "" {
 		r := (&popup{lines: []string{name}}).textRect()
-		at := image.Pt(host.MouseX-r.Dx()/2, host.ScreenHeight-g.dockOffset-margin-scrollPadding-r.Dy())
-		g.drawPopup(placePopup([]string{name}, at))
+		at := image.Pt(host.MouseX-r.Dx()/2, g.screenHeight-g.dockOffset-margin-scrollPadding-r.Dy())
+		g.drawPopup(g.placePopup([]string{name}, at))
 	}
 	if g.popup != nil {
 		g.drawPopup(g.popup)
@@ -354,9 +354,9 @@ func (g *Game) dockTooltip() string {
 	if g.dockOffset < iconsPanel.Dy() || g.popup != nil {
 		return ""
 	}
-	dockX := (host.ScreenWidth - iconsPanel.Dx()) / 2
+	dockX := (g.screenWidth - iconsPanel.Dx()) / 2
 	x := host.MouseX - dockX + iconsPanel.Min.X - iconsX
-	if host.MouseY < host.ScreenHeight-g.dockOffset || x < 0 || x/tileSize >= len(dockNames) {
+	if host.MouseY < g.screenHeight-g.dockOffset || x < 0 || x/tileSize >= len(dockNames) {
 		return ""
 	}
 	i := x / tileSize

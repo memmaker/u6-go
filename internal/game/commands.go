@@ -454,8 +454,8 @@ func (g *Game) look() {
 	sel := &g.Selection
 	if sel.obj == noObject || g.object(sel.obj).Has(StatusInvisible) {
 		if g.PointerX < lookViewEdge && g.PointerY < lookViewEdge {
-			sel.x = int(g.MapX) - viewCenterX + g.PointerX/tileSize
-			sel.y = int(g.MapY) - viewCenterY + g.PointerY/tileSize
+			sel.x = int(g.MapX) - g.viewCenterX + g.PointerX/tileSize
+			sel.y = int(g.MapY) - g.viewCenterY + g.PointerY/tileSize
 			tile := g.GetTileAtXYZ(sel.x, sel.y, int(g.MapZ))
 			g.printArticle(tile)
 			g.printf("%s", g.tileString(tile))
@@ -857,7 +857,7 @@ func (g *Game) carrierOf(n int) int {
 
 // resetPointerCentre puts the mouse directions back on the party.
 func (g *Game) resetPointerCentre() {
-	g.pointerCentreX, g.pointerCentreY = mapCentreX, mapCentreY
+	g.pointerCentreX, g.pointerCentreY = g.mapCentre()
 	g.updatePointerShape()
 }
 
@@ -898,8 +898,9 @@ func (g *Game) push() {
 	o := g.object(sel.obj)
 	x, y := o.Pos.X, o.Pos.Y
 	g.MouseMode = 0
-	g.pointerCentreX = mapCentreX + (x-int(g.MapX))*tileSize
-	g.pointerCentreY = mapCentreY + (y-int(g.MapY))*tileSize
+	centreX, centreY := g.mapCentre()
+	g.pointerCentreX = centreX + (x-int(g.MapX))*tileSize
+	g.pointerCentreY = centreY + (y-int(g.MapY))*tileSize
 	g.printf("To ")
 	defer g.resetPointerCentre()
 	if g.getch() != cmdAdvance {
