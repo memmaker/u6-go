@@ -1,6 +1,8 @@
 package game
 
 import (
+	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -114,6 +116,7 @@ func TestTalkToTholden(t *testing.T) {
 		}
 	}
 	steps(settle)
+	compareClassicTiles(t, g)
 	me := g.object(int(g.Party[g.Active])).Pos
 	g.MoveObj(tholden, me.X+1, me.Y, me.Z)
 	g.NPCs[tholden].Mode = AIMotionless
@@ -210,8 +213,9 @@ func writePNG(t *testing.T, g *Game, name string) {
 
 // compareClassicView checks that the middle 11x11 tiles of the view are drawn as the
 // original drew its whole view: testdata/classic_view.bin is the main branch's back buffer
-// (before the frame went over it) when this test's game first drew it. The walls on the
-// original's right edge differ: they now join the walls beyond it, which it never looked at.
+// (before the frame went over it) when this test's game first drew it. Its ring of tiles
+// is left out: there the original's sight stopped at its edge, so walls missed the sides
+// seen beyond it (compareClassicTiles checks those tiles from cameras that see around them).
 func compareClassicView(t *testing.T, g *Game) {
 	want, err := os.ReadFile(filepath.Join("testdata", "classic_view.bin"))
 	if err != nil {
@@ -221,16 +225,10 @@ func compareClassicView(t *testing.T, g *Game) {
 		classicSize = classicViewTiles * tileSize
 		offsetX     = (viewCenterX - classicViewCenter) * tileSize
 		offsetY     = (viewCenterY - classicViewCenter) * tileSize
-		edge        = classicViewTiles - 1
-		joinRow     = 3 // the wall that meets the room's east wall
 	)
-	wallJoins := map[image.Point]bool{{edge, joinRow}: true, {edge, edge}: true}
 	bad := 0
-	for y := range classicSize {
-		for x := range classicSize {
-			if wallJoins[image.Pt(x/tileSize, y/tileSize)] {
-				continue
-			}
+	for y := tileSize; y < classicSize-tileSize; y++ {
+		for x := tileSize; x < classicSize-tileSize; x++ {
 			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*classicSize+x] {
 				bad++
 			}
@@ -238,5 +236,43 @@ func compareClassicView(t *testing.T, g *Game) {
 	}
 	if bad != 0 {
 		t.Errorf("%d pixels of the classic 11x11 view differ", bad)
+	}
+}
+
+// compareClassicTiles checks the tiles all over the view, walls joined to the sides one
+// sees included, against the original's 11x11 view with the camera moved so that each
+// tile is well inside it: testdata/classic_tiles.json holds the main branch's views for
+// cameras moved by "dx,dy" from this test's place. Tiles hidden from either camera are
+// skipped: what one sees changes with where one looks from.
+func compareClassicTiles(t *testing.T, g *Game) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "classic_tiles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var views map[string][classicViewTiles][classicViewTiles]int
+	if err := json.Unmarshal(raw, &views); err != nil {
+		t.Fatal(err)
+	}
+	const inside = classicViewCenter - 1 // the ring of the 11x11 view is left out
+	compared := 0
+	for key, classic := range views {
+		var dx, dy int
+		fmt.Sscanf(key, "%d,%d", &dx, &dy)
+		for y := -inside; y <= inside; y++ {
+			for x := -inside; x <= inside; x++ {
+				vx, vy := viewCenterX+dx+x, viewCenterY+dy+y
+				want, got := classic[classicViewCenter+y][classicViewCenter+x], g.tileView[vy][vx]
+				if want == tileHidden || got == tileHidden {
+					continue
+				}
+				compared++
+				if want != got {
+					t.Errorf("tile (%d,%d) of the view is %d, the original's view moved by %s shows %d", vx, vy, got, key, want)
+				}
+			}
+		}
+	}
+	if compared < classicViewTiles*classicViewTiles {
+		t.Error("no tile compared")
 	}
 }
