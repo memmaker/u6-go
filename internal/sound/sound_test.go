@@ -20,7 +20,7 @@ func dataFS(t *testing.T) string {
 	return dir
 }
 
-// writeWAV saves mono float samples as 16-bit PCM.
+// writeWAV saves interleaved stereo float samples as 16-bit PCM.
 func writeWAV(path string, pcm []float32) error {
 	const header = 44
 	b := make([]byte, header+2*len(pcm))
@@ -29,10 +29,10 @@ func writeWAV(path string, pcm []float32) error {
 	copy(b[8:], "WAVEfmt ")
 	binary.LittleEndian.PutUint32(b[16:], 16)
 	binary.LittleEndian.PutUint16(b[20:], 1) // PCM
-	binary.LittleEndian.PutUint16(b[22:], 1) // mono
+	binary.LittleEndian.PutUint16(b[22:], outChannels)
 	binary.LittleEndian.PutUint32(b[24:], outputRate)
-	binary.LittleEndian.PutUint32(b[28:], 2*outputRate)
-	binary.LittleEndian.PutUint16(b[32:], 2)
+	binary.LittleEndian.PutUint32(b[28:], 2*outChannels*outputRate)
+	binary.LittleEndian.PutUint16(b[32:], 2*outChannels)
 	binary.LittleEndian.PutUint16(b[34:], 16)
 	copy(b[36:], "data")
 	binary.LittleEndian.PutUint32(b[40:], uint32(2*len(pcm)))
@@ -58,7 +58,7 @@ func TestRenderSongs(t *testing.T) {
 		if err != nil {
 			t.Fatal(name, err)
 		}
-		pcm := make([]float32, 4*outputRate)
+		pcm := make([]float32, outChannels*4*outputRate)
 		tickDue, chipDue = 0, 0
 		renderMusic(newPlayer(b, newAdlib(b)), pcm)
 		if err := writeWAV(filepath.Join(t.TempDir(), name+".wav"), pcm); err != nil {

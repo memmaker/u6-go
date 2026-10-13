@@ -22,9 +22,10 @@ import (
 
 const (
 	outputRate     = 44100
-	mt32Gain       = 1.0 / 65536 // the sum of the MT-32's two 16-bit channels into -1..1
+	mt32Gain       = 1.0 / 32768 // each of the MT-32's 16-bit channels into -1..1
 	musicGain      = 1.0 / 16384 // the summed OPL channels (each up to about ±4096) into -1..1
 	maxQueuedAudio = 4           // seconds of effects the queue keeps at most
+	outChannels    = 2           // the output is stereo: the MT-32 pans its parts and reverb
 	bytesPerFrame  = 8           // two float32 channels
 )
 
@@ -221,7 +222,7 @@ func PlayWavedNote(step, stepUnits, steps, width, widthDelta int) time.Duration 
 	return queue(func(b *beeper) { b.playWavedNote(step, stepUnits, steps, width, widthDelta) })
 }
 
-// renderMusic adds the song's next samples into out.
+// renderMusic adds the song's next stereo frames into out (left and right interleaved).
 func renderMusic(p *songPlayer, out []float32) {
 	if mt32 {
 		renderMIDI(p, out)
@@ -229,7 +230,7 @@ func renderMusic(p *songPlayer, out []float32) {
 	}
 	chip := p.driver.(*adlib).chip
 	const samplesPerTick = outputRate / driverTickHz
-	for i := range out {
+	for i := 0; i < len(out); i += outChannels {
 		if tickDue == 0 {
 			p.tick()
 			tickDue = samplesPerTick
@@ -241,10 +242,11 @@ func renderMusic(p *songPlayer, out []float32) {
 			v = chip.sample()
 		}
 		out[i] += float32(v) * musicGain
+		out[i+1] += float32(v) * musicGain
 	}
 }
 
-// renderMIDI ticks the song between runs of the MT-32's output, mixed down to mono.
+// renderMIDI ticks the song between runs of the MT-32's stereo output.
 func renderMIDI(p *songPlayer, out []float32) {
 	const samplesPerTick = outputRate / driverTickHz
 	for len(out) > 0 {
@@ -252,16 +254,16 @@ func renderMIDI(p *songPlayer, out []float32) {
 			p.tick()
 			tickDue = samplesPerTick
 		}
-		n := min(len(out), tickDue)
-		if cap(mtFrames) < 2*n {
-			mtFrames = make([]int16, 2*n)
+		n := min(len(out)/outChannels, tickDue)
+		if cap(mtFrames) < outChannels*n {
+			mtFrames = make([]int16, outChannels*n)
 		}
-		frames := mtFrames[:2*n]
+		frames := mtFrames[:outChannels*n]
 		mtRender(frames)
-		for i := range n {
-			out[i] += (float32(frames[2*i]) + float32(frames[2*i+1])) * mt32Gain
+		for i, v := range frames {
+			out[i] += float32(v) * mt32Gain
 		}
-		out, tickDue = out[n:], tickDue-n
+		out, tickDue = out[outChannels*n:], tickDue-n
 	}
 }
 
@@ -273,10 +275,10 @@ func (stream) Read(b []byte) (int, error) {
 	frames := len(b) / bytesPerFrame
 	mu.Lock()
 	defer mu.Unlock()
-	if cap(mixBuffer) < frames {
-		mixBuffer = make([]float32, frames)
+	if cap(mixBuffer) < outChannels*frames {
+		mixBuffer = make([]float32, outChannels*frames)
 	}
-	mix := mixBuffer[:frames]
+	mix := mixBuffer[:outChannels*frames]
 	clear(mix)
 	if song != nil {
 		renderMusic(song, mix)
@@ -288,13 +290,12 @@ func (stream) Read(b []byte) (int, error) {
 	n := min(frames, len(speaker.pcm))
 	g := float32(fader("sfx"))
 	for i := range n {
-		mix[i] += speaker.pcm[i] * g
+		mix[outChannels*i] += speaker.pcm[i] * g
+		mix[outChannels*i+1] += speaker.pcm[i] * g
 	}
 	speaker.pcm = speaker.pcm[n:]
 	for i, v := range mix {
-		bits := math.Float32bits(v)
-		binary.LittleEndian.PutUint32(b[i*bytesPerFrame:], bits)
-		binary.LittleEndian.PutUint32(b[i*bytesPerFrame+bytesPerFrame/2:], bits)
+		binary.LittleEndian.PutUint32(b[i*bytesPerFrame/outChannels:], math.Float32bits(v))
 	}
 	return frames * bytesPerFrame, nil
 }

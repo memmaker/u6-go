@@ -30,7 +30,7 @@ func TestMT32Songs(t *testing.T) {
 		if midiDriver.instruments.program[0] == noProgram {
 			t.Error("MIDI.DAT: no program for ULTIMA.M's first instrument")
 		}
-		pcm := make([]float32, 6*outputRate)
+		pcm := make([]float32, outChannels*6*outputRate)
 		tickDue = 0
 		renderMusic(song, pcm)
 		if out != "" {
@@ -40,6 +40,13 @@ func TestMT32Songs(t *testing.T) {
 		}
 		if r := rms(pcm); r < 0.005 {
 			t.Errorf("%s: silent (rms %.4f)", name, r)
+		}
+		stereo := false
+		for i := 0; i < len(pcm) && !stereo; i += outChannels {
+			stereo = pcm[i] != pcm[i+1]
+		}
+		if !stereo {
+			t.Errorf("%s: mono (the MT-32 pans its parts and reverb)", name)
 		}
 	}
 	StopSong()
