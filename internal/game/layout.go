@@ -376,7 +376,8 @@ func (g *Game) askTopic() string {
 }
 
 // topicWord is keyword spelled out as the first longer word of the conversation that starts
-// with it (the script matches only the keyword's letters), or keyword itself.
+// with it (the script matches only the keyword's letters), else the topicWords tables',
+// else keyword itself.
 func (g *Game) topicWord(keyword string) string {
 	isLetter := func(r rune) bool { return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' }
 	for _, w := range strings.FieldsFunc(string(g.script), func(r rune) bool { return !isLetter(r) }) {
@@ -384,6 +385,9 @@ func (g *Game) topicWord(keyword string) string {
 		if len(w) > len(keyword) && len(w) < optionWidth && strings.HasPrefix(w, keyword) {
 			return w
 		}
+	}
+	if w := g.scriptTopicWord(keyword); w != "" {
+		return w
 	}
 	return keyword
 }
