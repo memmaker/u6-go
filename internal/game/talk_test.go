@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/json"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -213,9 +212,7 @@ func writePNG(t *testing.T, g *Game, name string) {
 
 // compareClassicView checks that the middle 11x11 tiles of the view are drawn as the
 // original drew its whole view: testdata/classic_view.bin is the main branch's back buffer
-// (before the frame went over it) when this test's game first drew it. Its ring of tiles
-// is left out: there the original's sight stopped at its edge, so walls missed the sides
-// seen beyond it (compareClassicTiles checks those tiles from cameras that see around them).
+// (before the frame went over it) when this test's game first drew it.
 func compareClassicView(t *testing.T, g *Game) {
 	want, err := os.ReadFile(filepath.Join("testdata", "classic_view.bin"))
 	if err != nil {
@@ -227,8 +224,8 @@ func compareClassicView(t *testing.T, g *Game) {
 		offsetY     = (viewCenterY - classicViewCenter) * tileSize
 	)
 	bad := 0
-	for y := tileSize; y < classicSize-tileSize; y++ {
-		for x := tileSize; x < classicSize-tileSize; x++ {
+	for y := range classicSize {
+		for x := range classicSize {
 			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*classicSize+x] {
 				bad++
 			}
@@ -239,40 +236,24 @@ func compareClassicView(t *testing.T, g *Game) {
 	}
 }
 
-// compareClassicTiles checks the tiles all over the view, walls joined to the sides one
-// sees included, against the original's 11x11 view with the camera moved so that each
-// tile is well inside it: testdata/classic_tiles.json holds the main branch's views for
-// cameras moved by "dx,dy" from this test's place. Tiles hidden from either camera are
-// skipped: what one sees changes with where one looks from.
+// compareClassicTiles checks the middle 11x11 tiles of the view, the hidden ones and the
+// walls cut to the sides one sees included, against the original's view from the same
+// place: testdata/classic_tiles.json is the main branch's.
 func compareClassicTiles(t *testing.T, g *Game) {
 	raw, err := os.ReadFile(filepath.Join("testdata", "classic_tiles.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var views map[string][classicViewTiles][classicViewTiles]int
-	if err := json.Unmarshal(raw, &views); err != nil {
+	var classic [classicViewTiles][classicViewTiles]int
+	if err := json.Unmarshal(raw, &classic); err != nil {
 		t.Fatal(err)
 	}
-	const inside = classicViewCenter - 1 // the ring of the 11x11 view is left out
-	compared := 0
-	for key, classic := range views {
-		var dx, dy int
-		fmt.Sscanf(key, "%d,%d", &dx, &dy)
-		for y := -inside; y <= inside; y++ {
-			for x := -inside; x <= inside; x++ {
-				vx, vy := viewCenterX+dx+x, viewCenterY+dy+y
-				want, got := classic[classicViewCenter+y][classicViewCenter+x], g.tileView[vy][vx]
-				if want == tileHidden || got == tileHidden {
-					continue
-				}
-				compared++
-				if want != got {
-					t.Errorf("tile (%d,%d) of the view is %d, the original's view moved by %s shows %d", vx, vy, got, key, want)
-				}
+	for y := range classicViewTiles {
+		for x := range classicViewTiles {
+			vx, vy := viewCenterX-classicViewCenter+x, viewCenterY-classicViewCenter+y
+			if want, got := classic[y][x], g.tileView[vy][vx]; want != got {
+				t.Errorf("tile (%d,%d) of the view is %d, the original shows %d", vx, vy, got, want)
 			}
 		}
-	}
-	if compared < classicViewTiles*classicViewTiles {
-		t.Error("no tile compared")
 	}
 }

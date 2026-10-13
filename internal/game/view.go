@@ -95,8 +95,10 @@ type view struct {
 	// tile of each slot is objChainTile (D_D5DC)
 	objChain     [objChainSlots]chainSlot
 	objChainTile [objChainSlots]int
-	areaFlags    [areaSize * areaSize]byte
-	areaLight    [areaSize * areaSize]byte
+	// straight marks the area places sight reaches in a line from the eye (spreadSight)
+	straight  [areaSize * areaSize]bool
+	areaFlags [areaSize * areaSize]byte
+	areaLight [areaSize * areaSize]byte
 	// the queue of places whose light is computed (D_BBCC, D_BCCC, visited_w, visited_r)
 	queueX, queueY [npcCount]byte
 	queueIn        byte
@@ -220,6 +222,7 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 		if !g.isVisible(at, qx, qy) {
 			continue
 		}
+		from, fromX, fromY := at, qx-x, qy-y
 		for dir := range len(aroundX) {
 			qx += aroundX[dir]
 			qy += aroundY[dir]
@@ -228,15 +231,16 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 			if at < 0 || at >= len(g.areaFlags) {
 				continue
 			}
+			if mode == lightView {
+				if g.ViewX-1 <= qx && qx <= g.ViewX+viewTilesX && g.ViewY-1 <= qy && qy <= g.ViewY+viewTilesY {
+					g.spreadSight(from, fromX, fromY, qx, qy, qx-x, qy-y)
+				}
+				continue
+			}
 			if g.areaFlags[at]&areaQueued != 0 {
 				continue
 			}
 			switch {
-			case mode == lightView:
-				if g.ViewX-1 > qx || g.ViewX+viewTilesX < qx || g.ViewY-1 > qy || g.ViewY+viewTilesY < qy {
-					continue
-				}
-				g.queue(qx, qy)
 			case mode == lightPeer:
 				g.queue(qx, qy)
 			case abs(qx-x) < len(lightFalloff) && abs(qy-y) < len(lightFalloff) &&
@@ -245,6 +249,27 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 			}
 		}
 	}
+}
+
+// spreadSight queues area place (qx, qy) for sight spreading to it from area place from;
+// (fromX, fromY) and (toX, toY) are the two places relative to the eye. Within the
+// original's view and the ring around it, sight spreads as the original's did. Beyond, the
+// port lets it go on only along "straight" places, which farther from the eye on both axes
+// than the place before, as a line from the eye is, so it does not come round walls (or
+// along the original's ring behind them) into rooms one cannot see.
+func (g *Game) spreadSight(from, fromX, fromY, qx, qy, toX, toY int) {
+	const core = classicViewCenter
+	to := qy*areaSize + qx
+	far := max(abs(toX), abs(toY))
+	straight := far <= core || g.straight[from] && abs(toX) >= abs(fromX) && abs(toY) >= abs(fromY)
+	if !straight && max(far, abs(fromX), abs(fromY)) > core+1 {
+		return
+	}
+	if g.areaFlags[to]&areaQueued != 0 && (!straight || g.straight[to]) {
+		return
+	}
+	g.straight[to] = g.straight[to] || straight
+	g.queue(qx, qy) // again when it turns out straight: it spreads farther
 }
 
 // wallPatches pick the piece of wall shown for the sides of it one sees (D_0644).
@@ -282,6 +307,7 @@ func (g *Game) computeView() {
 		for x := first; x < last; x++ {
 			g.areaFlags[y*areaSize+x] = 0
 			g.areaLight[y*areaSize+x] = 0
+			g.straight[y*areaSize+x] = false
 		}
 	}
 	cornerX := (int(g.MapX) - areaMargin) &^ (chunkTiles - 1)
@@ -355,7 +381,10 @@ func (g *Game) computeView() {
 			at := (vy+g.ViewY)*areaSize + vx + g.ViewX
 			var tile int
 			switch {
-			case g.areaFlags[at]&areaVisible == 0:
+			case g.areaFlags[at]&areaVisible == 0,
+				// the port: the original's ring is seen round walls, but only for joining
+				// walls; past its view one sees only what is in line (spreadSight)
+				max(abs(vx-viewCenterX), abs(vy-viewCenterY)) > classicViewCenter && !g.straight[at]:
 				tile = tileHidden
 			case g.areaLight[at] == 0:
 				tile = tileDarkness
