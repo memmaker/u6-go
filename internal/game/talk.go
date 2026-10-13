@@ -81,9 +81,9 @@ func (g *Game) initTalk(partyID, n int) {
 	g.VarStr[variableIndex('N')] = ""
 	g.VarStr[variableIndex('P')] = cString(g.Names[partyID][:])
 	switch {
-	case g.Hour < 12:
+	case g.Hour < noon:
 		g.VarStr[variableIndex('T')] = "morning"
-	case g.Hour < 18:
+	case g.Hour < eveningHour:
 		g.VarStr[variableIndex('T')] = "afternoon"
 	default:
 		g.VarStr[variableIndex('T')] = "evening"

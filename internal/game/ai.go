@@ -341,38 +341,38 @@ func (g *Game) tracePath(x, y int) {
 // visit queues place (x, y) of the area at cost; search is fromGoal for the search from
 // the goal.
 // C: seg_1E0F:2A74 (C_1E0F_2A74)
-func (g *Game) visit(cost, search, y, side int) {
+func (g *Game) visit(cost, x, y, search int) {
 	pf := &g.paths
-	if pf.found || cost > costMask || !inArea(search, y) {
+	if pf.found || cost > costMask || !inArea(x, y) {
 		return
 	}
-	if c := pf.cost[y][search]; c != unreached && int(c)&fromGoal != side {
+	if c := pf.cost[y][x]; c != unreached && int(c)&fromGoal != search {
 		pf.found = true
-		g.tracePath(search, y)
+		g.tracePath(x, y)
 		return
 	}
 	if pf.seek >= 0 {
 		areaX, areaY := g.pathArea()
-		for i := g.FindLoc(search+areaX, y+areaY, int(g.MapZ)); i >= 0; i = g.NextLoc() {
+		for i := g.FindLoc(x+areaX, y+areaY, int(g.MapZ)); i >= 0; i = g.NextLoc() {
 			t := g.object(i).Type()
-			if ObjectType(pf.seek) == ObjTable && t == ObjChair && g.plateNear(search+areaX, y+areaY, int(g.MapZ)) != 0 ||
+			if ObjectType(pf.seek) == ObjTable && t == ObjChair && g.plateNear(x+areaX, y+areaY, int(g.MapZ)) != 0 ||
 				ObjectType(pf.seek) != ObjTable && t == ObjectType(pf.seek) {
 				pf.found = true
-				g.tracePath(search, y)
+				g.tracePath(x, y)
 				return
 			}
 		}
 	}
 	if pf.edge >= 0 {
-		if search == 0 && pf.edge == edgeWest || search == areaSize-1 && pf.edge == edgeEast ||
+		if x == 0 && pf.edge == edgeWest || x == areaSize-1 && pf.edge == edgeEast ||
 			y == 0 && pf.edge == edgeNorth || y == areaSize-1 && pf.edge == edgeSouth {
 			pf.found = true
-			pf.exitX, pf.exitY = search, y
-			g.tracePath(search, y)
+			pf.exitX, pf.exitY = x, y
+			g.tracePath(x, y)
 			return
 		}
 	}
-	if int(pf.cost[y][search])&costMask <= cost {
+	if int(pf.cost[y][x])&costMask <= cost {
 		return
 	}
 	slot := pf.free
@@ -382,9 +382,9 @@ func (g *Game) visit(cost, search, y, side int) {
 	pf.highest = max(pf.highest, cost)
 	pf.free = pf.next[slot]
 	pf.next[slot] = pf.rank[cost]
-	pf.queueX[slot], pf.queueY[slot] = byte(search), byte(y)
+	pf.queueX[slot], pf.queueY[slot] = byte(x), byte(y)
 	pf.rank[cost] = slot
-	pf.cost[y][search] = byte(cost | side)
+	pf.cost[y][x] = byte(cost | search)
 }
 
 // reversePath turns path slot around.
@@ -668,7 +668,8 @@ func (g *Game) followPath(n, x, y int) {
 func (g *Game) approachParty(n int) int {
 	picked := noObject
 	p := g.object(n).Pos
-	best := 50
+	const farthest = 50
+	best := farthest
 	for i := range int(g.PartySize) {
 		m := int(g.Party[i])
 		if g.object(m).Shape == 0 || g.NPCs[m].Has(Dead) || !g.canSee(n, m) {
@@ -1158,9 +1159,9 @@ func (g *Game) resurrectParty() {
 						g.object(avatar).Shape = npc.OrigShape
 						npc.Magic = npc.Intelligence
 						npc.Status &^= Dead | Poisoned | Asleep | Paralyzed | Protected
-						const fullKarma = 98
+						const fullKarma, percent = 98, 100
 						if g.Karma < fullKarma {
-							npc.Experience = uint16(int(npc.Experience) * int(g.Karma) / 100)
+							npc.Experience = uint16(int(npc.Experience) * int(g.Karma) / percent)
 						}
 					} else {
 						g.gameLoaded = false
@@ -1199,7 +1200,8 @@ func (g *Game) resurrectParty() {
 	const castleX, castleY = 307, 352
 	g.partyTeleport(castleX, castleY, 0, 0)
 	g.allowNPCTeleport = true
-	for g.Hour < 8 || g.Hour > 11 && g.Hour < 14 || g.Hour > 17 {
+	const morningFrom, morningTo, afternoonFrom, afternoonTo = 8, 11, 14, 17 // the court hours
+	for g.Hour < morningFrom || g.Hour > morningTo && g.Hour < afternoonFrom || g.Hour > afternoonTo {
 		const quarter = 15
 		g.passTime(quarter)
 		g.schedulePaths()

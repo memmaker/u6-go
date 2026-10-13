@@ -718,9 +718,9 @@ func (g *Game) resurrect(body int) {
 	g.object(n).Shape = npc.OrigShape
 	npc.Magic = byte(g.maxMagic(n))
 	npc.Status &^= Dead | Poisoned | Asleep | Paralyzed | Protected
-	const fullKarma = 98
+	const fullKarma, percent = 98, 100
 	if g.Karma < fullKarma {
-		npc.Experience = uint16(int(npc.Experience) * int(g.Karma) / 100)
+		npc.Experience = uint16(int(npc.Experience) * int(g.Karma) / percent)
 	}
 	p := g.object(n).Pos
 	placed := false

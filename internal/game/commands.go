@@ -421,7 +421,6 @@ func (g *Game) pushedAway(a, b int) bool {
 
 // lookAtTime prints the time of a clock or sundial.
 func (g *Game) printTime() {
-	const noon = 12
 	g.printf("\n\nThe time is ")
 	h, m := int(g.Hour), int(g.Minute)
 	switch {
@@ -543,7 +542,7 @@ func (g *Game) look() {
 		case t == ObjSpellbook && g.FindInv(sel.obj) >= 0 &&
 			(closeEnough(1, sel.x, sel.y, pp.X, pp.Y) || g.object(sel.obj).CoordUse() != OnMap):
 			g.lookSpellbook(sel.obj)
-		case t == ObjClock || t == ObjSundial && g.Hour >= 5 && g.Hour < 20:
+		case t == ObjClock || t == ObjSundial && g.Hour >= dawnHour && g.Hour <= duskHour:
 			g.printTime()
 		default:
 			g.printf(".\n")

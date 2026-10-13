@@ -414,10 +414,11 @@ func (g *Game) putch(ch int) {
 			}
 		}
 	case '^':
+		const controlMask = 31 // '^' makes the next character a control character
 		if g.current.attr&clipHighlight != 0 {
-			g.putch0(ch&31 | highBit)
+			g.putch0(ch&controlMask | highBit)
 		} else {
-			g.putch0(ch & 31)
+			g.putch0(ch & controlMask)
 		}
 		g.control = 0
 	case '@':

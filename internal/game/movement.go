@@ -402,7 +402,7 @@ func (g *Game) draggedUnderTurn(n int) bool {
 	if npc.Mode == AICommand {
 		g.printf(argghMsg, g.objectString(n))
 	}
-	if g.rand(1, 30) < int(npc.Strength) {
+	if g.rand(1, maxStat) < int(npc.Strength) {
 		g.sfx(sound.EffectHiss, 0)
 		g.printf(g.objectString(n))
 		g.printf(regurgitated)
@@ -501,15 +501,16 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 					if !g.passable(member, nx, ny) {
 						continue
 					}
-					eager := 256
+					const keen, wary = 256, 128
+					eager := keen
 					if g.steppedOnDamage {
 						if near {
 							continue
 						}
-						eager = 128
+						eager = wary
 					}
 					if g.alreadyNear(place, nx, ny) {
-						eager += 256
+						eager += keen
 					} else if near {
 						eager = 0
 					}

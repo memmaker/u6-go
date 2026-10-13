@@ -214,11 +214,13 @@ func (g *Game) generate(t int, x, y, z int) int {
 	} else {
 		const plain = 10
 		npc.Strength, npc.Dexterity, npc.Intelligence = plain, plain, plain
-		npc.HitPoints, npc.Level, npc.Status = 30, 1, alignEvil
+		const plainHitPoints = 30
+		npc.HitPoints, npc.Level, npc.Status = plainHitPoints, 1, alignEvil
 	}
 	npc.Magic = byte(g.maxMagic(n))
 	npc.MovePoints = int8(npc.Dexterity)
-	npc.Experience = 100
+	const hatchedExperience = 100
+	npc.Experience = hatchedExperience
 	npc.Mode, npc.CombatMode = AIAssault, AIAssault
 	part := func(shape uint16, x, y int) {
 		if i := g.AddMapObj(shape, StatusOwned, 0, x, y, z); i >= 0 {
@@ -334,7 +336,8 @@ func (g *Game) hatchCreatures(egg int, offScreen, gargoylesGraze bool) {
 	eo := g.object(egg)
 	const alignShift = 5
 	align := NPCStatus((eo.Quality()%10 - 1) << alignShift)
-	if g.rand(1, 100) > eo.Quantity() {
+	const percent = 100 // the quantity is the chance of hatching
+	if g.rand(1, percent) > eo.Quantity() {
 		return
 	}
 	attacks, first := false, true

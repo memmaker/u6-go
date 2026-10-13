@@ -254,8 +254,9 @@ func (g *Game) parseFactor() int {
 			a := pop(1)
 			n := g.npcNumber(int(int16(a[0].n)))
 			g.weighInventory(n, true)
-			can := int(g.NPCs[n].Strength) * 200
-			carried := (g.weightEquip + g.weightInven) * 10
+			const weightPerStrength, unitsPerWeight = 200, 10
+			can := int(g.NPCs[n].Strength) * weightPerStrength
+			carried := (g.weightEquip + g.weightInven) * unitsPerWeight
 			if can > carried {
 				push(int32(can - carried))
 			} else {
@@ -347,7 +348,8 @@ func (g *Game) parseFactor() int {
 			push(int32(g.object(int(int16(a[0].n))).Type()))
 		case opHundredBC, opHundredBD:
 			pop(2)
-			push(100)
+			const hundred = 100
+			push(hundred)
 		case opArrayItem:
 			a := pop(2)
 			index := int(byte(a[1].n))

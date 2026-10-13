@@ -475,7 +475,7 @@ var dragonPartFrames = [16]int{8, 32, 16, 24, 26, 10, 34, 18, 20, 28, 12, 36, 38
 func (g *Game) dragonPart(x, y, z, dir, facing int) int {
 	frame := dragonPartFrames[dir>>1+(facing&6)<<1]
 	for part := g.FindLoc(x+dirStepX[dir], y+dirStepY[dir], z); part >= 0; part = g.NextLoc() {
-		if o := g.object(part); o.Type() == ObjDragon && o.Frame()&62 == frame {
+		if o := g.object(part); o.Type() == ObjDragon && o.Frame()&^1 == frame {
 			return part
 		}
 	}

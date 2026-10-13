@@ -2334,7 +2334,7 @@ func (g *Game) rest() {
 		surprised
 	)
 	woke := awake
-	for i := range hours * 60 / minutesPerRest {
+	for i := range hours * minutesPerHour / minutesPerRest {
 		if guard < npcCount {
 			g.npcTurn(guard)
 		}

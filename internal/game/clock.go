@@ -29,6 +29,9 @@ const (
 	// the sun is up from dawnHour to duskHour
 	dawnHour = 5
 	duskHour = 19
+	// noon and eveningHour split the day into morning, afternoon and evening
+	noon        = 12
+	eveningHour = 18
 	// daylight is AmbientLight at day
 	daylight = 7
 )

@@ -196,10 +196,12 @@ func (g *Game) playSoundSources() {
 					crackle(fieldSteps, fieldOdds, func() int { return g.rand(fieldLowHz, fieldHighHz-d<<8) }, g.rand)
 				}
 			case ObjFountain:
-				speaker(sound.PlayNoise(10, 30-d<<2, 25000-d<<11))
+				const fountainStep, fountainLength, fountainHz = 10, 30, 25000
+				speaker(sound.PlayNoise(fountainStep, fountainLength-d<<2, fountainHz-d<<11))
 				count++
 			case ObjWaterWheel:
-				speaker(sound.PlayNoise(20, 60-d<<2, 10000-d<<10))
+				const wheelStep, wheelLength, wheelHz = 20, 60, 10000
+				speaker(sound.PlayNoise(wheelStep, wheelLength-d<<2, wheelHz-d<<10))
 				count++
 			case ObjMusician2:
 				melody := melodies[g.melody]

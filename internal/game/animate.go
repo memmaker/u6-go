@@ -9,17 +9,20 @@ const (
 	directionBits = 252 // 0xfc
 )
 
+// fidgetOften and fidgetRarely are the dice of idle animations: one chance in 32 or 64.
+const fidgetOften, fidgetRarely = 31, 63
+
 // fidget plays an idle frame from a three-step walk: from the middle step it rarely moves
 // a foot, from a foot it goes back to the middle. It returns the new step and whether it
 // changed.
 func (g *Game) fidget(step int) (int, bool) {
 	switch step {
 	case 0, 2:
-		if g.rand(0, 31) == 0 {
+		if g.rand(0, fidgetOften) == 0 {
 			return 1, true
 		}
 	case 1:
-		if g.rand(0, 63) == 0 {
+		if g.rand(0, fidgetRarely) == 0 {
 			return g.rand(0, 2), true
 		}
 	}
@@ -110,11 +113,11 @@ func (g *Game) animateTiles() {
 			frame %= steps
 			switch frame {
 			case 3, 11:
-				if g.rand(0, 31) == 0 {
+				if g.rand(0, fidgetOften) == 0 {
 					frame, changed = 7, true
 				}
 			case 7:
-				if g.rand(0, 63) == 0 {
+				if g.rand(0, fidgetRarely) == 0 {
 					frame, changed = 11, true
 					if g.rand(0, 1) != 0 {
 						frame = 3
@@ -180,7 +183,7 @@ func (g *Game) animateTiles() {
 			}
 		case t == ObjBird:
 			if frame < 3 {
-				if g.rand(0, 31) == 0 {
+				if g.rand(0, fidgetOften) == 0 {
 					frame, changed = 3, true
 				} else if g.rand(0, 1) != 0 {
 					if frame++; frame > 2 {
