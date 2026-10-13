@@ -2,7 +2,7 @@ package game
 
 // Full words for the topic list where the script's 4-letter keyword has no longer word in
 // that NPC's script to spell it out (see topicWord). Picked from the game's prose and each
-// NPC's reply; doubtful stubs are left out and listed in docs/topic-doubts.md.
+// NPC's reply; the doubtful ones were settled by hand.
 
 // topicWords spells out a keyword for every NPC.
 var topicWords = map[string]string{
@@ -40,13 +40,17 @@ var topicWords = map[string]string{
 // npcTopicWords overrides topicWords for one NPC (by script name); a keyword mapped to
 // itself stays a stub.
 var npcTopicWords = map[string]map[string]string{
-	"Antonio":   {"star": "starfalcon"},
-	"Marney":    {"lock": "locket"},
-	"Yorl":      {"lock": "locket"},
-	"Ybarra":    {"spar": "spare"},
-	"Sin'Vraal": {"inte": "intelligence", "mari": "mari"},
-	"Troy":      {"inte": "interconnected"},
-	"Trenton":   {"humb": "humb"},
+	"Antonio":      {"star": "starfalcon"},
+	"Marney":       {"lock": "locket"},
+	"Yorl":         {"lock": "locket"},
+	"Ybarra":       {"spar": "spare"},
+	"Sin'Vraal":    {"inte": "intelligence", "mari": "mariah"},
+	"Troy":         {"inte": "interconnected"},
+	"Horance":      {"tubl": "traubel"},
+	"Glen":         {"ress": "resurrection"},
+	"Selganor":     {"kine": "kinetic force", "prop": "propulsion"},
+	"Isabella":     {"ligh": "light"},
+	"Lord British": {"frag": "fragrance"},
 }
 
 // scriptTopicWord is keyword spelled out from the tables for the NPC whose script is

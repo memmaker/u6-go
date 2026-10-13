@@ -10,7 +10,9 @@ func TestTopicWordTable(t *testing.T) {
 		{"Ephemerides", "vort", "vortex"},
 		{"Yorl", "lock", "locket"},
 		{"Troy", "inte", "interconnected"},
-		{"Sin'Vraal", "mari", "mari"},
+		{"Sin'Vraal", "mari", "mariah"},
+		{"Selganor", "kine", "kinetic force"},
+		{"Horance", "tubl", "traubel"},
 		{"Iolo", "spam", "spam"},
 	} {
 		g := &Game{}
