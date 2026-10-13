@@ -3,7 +3,7 @@ package vga
 // target is the picture PutPixel and FillRect draw on, and its width.
 func (d *Driver) target() ([]byte, int) {
 	if d.Offscreen {
-		return d.BackBuffer[:], BackBufferSize
+		return d.BackBuffer[:], BackBufferWidth
 	}
 	return d.Screen[:], ScreenWidth
 }
@@ -123,7 +123,7 @@ func (d *Driver) CopyBackBufferToScreen(x0, y0, x1, y1, toX, toY int) {
 	toX &^= 1
 	width := x1 - x0 + 1
 	for row := 0; row <= y1-y0; row++ {
-		from := (y0+row)*BackBufferSize + x0
+		from := (y0+row)*BackBufferWidth + x0
 		to := (toY+row)*ScreenWidth + toX
 		copy(d.Screen[to:to+width], d.BackBuffer[from:from+width])
 	}
@@ -145,7 +145,7 @@ func (d *Driver) FadeIn(x0, y0, x1, y1 int) {
 	taps := feedbackTaps[bits-minFeedbackBits]
 	copyPixel := func(i int) {
 		x, y := x0+i%width, y0+i/width
-		d.Screen[y*ScreenWidth+x] = d.BackBuffer[y*BackBufferSize+x]
+		d.Screen[y*ScreenWidth+x] = d.BackBuffer[y*BackBufferWidth+x]
 	}
 	for state, step := 1, 0; ; step++ {
 		if state/width < height {
@@ -223,7 +223,7 @@ func (d *Driver) Vortex() {
 						if x >= viewStart && x < viewEnd && y >= viewStart && y < viewEnd {
 							copy(pair[:], d.Screen[at:])
 						} else {
-							copy(pair[:], d.BackBuffer[y*BackBufferSize+x:])
+							copy(pair[:], d.BackBuffer[y*BackBufferWidth+x:])
 						}
 					}
 					if to := placed[oldest][arm]; to != -1 {

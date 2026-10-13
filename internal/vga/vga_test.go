@@ -70,8 +70,9 @@ func TestRender(t *testing.T) {
 
 	d.DrawPixmap(paper, 0, 0)
 	// the map view: grass, water, coasts, then objects (transparent and pixel block tiles)
-	for i := range BackBufferSize / tileSize * BackBufferSize / tileSize {
-		x, y := i%11*tileSize, i/11*tileSize
+	const viewTiles = 11 // the original's map view
+	for i := range viewTiles * viewTiles {
+		x, y := i%viewTiles*tileSize, i/viewTiles*tileSize
 		d.DrawTileOffscreen(i*3, x, y) // map tiles and the first object tiles
 	}
 	d.AnimateCoasts()

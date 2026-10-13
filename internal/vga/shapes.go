@@ -42,8 +42,8 @@ func (d *Driver) ScreenSurface() Surface {
 
 // BackBufferSurface is the whole back buffer.
 func (d *Driver) BackBufferSurface() Surface {
-	return Surface{Pixels: d.BackBuffer[:], Width: BackBufferSize,
-		Right: BackBufferSize - 1, Bottom: BackBufferSize - 1}
+	return Surface{Pixels: d.BackBuffer[:], Width: BackBufferWidth,
+		Right: BackBufferWidth - 1, Bottom: BackBufferHeight - 1}
 }
 
 func (s *Surface) contains(x, y int) bool {
