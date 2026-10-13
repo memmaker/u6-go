@@ -115,6 +115,7 @@ const (
 	nameBoxTop          = 87
 	nameBoxBottom       = 99
 	nameRowOffset       = 2
+	continueButton      = 2 // the button that becomes Transfer
 )
 
 var (
@@ -124,13 +125,18 @@ var (
 	buttonShapes  = [...]int{sexButtonShape, portraitButtonShape, continueButtonShape, abortButtonShape}
 )
 
-// portraitKeys are the keys of the buttons: Sex, Portrait, Continue, Abort, and Escape.
+// portraitKeys are the keys of the buttons: Sex, Portrait, Continue (Transfer), Abort, and
+// Escape.
 const portraitKeys = "SPCA" + string(rune(charEscape))
 
-// choosePortrait shows the name and the portraits; true when the player continues, false
-// to enter the name again.
+// choosePortrait shows the name and the portraits; true when the player continues (or
+// transfers), false to go back.
 // C: seg_0263:0987 (choose_portrait)
-func (u *intro) choosePortrait(vellum, montage shapes) bool {
+func (u *intro) choosePortrait(vellum, montage shapes, transfer bool) bool {
+	shapes, keys := buttonShapes, []byte(portraitKeys)
+	if transfer {
+		shapes[continueButton], keys[continueButton] = transferButtonShape, 'T'
+	}
 	page := u.vellumBack
 	page.left, page.top, page.right, page.bottom = creationLeft, creationTop, creationRight, creationBottom
 	pageOnScreen := page
@@ -153,7 +159,7 @@ func (u *intro) choosePortrait(vellum, montage shapes) bool {
 		fg: vellumTextColour, bg: vellumColour, justify: justifyCenter}
 	u.win = &win
 	u.putsJustified(cString(u.char.name[:]))
-	for i, shape := range buttonShapes {
+	for i, shape := range shapes {
 		vellum.draw(page, buttons[i].left, buttons[i].top, shape)
 	}
 	for {
@@ -167,12 +173,12 @@ func (u *intro) choosePortrait(vellum, montage shapes) bool {
 		montage.draw(portrait, portrait.left, portrait.top, c.portrait)
 		u.copyRect(page, pageOnScreen)
 		u.mouseShow()
-		switch portraitKeys[u.menuSelect(buttons, portraitKeys)] {
+		switch keys[u.menuSelect(buttons, string(keys))] {
 		case 'S':
 			u.toggleSex()
 		case 'P':
 			c.portraitChoice = (c.portraitChoice + 1) % portraitsPerSex
-		case 'C':
+		case 'C', 'T':
 			return true
 		default:
 			return false
@@ -189,7 +195,6 @@ const (
 	gypsyFaceShape   = 198
 	gypsyPortalShape = 199
 	creationPassage  = 100
-	gameInProgress   = 998
 	portalColour     = 117
 	gypsyMillis      = 2000
 	finalNoiseLeft   = 116
@@ -228,7 +233,7 @@ func (u *intro) createCharacter() (bool, error) {
 			break
 		}
 		u.mouseShow()
-		if u.choosePortrait(vellum, montage) {
+		if u.choosePortrait(vellum, montage, false) {
 			break
 		}
 	}
@@ -348,18 +353,9 @@ func (u *intro) createCharacter() (bool, error) {
 	u.setPalette(&u.menuPalette)
 	c := &u.char
 	c.experience, c.hitPoints, c.level = startExperience, startHitPoints, startLevel
-	inProgress, err := u.saveObjlist()
-	if err != nil {
+	if err := u.saveObjlist(); err != nil {
 		return false, err
 	}
-	if inProgress {
-		u.showPassage(gameInProgress)
-		u.drawPassage()
-		u.copyRect(u.back, u.screen)
-		u.waitInput()
-		fill(u.back, 0)
-		u.copyRect(u.back, u.screen)
-	}
 	u.playMusic(sound.SongStop)
-	return !inProgress, nil
+	return true, nil
 }

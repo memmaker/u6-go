@@ -218,8 +218,14 @@ func (u *intro) main() (Result, error) {
 				return u.runGame(), nil
 			}
 		case menuTransfer:
-			// The transfer of an Ultima IV or V character from their floppy disks is not
-			// ported (README.md); the menu comes back.
+			if transferred, err := u.transferCharacter(); err != nil {
+				return Quit, err
+			} else if transferred {
+				if !u.introSeen {
+					u.playTitle()
+				}
+				return u.runGame(), nil
+			}
 		case menuAcknowledgments:
 			u.showCredits()
 		case menuJourneyOnward:

@@ -177,7 +177,11 @@ func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 // StartHeadless starts the game goroutine without a window, for tests; Step then runs it one
 // host tick at a time.
-func StartHeadless(gameMain func()) { startGame(gameMain) }
+func StartHeadless(gameMain func()) {
+	finished.Store(false) // a test may run one game after another
+	KeyQueue = KeyQueue[:0]
+	startGame(gameMain)
+}
 
 // Step runs one host tick of a headless game; false once the game has ended.
 func Step() bool { return step() }

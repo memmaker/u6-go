@@ -88,23 +88,27 @@ func (u *intro) ensureSaveGame() error {
 	return os.WriteFile(filepath.Join(dir, objlistName), rest[:objlistSize], 0o644)
 }
 
-// saveObjlist writes the new avatar into SAVEGAME/OBJLIST; true when the saved game already
-// has a character (a game in progress), which it leaves alone.
+// saveObjlist writes the new avatar into SAVEGAME/OBJLIST, starting a new saved game when
+// one is in progress.
 // C: seg_0406:0006 (SaveObjlist)
-func (u *intro) saveObjlist() (bool, error) {
-	if err := u.ensureSaveGame(); err != nil {
-		return false, err
-	}
+func (u *intro) saveObjlist() error {
 	path := filepath.Join(u.saveDir, saveGameDir, objlistName)
+	if b, err := os.ReadFile(path); err == nil && len(b) > portraitAt && b[portraitAt] != 0 {
+		// a game in progress: the new avatar starts a new game, where the original asked
+		// for the installer to make a new character disk
+		if err := os.RemoveAll(filepath.Join(u.saveDir, saveGameDir)); err != nil {
+			return err
+		}
+	}
+	if err := u.ensureSaveGame(); err != nil {
+		return err
+	}
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if len(b) < objlistSize {
-		return false, errShortObjects
-	}
-	if b[portraitAt] != 0 {
-		return true, nil
+		return errShortObjects
 	}
 	c := &u.char
 	b[strengthAt] = byte(c.strength)
@@ -122,5 +126,5 @@ func (u *intro) saveObjlist() (bool, error) {
 	b[hitPointsAt] = byte(c.hitPoints)
 	b[levelAt] = byte(c.level)
 	b[portraitAt] = byte(c.portrait + 1)
-	return false, os.WriteFile(path, b[:objlistSize], 0o644)
+	return os.WriteFile(path, b[:objlistSize], 0o644)
 }

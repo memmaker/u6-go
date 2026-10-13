@@ -291,9 +291,6 @@ var passages = map[int]passage{
 			"scramble toward the gate. Driven by fury, " +
 			"the creatures hurl their bodies into the " +
 			"portal's last handspan of light!"},
-	998: {Block: 1, BlockX: 1, BlockY: 72, TextX: 8, TextY: 80, TextRight: 303, TextBottom: 15, Centered: true,
-		Text: "A game is already in progress.  Please run the install " +
-			"program to create a new character disk."},
 }
 
 // undefinedPassage is shown for a number that has no passage.
