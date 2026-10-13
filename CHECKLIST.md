@@ -13,9 +13,10 @@
 - [x] Game state with readable names (globals, objects, NPCs)
 - [ ] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
   - [x] phase 1: init, map, view, scroll, movement, main loop (121/476 fns)
-  - [ ] phase 2: commands, objects, inventory/portrait views, music hookup
+  - [x] phase 2: commands, objects, inventory/portrait views, travel, eggs, music hookup (280/476 fns)
   - [ ] phase 3: combat, AI, magic
-  - [ ] phase 4: conversation, remaining TODOs
+  - [x] conversation engine (talkdr)
+  - [ ] phase 4: remaining TODOs
 - [x] Mouse + keyboard input
 - [x] Sound/music (AdLib driver port, internal/sound)
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
