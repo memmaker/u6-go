@@ -28,7 +28,9 @@
   - [x] castle view after load, walking, look, talk to Lord British, get/use, equipment view (F1), party view, combat toggle: text/status identical; map differs only by NPC wandering, animation phase and random wind
   - [x] ending (END.EXE VMN 1 2 3): 0 px diff on static scenes, star field timing only
   - [x] mouse tile mapping: tile i spans screen x 16i..16i+15 in both (map back buffer copied 1:1), so PointerX>>4 is right; direction centre fixed to 88
-  - [ ] spellbook view: the opening Avatar carries no spellbook ("No spellbook is readied" matches); needs a save with one
+  - [x] spellbook view (save prepared by TestParityPrep with a readied book): page, selection, page turn, casting Create Food/Light identical after fixing the corner x
+  - [x] skiff boarding and rowing, balloon boarding and drifting, rest outside the wilderness, attack prompt: identical except water phase and random rolls
+  - [x] a save written by the Go saveGame loads in the original
 
 ## C. Publish
 - [x] -import SRC (folders, zip, ISO/BIN/CUE, floppy images, GOG installers, loose files) + COVER.PNG
