@@ -27,6 +27,7 @@ func run(dir, romDir string) error {
 		}
 	}
 	loadSettings(dir)
+	game.SaveSettings = func() { saveSettings(dir) }
 	host.SquarePixels = sound.Settings.SquarePixels
 	sound.Start(files)
 	// Journey Onward without a character: GAME.EXE says so and runs the intro again.

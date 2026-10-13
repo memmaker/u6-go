@@ -4,8 +4,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
 )
 
 // The port's game menu, quick save and quick load (after Nuvie's game menu dialog and its
@@ -33,10 +35,28 @@ type setting struct {
 	toggle func(g *Game)
 }
 
-// settings are the toggles of the settings page. Further options (the audio ones) append
-// theirs here.
+// settings are the toggles of the settings page: the sound, then the options of settings.json.
 var settings = []setting{
 	{"Sound", func(g *Game) bool { return g.SoundOn != 0 }, (*Game).toggleSound},
+	option("Show stealing", &sound.Settings.ShowStealing),
+	option("Free balloon movement", &sound.Settings.FreeBalloonMovement),
+	option("Displayed wind direction", &sound.Settings.DisplayedWindDir),
+	option("Skip intro", &sound.Settings.SkipIntro),
+	option("Smooth lighting", &sound.Settings.SmoothLighting),
+	option("Map tile lighting", &sound.Settings.MapTileLighting),
+	option("Square pixels", &sound.Settings.SquarePixels),
+	option("New style UI", &sound.Settings.NewStyleUI),
+}
+
+// talkMusicChoices are the TalkMusic settings in the order the settings page steps through them.
+var talkMusicChoices = []string{"", sound.TalkMusicStop, sound.TalkMusicKeep}
+
+// SaveSettings, when set, writes the options after the settings page changed one.
+var SaveSettings func()
+
+// option is the setting toggling flag.
+func option(name string, flag *bool) setting {
+	return setting{name, func(*Game) bool { return *flag }, func(*Game) { *flag = !*flag }}
 }
 
 // gameMenu is the game menu (Ctrl+O): it returns the command picked, or 0.
@@ -52,11 +72,12 @@ func (g *Game) gameMenu() int {
 	return g.runMenu(items, g.centredPopup(names).at)
 }
 
-// settingsPage shows the settings and toggles the one picked until cancelled.
+// settingsPage shows the settings and the talk music, and changes the one picked until
+// cancelled.
 func (g *Game) settingsPage() {
 	choice := 0
 	for {
-		lines := make([]string, len(settings))
+		lines := make([]string, len(settings), len(settings)+1)
 		for i, s := range settings {
 			state := "off"
 			if s.on(g) {
@@ -64,12 +85,26 @@ func (g *Game) settingsPage() {
 			}
 			lines[i] = s.name + ": " + state
 		}
+		talkMusic := sound.Settings.TalkMusic
+		if talkMusic == "" {
+			talkMusic = "lower"
+		}
+		lines = append(lines, "Talk music: "+talkMusic)
 		p := g.centredPopup(lines)
 		p.choice = choice
 		if choice = g.runPopup(p); choice == noChoice {
 			return
 		}
-		settings[choice].toggle(g)
+		if choice < len(settings) {
+			settings[choice].toggle(g)
+		} else {
+			next := (slices.Index(talkMusicChoices, sound.Settings.TalkMusic) + 1) % len(talkMusicChoices)
+			sound.Settings.TalkMusic = talkMusicChoices[next]
+		}
+		host.SquarePixels = sound.Settings.SquarePixels
+		if SaveSettings != nil {
+			SaveSettings()
+		}
 	}
 }
 

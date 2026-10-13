@@ -18,12 +18,17 @@ func loadSettings(dir string) {
 	path := filepath.Join(dir, settingsFile)
 	b, err := os.ReadFile(path)
 	if err != nil {
-		if b, err = json.MarshalIndent(sound.Settings, "", "\t"); err == nil {
-			_ = os.WriteFile(path, b, fileMode)
-		}
+		saveSettings(dir)
 		return
 	}
 	if err := json.Unmarshal(b, &sound.Settings); err != nil {
 		fmt.Fprintln(os.Stderr, settingsFile+":", err)
+	}
+}
+
+// saveSettings writes sound.Settings to dir's settings.
+func saveSettings(dir string) {
+	if b, err := json.MarshalIndent(sound.Settings, "", "\t"); err == nil {
+		_ = os.WriteFile(filepath.Join(dir, settingsFile), b, fileMode)
 	}
 }

@@ -23,6 +23,9 @@ type Options struct {
 	MapTileLighting bool `json:"map_tile_lighting"`
 	// SquarePixels shows square pixels instead of the CRT's 4:3 picture.
 	SquarePixels bool `json:"square_pixels"`
+	// NewStyleUI frames the panels and popups with Nuvie's new style border instead of the
+	// scroll of PAPER.BMP.
+	NewStyleUI bool `json:"new_style_ui"`
 }
 
 // Settings are the options in force; set them before Start.
