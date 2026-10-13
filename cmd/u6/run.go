@@ -3,23 +3,30 @@ package main
 import (
 	"os"
 
+	"github.com/memmaker/u6-go/internal/ending"
 	"github.com/memmaker/u6-go/internal/game"
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/intro"
 	"github.com/memmaker/u6-go/internal/sound"
 )
 
-// run plays the game from the files in dir.
+// run plays the game from the files in dir, as ULTIMA6.EXE did: the intro and character
+// creation (U.EXE), then the game (GAME.EXE), which hands over to the ending (END.EXE).
 func run(dir string) error {
-	// TODO(port): the intro (U.EXE) makes the character; until it runs here, a default one
-	if err := game.WriteCharacter(dir, game.DefaultCharacter()); err != nil {
+	files := os.DirFS(dir)
+	sound.Start(files)
+	result, err := intro.Run(files, dir)
+	if err != nil || result == intro.Quit {
 		return err
 	}
-	sound.Start(os.DirFS(dir))
 	g, err := game.New(dir)
 	if err != nil {
 		return err
 	}
 	host.ShowFrame = g.Frame
-	g.Play()
-	return nil
+	g.Run()
+	if g.Ending == nil {
+		return nil
+	}
+	return ending.Run(files, *g.Ending)
 }

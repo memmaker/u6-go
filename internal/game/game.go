@@ -8,6 +8,7 @@ package game
 import (
 	"io/fs"
 
+	"github.com/memmaker/u6-go/internal/ending"
 	"github.com/memmaker/u6-go/internal/vga"
 )
 
@@ -184,6 +185,9 @@ const (
 
 // Game is the state of GAME.EXE.
 type Game struct {
+	// Ending is set when the game handed over to the ending (Run returns then).
+	Ending *ending.Args
+
 	dir   string // the game directory, where SAVEGAME and MAP are written
 	files fs.FS
 	gr    *vga.Driver
