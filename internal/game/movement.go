@@ -31,10 +31,8 @@ type turns struct {
 	soloLeader int
 	// allowNPCTeleport lets NPCs far away jump to their schedule (AllowNPCTeleport)
 	allowNPCTeleport bool
-	// formation is how the party lines up behind its leader, formationShown is set while
-	// its scroll is up (the port's, formation.go)
-	formation      formation
-	formationShown bool
+	// formation is how the party lines up behind its leader (the port's, formation.go)
+	formation formation
 }
 
 func (t *turns) initTurns() { t.allowPartySwap = true }

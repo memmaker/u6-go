@@ -39,6 +39,7 @@ var helpText = []string{
 	"Ctrl+S   save, Ctrl+R restore",
 	"Ctrl+D   date",
 	"Ctrl+L   message log",
+	"Ctrl+F   party formation",
 	"Ctrl+Z   sound, Ctrl+Q quit",
 	"Ctrl+H,? this help",
 }
@@ -191,6 +192,7 @@ func (g *Game) availableCommands() []menuItem {
 	add(party && g.InCombat == 0 && !vehicle, "Begin combat", 'B')
 	add(party && g.InCombat != 0, "Break off combat", 'B')
 	add(!party && g.InCombat == 0 && !vehicle, "Party mode", '0')
+	add(party && !vehicle, "Formation", keyCtrlF)
 	add(true, "Pass", ' ')
 	add(true, "Save game", keyCtrlS)
 	add(true, "Help", '?')
