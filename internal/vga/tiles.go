@@ -181,7 +181,7 @@ func decodeTile(file []byte, offset int, mask byte) (*Tile, int, error) {
 		if count == 0 {
 			return tile, size, nil
 		}
-		x, y := position%BackBufferSize, position/BackBufferSize
+		x, y := position%packedTileStride, position/packedTileStride
 		if x+count > tileSize || y >= tileSize || at+count > len(stored) {
 			return nil, 0, errBadTile
 		}
@@ -235,7 +235,7 @@ func (d *Driver) DrawTileOffscreen(tile, x, y int) {
 		}
 		t = silhouette
 	}
-	drawTile(d.BackBuffer[:], BackBufferSize, t, x, y)
+	drawTile(d.BackBuffer[:], BackBufferWidth, t, x, y)
 }
 
 // SetTileFrame makes tile show the picture of tile frame, for the animated tiles (water,

@@ -1,6 +1,9 @@
 package game
 
-import "github.com/memmaker/u6-go/internal/sound"
+import (
+	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
+)
 
 // useStaff casts the first charge of staff n.
 // C: seg_27A1:3537 (C_27A1_3537)
@@ -68,7 +71,7 @@ func (g *Game) vortex() {
 	g.drawStatusCursor(0)
 	g.SelectMode = 0
 	g.drawMap(false)
-	g.gr.Vortex()
+	g.gr.Vortex(g.world[:], host.ScreenWidth, host.ScreenHeight, viewCropX, viewCropY)
 	g.redrawWorld()
 	g.screenFade = true
 	g.drawMap(true)
@@ -161,6 +164,8 @@ func (g *Game) getHex(n int) int {
 const (
 	peerCell        = 4
 	peerSize        = 40 // the cells across the view
+	peerPixels      = peerSize * peerCell
+	peerOrigin      = 8 // where the map is drawn on the back buffer
 	white           = 15
 	black           = 0
 	peerColour      = 7 // impassable dry land (D_2A5A)
@@ -176,7 +181,7 @@ func (g *Game) peer() {
 	g.areaLight = [areaSize * areaSize]byte{}
 	top, left, bottom, right := 0, 0, peerSize, peerSize
 	if underground {
-		g.computeLight(g.ViewX+viewCenter, g.ViewY+viewCenter, peerSize, lightPeer)
+		g.computeLight(g.ViewX+viewCenterX, g.ViewY+viewCenterY, peerSize, lightPeer)
 	} else if g.MapZ == 0 {
 		const (
 			edge        = 1024      // the width of the surface
@@ -198,14 +203,14 @@ func (g *Game) peer() {
 	}
 	g.gr.Offscreen = true
 	g.gr.SetColor(black)
-	g.gr.FillRect(viewPixelStart, viewPixelStart, viewPixelEnd-1, viewPixelEnd-1)
+	g.gr.FillRect(peerOrigin, peerOrigin, peerOrigin+peerPixels-1, peerOrigin+peerPixels-1)
 	for y := top; y < bottom; y++ {
 		for x := left; x < right; x++ {
 			t := int(g.AreaTiles[y*areaSize+x])
 			if underground && g.areaFlags[y*areaSize+x]&areaVisible == 0 {
 				t = unseenTile
 			}
-			g.peerTile(t, x*peerCell+viewPixelStart, y*peerCell+viewPixelStart)
+			g.peerTile(t, x*peerCell+peerOrigin, y*peerCell+peerOrigin)
 		}
 	}
 	for n := g.SearchArea(g.AreaX, g.AreaY, g.AreaX+areaSize-1, g.AreaY+areaSize-1); n >= 0; n = g.NextArea() {
@@ -217,7 +222,7 @@ func (g *Game) peer() {
 		if underground && g.areaFlags[y*areaSize+x]&areaVisible == 0 {
 			continue
 		}
-		px, py := x*peerCell+viewPixelStart, y*peerCell+viewPixelStart
+		px, py := x*peerCell+peerOrigin, y*peerCell+peerOrigin
 		if n < npcCount {
 			g.peerTile(-1, px, py)
 			continue
@@ -236,12 +241,14 @@ func (g *Game) peer() {
 		}
 	}
 	g.gr.SetColor(white)
-	const partyAt = 28 // the party's cell is 5 cells in, past the frame
-	g.gr.FillRect(g.ViewX*peerCell+partyAt, g.ViewY*peerCell+partyAt, g.ViewX*peerCell+partyAt+3, g.ViewY*peerCell+partyAt+3)
+	partyX := (g.ViewX+viewCenterX)*peerCell + peerOrigin
+	partyY := (g.ViewY+viewCenterY)*peerCell + peerOrigin
+	g.gr.FillRect(partyX, partyY, partyX+peerCell-1, partyY+peerCell-1)
 	g.gr.SetColor(black)
 	g.gr.Offscreen = false
-	g.redrawFrame(viewPixelStart, viewPixelStart, viewPixelEnd-1, viewPixelEnd-1)
-	g.gr.CopyBackBufferToScreen(viewPixelStart, viewPixelStart, viewPixelEnd-1, viewPixelEnd-1, viewPixelStart, viewPixelStart)
+	// centred on the screen
+	g.copyView(peerOrigin, peerOrigin, peerOrigin+peerPixels-1, peerOrigin+peerPixels-1,
+		viewCropX+(host.ScreenWidth-peerPixels)/2, viewCropY+(host.ScreenHeight-peerPixels)/2)
 	g.animatePrompt = false
 	g.getch()
 	g.animatePrompt = true
@@ -311,14 +318,13 @@ func (g *Game) hailStorm(x, y int) int {
 	const fewestStones, mostStones = 10, 30
 	stones := g.rand(fewestStones, mostStones)
 	g.gr.MakeRotatedSprite(hailSprite, tileHail, 0, hailPivot, hailPivot)
-	empty := clipRect{viewPixelEnd, viewPixelStart - 1, viewPixelEnd, viewPixelStart - 1}
+	empty := emptyClip
 	r := empty
-	viewX := (int(g.MapX) - viewCenter) * tileSize
-	viewY := (int(g.MapY) - viewCenter) * tileSize
+	viewX := (int(g.MapX) - viewCenterX) * tileSize
+	viewY := (int(g.MapY) - viewCenterY) * tileSize
 	inView := func(i int) (int, int, bool) {
 		sx, sy := fromX[i]-viewX, fromY[i]-viewY
-		last := viewPixelEnd - hailMargin - 1
-		return sx, sy, sx > hailMargin && sx < last && sy > hailMargin && sy < last
+		return sx, sy, sx > hailMargin && sx < viewPixelEndX-hailMargin-1 && sy > hailMargin && sy < viewPixelEndY-hailMargin-1
 	}
 	for stones != 0 || falling {
 		noise := 0
@@ -347,7 +353,7 @@ func (g *Game) hailStorm(x, y int) int {
 				}
 			}
 			if r.x0 <= r.x1 && r.y0 <= r.y1 {
-				g.gr.CopyBackBufferToScreen(r.x0, r.y0, r.x1, r.y1, r.x0, r.y0)
+				g.copyView(r.x0, r.y0, r.x1, r.y1, r.x0, r.y0)
 			}
 			r = empty
 			for i := range hailSlots {
@@ -379,12 +385,12 @@ func (g *Game) hailStorm(x, y int) int {
 				g.hideNextHit = true
 				xp += g.loseHitPoints(n, 1)
 				noise = -1
-				sx := (tx-(int(g.MapX)-viewCenter))*tileSize + halfTile
-				sy := (ty-(int(g.MapY)-viewCenter))*tileSize + halfTile
-				if sx >= viewPixelStart && sx < viewPixelEnd && sy >= viewPixelStart && sy < viewPixelEnd {
+				sx := (tx-(int(g.MapX)-viewCenterX))*tileSize + halfTile
+				sy := (ty-(int(g.MapY)-viewCenterY))*tileSize + halfTile
+				if sx >= viewPixelStartX && sx < viewPixelEndX && sy >= viewPixelStartY && sy < viewPixelEndY {
 					g.gr.SaveUnderSprite(hitSprite, sx, sy)
 					g.gr.DrawTileOffscreen(tileHit, sx-halfTile, sy-halfTile)
-					g.gr.CopyBackBufferToScreen(sx-halfTile, sy-halfTile, sx+halfTile-1, sy+halfTile-1, sx-halfTile, sy-halfTile)
+					g.copyView(sx-halfTile, sy-halfTile, sx+halfTile-1, sy+halfTile-1, sx-halfTile, sy-halfTile)
 					g.gr.DrawSprite(hitSprite, sx, sy)
 					r.grow(sx, sy)
 				}

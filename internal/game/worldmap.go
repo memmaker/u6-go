@@ -126,9 +126,9 @@ func (w *worldMap) GetTileAtXYZ(x, y, z int) int {
 func (g *Game) refreshArea() {
 	mx, my := int(g.MapX), int(g.MapY)
 	g.AreaX = (mx - areaMargin) & areaAlign
-	g.ViewX = (mx - g.AreaX - viewCenter) & (levelChunks - 1)
+	g.ViewX = (mx - g.AreaX - viewCenterX) & (levelChunks - 1)
 	g.AreaY = (my - areaMargin) & areaAlign
-	g.ViewY = (my - g.AreaY - viewCenter) & (levelChunks - 1)
+	g.ViewY = (my - g.AreaY - viewCenterY) & (levelChunks - 1)
 	if g.MapZ != 0 {
 		g.coordMask = dungeonMask
 	} else {

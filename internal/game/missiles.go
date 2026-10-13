@@ -63,9 +63,7 @@ const (
 	maxMissiles      = 16
 	saveSlots        = 8 // sprite slots 0-7 keep what is under the sprites
 	fixedSpriteSlot  = 15
-	missileReach     = 7 // the tiles of rangeTable
-	viewPixelEnd     = 168
-	viewPixelStart   = 8
+	missileReach     = 7  // the tiles of rangeTable
 	maxHits          = 62 // the size of hitList less its end mark
 	halfTile         = 8
 	trailRefresh     = 6
@@ -87,68 +85,37 @@ type clipRect struct{ x0, x1, y0, y1 int }
 // grow adds the 16x16 square around (x, y), kept inside the view.
 // C: seg_2FC1:017F (C_2FC1_017F)
 func (r *clipRect) grow(x, y int) {
-	const last = viewPixelEnd - 1
 	if x < tileSize {
-		r.x0 = viewPixelStart
+		r.x0 = viewPixelStartX
 	} else if x-halfTile < r.x0 {
 		r.x0 = x - halfTile
 	}
 	if y < tileSize {
-		r.y0 = viewPixelStart
+		r.y0 = viewPixelStartY
 	} else if y-halfTile < r.y0 {
 		r.y0 = y - halfTile
 	}
-	if x > last-halfTile {
-		r.x1 = last
+	if x > viewPixelEndX-1-halfTile {
+		r.x1 = viewPixelEndX - 1
 	} else if x+halfTile > r.x1 {
 		r.x1 = x + halfTile
 	}
-	if y > last-halfTile {
-		r.y1 = last
+	if y > viewPixelEndY-1-halfTile {
+		r.y1 = viewPixelEndY - 1
 	} else if y+halfTile > r.y1 {
 		r.y1 = y + halfTile
 	}
 }
 
-// redrawFrame draws the frame of the view on the back buffer where the rectangle touches
-// it.
-// C: seg_2FC1:0212 (C_2FC1_0212)
-func (g *Game) redrawFrame(x0, y0, x1, y1 int) {
-	const far = (viewTiles - 1) * tileSize
-	if x0 < tileSize && y0 < tileSize {
-		g.gr.DrawTileOffscreen(tileFrameTopLeft, 0, 0)
-	}
-	if x1 >= far && y0 < tileSize {
-		g.gr.DrawTileOffscreen(tileFrameTopRight, far, 0)
-	}
-	if x0 < tileSize && y1 >= far {
-		g.gr.DrawTileOffscreen(tileFrameBottomLeft, 0, far)
-	}
-	if x1 >= far && y1 >= far {
-		g.gr.DrawTileOffscreen(tileFrameBottomRight, far, far)
-	}
-	for i := 1; i < viewTiles-1; i++ {
-		if y0 < tileSize {
-			g.gr.DrawTileOffscreen(tileFrameTop, i*tileSize, 0)
-		}
-		if y1 >= far {
-			g.gr.DrawTileOffscreen(tileFrameBottom, i*tileSize, far)
-		}
-		if x0 < tileSize {
-			g.gr.DrawTileOffscreen(tileFrameLeft, 0, i*tileSize)
-		}
-		if x1 >= far {
-			g.gr.DrawTileOffscreen(tileFrameRight, far, i*tileSize)
-		}
-	}
-}
+// emptyClip is a clipRect that holds nothing yet.
+var emptyClip = clipRect{viewPixelEndX, viewPixelStartX - 1, viewPixelEndY, viewPixelStartY - 1}
 
 // redrawForeground draws again the foreground tiles and the darkness over the sprites in
 // the rectangle.
 // C: seg_2FC1:032B (C_2FC1_032B)
 func (g *Game) redrawForeground(x0, y0, x1, y1 int) {
-	for i := x0 / tileSize; i <= x1/tileSize && i < viewTiles; i++ {
-		for j := y0 / tileSize; j <= y1/tileSize && j < viewTiles; j++ {
+	for i := x0 / tileSize; i <= x1/tileSize && i < viewTilesX; i++ {
+		for j := y0 / tileSize; j <= y1/tileSize && j < viewTilesY; j++ {
 			for k := g.objectView[j][i]; k != 0; k = g.objChain[k] {
 				if tile := g.objChainTile[k]; tile != 0 && g.isForeground(tile&tileNumberMask) {
 					g.gr.DrawTileOffscreen(tile&tileNumberMask, i*tileSize, j*tileSize)
@@ -159,7 +126,6 @@ func (g *Game) redrawForeground(x0, y0, x1, y1 int) {
 			}
 		}
 	}
-	g.redrawFrame(x0, y0, x1, y1)
 }
 
 func (t *tables) isNoShoot(tile int) bool { return t.TileFlag[tile]&tileNoShoot != 0 }
@@ -238,7 +204,7 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 	}
 	for i := 0; i < deltaMax; i++ {
 		shown := false
-		r := clipRect{viewPixelEnd, viewPixelStart - 1, viewPixelEnd, viewPixelStart - 1}
+		r := emptyClip
 		for d := 0; d < count; d++ {
 			if deltaX[d] <= i {
 				if i != 0 {
@@ -254,9 +220,9 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 			curX[d] += incX[d][dir]
 			curY[d] += incY[d][dir]
 			if tile != 0 && refresh != 0 && i%refresh == 0 {
-				nx := curX[d] - (int(g.MapX)-viewCenter)*tileSize
-				ny := curY[d] - (int(g.MapY)-viewCenter)*tileSize
-				if nx >= viewPixelStart && nx < viewPixelEnd && ny >= viewPixelStart && ny < viewPixelEnd {
+				nx := curX[d] - (int(g.MapX)-viewCenterX)*tileSize
+				ny := curY[d] - (int(g.MapY)-viewCenterY)*tileSize
+				if nx >= viewPixelStartX && nx < viewPixelEndX && ny >= viewPixelStartY && ny < viewPixelEndY {
 					if !shown {
 						if d == 0 {
 							switch {
@@ -340,7 +306,7 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 		}
 		if r.x0 <= r.x1 && r.y0 <= r.y1 {
 			g.redrawForeground(r.x0, r.y0, r.x1, r.y1)
-			g.gr.CopyBackBufferToScreen(r.x0, r.y0, r.x1, r.y1, r.x0, r.y0)
+			g.copyView(r.x0, r.y0, r.x1, r.y1, r.x0, r.y0)
 		}
 		if attr&missileTrail == 0 {
 			for d := range count {

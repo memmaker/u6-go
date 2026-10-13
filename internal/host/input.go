@@ -98,6 +98,20 @@ var (
 	MouseLeft, MouseRight bool
 )
 
+// wheelRows are the mouse wheel's rows not yet taken (positive: up), wheelFraction the
+// part of a row turned.
+var (
+	wheelRows     int
+	wheelFraction float64
+)
+
+// TakeWheel returns how many rows the mouse wheel turned (positive: up) since the last call.
+func TakeWheel() int {
+	rows := wheelRows
+	wheelRows = 0
+	return rows
+}
+
 // The captured mouse: its position with fractions, the host position last tick, and the
 // ticks to ignore after locking.
 var (
@@ -164,6 +178,10 @@ func pollInput(g *game) {
 		MouseX, MouseY = int(mouseFX), int(mouseFY)
 	}
 	lastX, lastY = x, y
+	_, wheel := ebiten.Wheel()
+	wheelFraction += wheel
+	wheelRows += int(wheelFraction)
+	wheelFraction -= float64(int(wheelFraction))
 	MouseLeft = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	MouseRight = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
 	if swallowClick {

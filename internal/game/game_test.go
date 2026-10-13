@@ -125,6 +125,7 @@ func TestPlayHeadless(t *testing.T) {
 	for range settle {
 		host.Step()
 	}
+	removeGargoyles(g)
 	start := g.object(int(g.Party[g.Active])).Pos
 	keys := []byte{host.ScanRight, host.ScanRight, host.ScanDown, host.ScanLeft, host.ScanRight}
 	for _, k := range keys {
@@ -192,10 +193,9 @@ func TestPlayHeadless(t *testing.T) {
 func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(string)) {
 	p := g.object(int(g.Party[g.Active])).Pos
 	click := func(dx, dy int) {
-		// The left quarter of a tile: where the drawn tile and the pointer's tile agree.
-		const mapLeft, inTile = 8, 4
-		host.MouseX = mapLeft + (p.X+dx-int(g.MapX)+viewCenter)*tileSize + inTile
-		host.MouseY = mapLeft + (p.Y+dy-int(g.MapY)+viewCenter)*tileSize + inTile
+		const inTile = 4
+		host.MouseX = (p.X+dx-int(g.MapX)+viewCenterX)*tileSize + inTile - viewCropX
+		host.MouseY = (p.Y+dy-int(g.MapY)+viewCenterY)*tileSize + inTile - viewCropY
 		for _, down := range []bool{true, false} {
 			host.MouseLeft = down
 			for range 30 {
@@ -232,10 +232,12 @@ func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(str
 	}
 }
 
-// testFight puts a hostile rat next to the party and attacks it until it dies.
+// testFight puts a hostile rat near the party and attacks it until it dies.
 func testFight(t *testing.T, g *Game, press func(...host.Key), snap func(string)) {
 	p := g.object(int(g.Party[g.Active])).Pos
-	rat := g.generate(int(ObjGiantRat), p.X+1, p.Y, p.Z)
+	rat := g.generate(int(ObjGiantRat), p.X, p.Y-2, p.Z)
+	const ratHitPoints = 20 // lasts a few rounds, so the party gets to move
+	g.NPCs[rat].HitPoints = ratHitPoints
 	g.refreshArea()
 	positions := func() []Coord {
 		var c []Coord
@@ -245,6 +247,7 @@ func testFight(t *testing.T, g *Game, press func(...host.Key), snap func(string)
 		return c
 	}
 	before := positions()
+	moved := map[int]bool{}
 	if g.InCombat == 0 {
 		press(host.Key{Char: 'B'})
 	}
@@ -264,19 +267,34 @@ func testFight(t *testing.T, g *Game, press func(...host.Key), snap func(string)
 		}
 		press(host.Key{Char: 'a'}, dir)
 		p = g.object(int(g.Party[g.Active])).Pos
+		for i, c := range positions() {
+			if c != before[i] {
+				moved[i] = true
+			}
+		}
 	}
 	snap("fight_end")
 	if g.object(rat).Shape != 0 && g.object(rat).Type() == ObjGiantRat && !g.NPCs[rat].Has(Dead) {
 		t.Errorf("the rat survived: %v %v", *g.object(rat), g.NPCs[rat].Status)
 	}
-	moved := 0
-	for i, c := range positions() {
-		if c != before[i] {
-			moved++
+	t.Logf("%d party members moved during the fight", len(moved))
+	if len(moved) == 0 {
+		t.Error("no AI moves happened")
+	}
+}
+
+// removeGargoyles takes away the gargoyles a new game starts with in the throne room
+// and the eggs that hatch more, so the tests that play there do not start in a fight.
+func removeGargoyles(g *Game) {
+	var found []int
+	const reach = 32 // the throne room and the halls around it
+	mx, my := int(g.MapX), int(g.MapY)
+	for n := g.SearchArea(mx-reach, my-reach, mx+reach, my+reach); n >= 0; n = g.NextArea() {
+		if t := g.object(n).Type(); t == ObjGargoyle || t == ObjWingedGargoyle || t == ObjEgg {
+			found = append(found, n)
 		}
 	}
-	t.Logf("%d party members moved during the fight", moved)
-	if moved == 0 {
-		t.Error("no AI moves happened")
+	for _, n := range found {
+		g.DeleteObj(n)
 	}
 }

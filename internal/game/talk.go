@@ -247,8 +247,8 @@ func (g *Game) isOnScreen(n int) bool {
 		return true
 	}
 	p := g.object(n).Pos
-	x, y := p.X-(int(g.MapX)-viewCenter), p.Y-(int(g.MapY)-viewCenter)
-	if x <= 0 || x >= viewTiles-1 || y <= 0 || y >= viewTiles-1 {
+	x, y := p.X-(int(g.MapX)-viewCenterX), p.Y-(int(g.MapY)-viewCenterY)
+	if x <= 0 || x >= viewTilesX-1 || y <= 0 || y >= viewTilesY-1 {
 		return false
 	}
 	if g.objectView[y][x] != 0 || g.tileView[y][x] >= firstObjectTile {
@@ -609,6 +609,8 @@ func (g *Game) talkDriver(speaker, n int) {
 	}
 	g.VarStr[variableIndex('N')] = name.String()
 	g.InConversation = true
+	savedClip := g.startTalkLayout()
+	defer g.endTalkLayout(savedClip)
 	savedDisplay, savedMember := g.StatusDisplay, g.statusMember
 	if !g.seance {
 		if g.object(n).Type() != ObjShrine {
@@ -651,12 +653,11 @@ func (g *Game) converse() bool {
 	resume := g.pc
 	switch op := g.next(); op {
 	case opAskTop:
-		g.printf("\nyou say:")
 		if answer := g.copyProtectionAnswer(); answer != "" {
 			g.typed = answer
-			g.printf("%s", answer)
+			g.printf("\nyou say:%s", answer)
 		} else {
-			g.typed = g.gets(typedLength)
+			g.typed = g.askTopic()
 		}
 		g.printf("\n")
 		g.answered = false

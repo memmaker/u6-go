@@ -2,9 +2,9 @@
 // mode. GAME.EXE calls the driver through a jump table of far entries GR_00..GR_4E (gr.h); each
 // entry is a method of Driver here. DRIVER.md maps the entries to the methods.
 //
-// The driver draws on two pictures: the screen (320x200) and the back buffer, a 176x176 picture
-// in which the game composes the 11x11-tile map view (with an 8 pixel border) before copying it
-// to the screen.
+// The driver draws on two pictures: the screen and the back buffer, in which the game composes
+// the map view before copying it to the screen. The port's screen is taller than the 320x200
+// shown: the game keeps its panels there (see the game's layout.go) and composes what is shown.
 package vga
 
 import (
@@ -16,8 +16,15 @@ import (
 const (
 	ScreenWidth  = host.ScreenWidth
 	ScreenHeight = host.ScreenHeight
-	// BackBufferSize is the width and height of the back buffer: 11 tiles of 16 pixels.
-	BackBufferSize = 176
+	// CanvasHeight is the height of the screen picture: the shown 320x200 and room below it.
+	CanvasHeight = 2 * ScreenHeight
+	// BackBufferWidth and BackBufferHeight are the size of the back buffer: 21x13 tiles of
+	// 16 pixels, the port's map view (the original's was 11x11 tiles).
+	BackBufferWidth  = 336
+	BackBufferHeight = 208
+	// packedTileStride is the row length the packed tile positions in MAPTILES.VGA count in,
+	// the original's 176 pixel back buffer.
+	packedTileStride = 176
 
 	paletteBytes = 768
 	// transparent is the colour that tile, sprite and pointer pictures leave undrawn.
@@ -27,8 +34,8 @@ const (
 // Driver is the state of U6MCGA.DRV. The exported fields are the parts of the driver's
 // shared structure (tGr in gr.h) that GAME.EXE writes directly.
 type Driver struct {
-	Screen     [ScreenWidth * ScreenHeight]byte
-	BackBuffer [BackBufferSize * BackBufferSize]byte
+	Screen     [ScreenWidth * CanvasHeight]byte
+	BackBuffer [BackBufferWidth * BackBufferHeight]byte
 	// Palette is what the VGA DAC holds: 256 colours of three 6-bit components. The game
 	// loads it from U6PAL and animates it itself; the driver only shows it.
 	Palette [paletteBytes]byte
@@ -58,7 +65,7 @@ type Driver struct {
 
 // Frame returns the screen for the host to present.
 func (d *Driver) Frame() *host.Frame {
-	frame := &host.Frame{Pixels: d.Screen[:], Palette: &d.Palette}
+	frame := &host.Frame{Pixels: d.Screen[:ScreenWidth*ScreenHeight], Palette: &d.Palette}
 	d.pointer.addTo(frame)
 	return frame
 }

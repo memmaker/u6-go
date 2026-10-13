@@ -1,6 +1,12 @@
 package game
 
-import "github.com/memmaker/u6-go/internal/sound"
+import (
+	"math"
+
+	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
+	"github.com/memmaker/u6-go/internal/vga"
+)
 
 // The map view: the 11x11 tiles around the party (Tile_11x11), the objects drawn on each
 // (Obj_11x11, chains through D_E5E0), and drawing them on the back buffer.
@@ -75,16 +81,25 @@ const (
 	spellSlow        = 7
 )
 
+// objChainSlots is how many tiles the view chains on its places: the original's 256 ran
+// out in the port's bigger view, dropping objects and parts of them.
+const objChainSlots = 1024
+
+// chainSlot is a slot of objChain.
+type chainSlot uint16
+
 // view is the state of the view (seg_1100, the drawing parts of seg_1184 and seg_0A33).
 type view struct {
-	tileView   [viewTiles][viewTiles]int
-	objectView [viewTiles][viewTiles]byte
+	tileView   [viewTilesY][viewTilesX]int
+	objectView [viewTilesY][viewTilesX]chainSlot
 	// objChain links the tiles drawn on a place (D_E5E0; slot 0 is the free list), the
 	// tile of each slot is objChainTile (D_D5DC)
-	objChain     [npcCount]byte
-	objChainTile [npcCount]int
-	areaFlags    [areaSize * areaSize]byte
-	areaLight    [areaSize * areaSize]byte
+	objChain     [objChainSlots]chainSlot
+	objChainTile [objChainSlots]int
+	// straight marks the area places sight reaches in a line from the eye (spreadSight)
+	straight  [areaSize * areaSize]bool
+	areaFlags [areaSize * areaSize]byte
+	areaLight [areaSize * areaSize]byte
 	// the queue of places whose light is computed (D_BBCC, D_BCCC, visited_w, visited_r)
 	queueX, queueY [npcCount]byte
 	queueIn        byte
@@ -118,8 +133,8 @@ func (g *Game) isVisible(at, x, y int) bool {
 		return false
 	}
 	if g.isWindow(tile) || flags&areaWindow != 0 {
-		return g.ViewX+viewCenter == x && abs(g.ViewY+viewCenter-y) < 2 ||
-			g.ViewY+viewCenter == y && abs(g.ViewX+viewCenter-x) < 2
+		return g.ViewX+viewCenterX == x && abs(g.ViewY+viewCenterY-y) < 2 ||
+			g.ViewY+viewCenterY == y && abs(g.ViewX+viewCenterX-x) < 2
 	}
 	if flags&areaBackground == 0 && g.isOpaque(tile) {
 		return false
@@ -152,6 +167,15 @@ var lightFalloff = [8][8]int{
 	{5, 5, 6, 6, 7, 7, 8, 9},
 	{6, 6, 6, 7, 7, 8, 8, 9},
 	{7, 7, 7, 8, 8, 9, 9, 10},
+}
+
+// falloff is lightFalloff, continued past its table (which reached the original view's
+// corners) by the distance.
+func falloff(deltaX, deltaY int) int {
+	if deltaX < len(lightFalloff) && deltaY < len(lightFalloff) {
+		return lightFalloff[deltaX][deltaY]
+	}
+	return int(math.Round(math.Hypot(float64(deltaX), float64(deltaY))))
 }
 
 // the walk around a place: north, then clockwise (D_062C, D_0634)
@@ -187,7 +211,10 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 		qx, qy := int(g.queueX[g.queueOut]), int(g.queueY[g.queueOut])
 		g.queueOut++
 		at := qy*areaSize + qx
-		light := fullLight - lightFalloff[abs(qx-x)][abs(qy-y)] + dist
+		light := fullLight // the port: daylight lights all of the bigger view
+		if mode != lightView || dist < daylight {
+			light = fullLight - falloff(abs(qx-x), abs(qy-y)) + dist
+		}
 		light = max(0, min(light, fullLight))
 		g.areaLight[at] += byte(light)
 		if mode != lightSource {
@@ -196,6 +223,7 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 		if !g.isVisible(at, qx, qy) {
 			continue
 		}
+		from, fromX, fromY := at, qx-x, qy-y
 		for dir := range len(aroundX) {
 			qx += aroundX[dir]
 			qy += aroundY[dir]
@@ -204,15 +232,16 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 			if at < 0 || at >= len(g.areaFlags) {
 				continue
 			}
+			if mode == lightView {
+				if g.ViewX-1 <= qx && qx <= g.ViewX+viewTilesX && g.ViewY-1 <= qy && qy <= g.ViewY+viewTilesY {
+					g.spreadSight(from, fromX, fromY, qx, qy, qx-x, qy-y)
+				}
+				continue
+			}
 			if g.areaFlags[at]&areaQueued != 0 {
 				continue
 			}
 			switch {
-			case mode == lightView:
-				if g.ViewX-1 > qx || g.ViewX+viewTiles < qx || g.ViewY-1 > qy || g.ViewY+viewTiles < qy {
-					continue
-				}
-				g.queue(qx, qy)
 			case mode == lightPeer:
 				g.queue(qx, qy)
 			case abs(qx-x) < len(lightFalloff) && abs(qy-y) < len(lightFalloff) &&
@@ -221,6 +250,27 @@ func (g *Game) computeLight(x, y, dist, mode int) {
 			}
 		}
 	}
+}
+
+// spreadSight queues area place (qx, qy) for sight spreading to it from area place from;
+// (fromX, fromY) and (toX, toY) are the two places relative to the eye. Within the
+// original's view and the ring around it, sight spreads as the original's did. Beyond, the
+// port lets it go on only along "straight" places, which farther from the eye on both axes
+// than the place before, as a line from the eye is, so it does not come round walls (or
+// along the original's ring behind them) into rooms one cannot see.
+func (g *Game) spreadSight(from, fromX, fromY, qx, qy, toX, toY int) {
+	const core = classicViewCenter
+	to := qy*areaSize + qx
+	far := max(abs(toX), abs(toY))
+	straight := far <= core || g.straight[from] && abs(toX) >= abs(fromX) && abs(toY) >= abs(fromY)
+	if !straight && max(far, abs(fromX), abs(fromY)) > core+1 {
+		return
+	}
+	if g.areaFlags[to]&areaQueued != 0 && (!straight || g.straight[to]) {
+		return
+	}
+	g.straight[to] = g.straight[to] || straight
+	g.queue(qx, qy) // again when it turns out straight: it spreads farther
 }
 
 // wallPatches pick the piece of wall shown for the sides of it one sees (D_0644).
@@ -240,24 +290,25 @@ const (
 // C: seg_1100:0306 (C_1100_0306)
 func (g *Game) computeView() {
 	if g.xray {
-		for y := range viewTiles {
-			for x := range viewTiles {
+		for y := range viewTilesY {
+			for x := range viewTilesX {
 				g.tileView[y][x] = int(g.AreaTiles[(y+g.ViewY)*areaSize+x+g.ViewX])
 			}
 		}
-		for y := chunkTiles; y < areaSize-chunkTiles; y++ {
-			for x := chunkTiles; x < areaSize-chunkTiles; x++ {
+		for y := lightFirst; y < lightLast; y++ {
+			for x := lightFirst; x < lightLast; x++ {
 				g.areaLight[y*areaSize+x] = fullLight
 			}
 		}
 		g.ShowObjects()
 		return
 	}
-	const first, last = chunkTiles, areaSize - chunkTiles // the 24x24 places that are computed
+	const first, last = lightFirst, lightLast
 	for y := first; y < last; y++ {
 		for x := first; x < last; x++ {
 			g.areaFlags[y*areaSize+x] = 0
 			g.areaLight[y*areaSize+x] = 0
+			g.straight[y*areaSize+x] = false
 		}
 	}
 	cornerX := (int(g.MapX) - areaMargin) &^ (chunkTiles - 1)
@@ -300,7 +351,7 @@ func (g *Game) computeView() {
 		}
 	}
 
-	g.computeLight(g.ViewX+viewCenter, g.ViewY+viewCenter, int(g.AmbientLight), lightView)
+	g.computeLight(g.ViewX+viewCenterX, g.ViewY+viewCenterY, int(g.AmbientLight), lightView)
 
 	const daylight = 7
 	if g.AmbientLight < daylight {
@@ -326,12 +377,15 @@ func (g *Game) computeView() {
 		}
 	}
 
-	for vy := range viewTiles {
-		for vx := range viewTiles {
+	for vy := range viewTilesY {
+		for vx := range viewTilesX {
 			at := (vy+g.ViewY)*areaSize + vx + g.ViewX
 			var tile int
 			switch {
-			case g.areaFlags[at]&areaVisible == 0:
+			case g.areaFlags[at]&areaVisible == 0,
+				// the port: the original's ring is seen round walls, but only for joining
+				// walls; past its view one sees only what is in line (spreadSight)
+				max(abs(vx-viewCenterX), abs(vy-viewCenterY)) > classicViewCenter && !g.straight[at]:
 				tile = tileHidden
 			case g.areaLight[at] == 0:
 				tile = tileDarkness
@@ -403,7 +457,7 @@ func (g *Game) wallSeen(at int) int {
 // C: seg_1184:347C (ShowObject)
 func (g *Game) showObject(tileFrame, x, y, mode int) {
 	// fix: the lenses of the temple of singularity put tiles outside the view
-	if x < 0 || y < 0 || x >= viewTiles || y >= viewTiles {
+	if x < 0 || y < 0 || x >= viewTilesX || y >= viewTilesY {
 		return
 	}
 	tile := tileFrame & tileNumberMask
@@ -456,24 +510,24 @@ func (g *Game) showObject(tileFrame, x, y, mode int) {
 // showBigObject shows an object and the other parts of a double width or height one.
 // C: seg_1184:35EA (C_1184_35EA)
 func (g *Game) showBigObject(tile, frame, x, y int) {
-	if x < viewTiles && y < viewTiles {
+	if x < viewTilesX && y < viewTilesY {
 		g.showObject(tile+frame, x, y, 0)
 	}
 	flags := g.TileFlag[tile&tileNumberMask]
 	switch {
 	case flags&tileDoubleWidth != 0:
-		if x != 0 && y < viewTiles {
+		if x != 0 && y < viewTilesY {
 			g.showObject(tile+frame-1, x-1, y, 1)
 		}
 		if flags&tileDoubleHeight != 0 {
-			if x < viewTiles && y != 0 {
+			if x < viewTilesX && y != 0 {
 				g.showObject(tile+frame-2, x, y-1, 1)
 			}
 			if x != 0 && y != 0 {
 				g.showObject(tile+frame-3, x-1, y-1, 1)
 			}
 		}
-	case x < viewTiles && y != 0 && flags&tileDoubleHeight != 0:
+	case x < viewTilesX && y != 0 && flags&tileDoubleHeight != 0:
 		g.showObject(tile+frame-1, x, y-1, 1)
 	}
 }
@@ -491,11 +545,11 @@ func (g *Game) ShowObjects() {
 	g.soundCount = 0
 	hasMusic := false
 	for i := range g.objChain {
-		g.objChain[i] = byte(i + 1)
+		g.objChain[i] = chainSlot((i + 1) % objChainSlots) // the last ends the free list
 	}
-	g.objectView = [viewTiles][viewTiles]byte{}
+	g.objectView = [viewTilesY][viewTilesX]chainSlot{}
 	mx, my := int(g.MapX), int(g.MapY)
-	for n := g.SearchArea(mx-viewCenter, my-viewCenter, mx+viewCenter+1, my+viewCenter+1); n >= 0; n = g.NextArea() {
+	for n := g.SearchArea(mx-viewCenterX, my-viewCenterY, mx+viewCenterX+1, my+viewCenterY+1); n >= 0; n = g.NextArea() {
 		o := g.object(n)
 		silhouette := 0
 		t := o.Type()
@@ -531,34 +585,34 @@ func (g *Game) ShowObjects() {
 				silhouette = silhouetteCursed
 			}
 		}
-		x, y := o.Pos.X-mx+viewCenter, o.Pos.Y-my+viewCenter
+		x, y := o.Pos.X-mx+viewCenterX, o.Pos.Y-my+viewCenterY
 		if silhouette != 0 {
 			g.showBigObject(tile, silhouette, x, y)
 		}
 		if !o.Has(StatusInvisible) {
 			g.showBigObject(tile, 0, x, y)
 		}
-		if o.Pos.Z == 0 && y < viewTiles && x+mx == britanniaLensX && y+my == lensY && t == ObjBritanniaLens {
+		if o.Pos.Z == 0 && y < viewTilesY && x+mx == britanniaLensX && y+my == lensY && t == ObjBritanniaLens {
 			if x != 0 {
 				g.showObject(tileBritanniaLensRight, x+1, y, 1)
 			}
-			if x < viewTiles-1 {
+			if x < viewTilesX-1 {
 				g.showObject(tileBritanniaLensLeft, x-1, y, 1)
 			}
 			continue
 		}
-		if o.Pos.Z == 0 && y < viewTiles && x+mx == gargoyleLensX && y+my == lensY && t == ObjGargoyleLens {
+		if o.Pos.Z == 0 && y < viewTilesY && x+mx == gargoyleLensX && y+my == lensY && t == ObjGargoyleLens {
 			if x != 0 {
 				g.showObject(tileGargoyleLensRight, x+1, y, 1)
 			}
-			if x < viewTiles-1 {
+			if x < viewTilesX-1 {
 				g.showObject(tileGargoyleLensLeft, x-1, y, 1)
 			}
 		}
 	}
 	if !g.xray {
-		for i := range viewTiles {
-			for j := range viewTiles {
+		for i := range viewTilesX {
+			for j := range viewTilesY {
 				// fix: masked; a background object's silhouette bits made the original
 				// read past TerrainType
 				if g.isWall(g.tileView[j][i] & tileNumberMask) {
@@ -613,19 +667,13 @@ func (g *Game) drawClockFace(x, y int) {
 	g.gr.Offscreen = false
 }
 
-// the part of the back buffer shown, inside the frame
-const (
-	viewFirstPixel = borderSize
-	viewLastPixel  = viewTiles*tileSize - borderSize - 1
-)
-
-// drawMap draws the view on the back buffer and, when onScreen, the aim cursor and the
-// frame, then copies it to the screen.
+// drawMap draws the view on the back buffer and, when onScreen, the aim cursor, then
+// copies it to the world picture.
 // C: seg_0A33:09CE (C_0A33_09CE)
 func (g *Game) drawMap(onScreen bool) {
 	g.gr.SetColor(g.colours.viewBorder)
-	for j := range viewTiles {
-		for i := range viewTiles {
+	for j := range viewTilesY {
+		for i := range viewTilesX {
 			x, y := i*tileSize, j*tileSize
 			g.gr.DrawTileOffscreen(g.tileView[j][i], x, y)
 			for k := g.objectView[j][i]; k != 0; k = g.objChain[k] {
@@ -642,8 +690,8 @@ func (g *Game) drawMap(onScreen bool) {
 		g.gr.XorMode, g.gr.Offscreen = true, true
 		g.gr.SetColor(sparkleColour)
 		for range sparkles {
-			x := g.rand(viewFirstPixel, viewLastPixel)
-			g.gr.PutPixel(x, g.rand(viewFirstPixel, viewLastPixel))
+			x := g.rand(viewPixelStartX, viewPixelEndX-1)
+			g.gr.PutPixel(x, g.rand(viewPixelStartY, viewPixelEndY-1))
 		}
 		g.gr.XorMode, g.gr.Offscreen = false, false
 	}
@@ -661,24 +709,13 @@ func (g *Game) drawMap(onScreen bool) {
 		}
 		g.gr.DrawTileOffscreen(tile, g.AimX*tileSize, g.AimY*tileSize)
 	}
-	const far = (viewTiles - 1) * tileSize
-	g.gr.DrawTileOffscreen(tileFrameTopLeft, 0, 0)
-	g.gr.DrawTileOffscreen(tileFrameTopRight, far, 0)
-	g.gr.DrawTileOffscreen(tileFrameBottomLeft, 0, far)
-	g.gr.DrawTileOffscreen(tileFrameBottomRight, far, far)
-	for i := 1; i < viewTiles-1; i++ {
-		g.gr.DrawTileOffscreen(tileFrameTop, i*tileSize, 0)
-		g.gr.DrawTileOffscreen(tileFrameBottom, i*tileSize, far)
-		g.gr.DrawTileOffscreen(tileFrameLeft, 0, i*tileSize)
-		g.gr.DrawTileOffscreen(tileFrameRight, far, i*tileSize)
-	}
-	// the pointer is drawn by the host over the screen; the original drew it on the back
-	// buffer here
+	// the port fills the screen with the view: no frame
 	if g.screenFade {
-		g.gr.FadeIn(viewFirstPixel, viewFirstPixel, viewLastPixel, viewLastPixel)
+		g.gr.FadeIn(g.world[:], host.ScreenWidth, viewCropX, viewCropY,
+			viewPixelStartX, viewPixelStartY, viewPixelEndX-1, viewPixelEndY-1)
 		g.screenFade = false
 	} else {
-		g.gr.CopyBackBufferToScreen(viewFirstPixel, viewFirstPixel, viewLastPixel, viewLastPixel, viewFirstPixel, viewFirstPixel)
+		g.copyView(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1, 0, 0)
 	}
 }
 
@@ -715,12 +752,11 @@ func (g *Game) updateViewNow() {
 // shakeScreen shakes the view: the map is drawn off screen and copied at random offsets.
 // C: seg_2FC1:18BD (ShakeScreen)
 func (g *Game) shakeScreen(duration, amplitude int) {
-	const viewOrigin, viewSize = 16, 144
 	g.drawMap(false)
 	for range duration {
-		x := g.rand(viewOrigin-amplitude, viewOrigin+amplitude)
-		y := g.rand(viewOrigin-amplitude, viewOrigin+amplitude)
-		g.gr.CopyBackBufferToScreen(x, y, x+viewSize, y+viewSize, viewOrigin, viewOrigin)
+		x := g.rand(-amplitude, amplitude)
+		y := g.rand(-amplitude, amplitude)
+		g.copyView(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1, x, y)
 		g.sfx(sound.EffectRumble, 0)
 	}
 	g.OtherAnimations()

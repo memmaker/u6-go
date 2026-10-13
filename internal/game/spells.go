@@ -2,7 +2,10 @@ package game
 
 // The spells (seg_1944): their tables, the cast command and what each spell does.
 
-import "github.com/memmaker/u6-go/internal/sound"
+import (
+	"github.com/memmaker/u6-go/internal/sound"
+	"github.com/memmaker/u6-go/internal/vga"
+)
 
 // Spell numbers (SPELL_xx): the circle (from 0) times circleSlots plus the spell's place in
 // its circle.
@@ -559,10 +562,8 @@ func (g *Game) spellFlash(circle int) {
 
 // invertView flips the colours of the view on the back buffer and shows it.
 func (g *Game) invertView() {
-	const first, last = viewPixelStart, viewPixelEnd
-	g.gr.FillRect(first, first, last, last)
-	g.redrawFrame(first, first, last-1, last-1)
-	g.gr.CopyBackBufferToScreen(first, first, last-1, last-1, first, first)
+	g.gr.FillRect(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1)
+	g.copyView(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1, 0, 0)
 }
 
 // strengthResists says whether b resists a's strength.
@@ -1872,8 +1873,8 @@ func (g *Game) telekinesis(targeted bool) {
 	g.magicalHalo(n, 1)
 	p := g.object(n).Pos
 	g.MouseMode = 0
-	g.pointerCentreX = (p.X-int(g.MapX))*tileSize + mapCentrePixel
-	g.pointerCentreY = (p.Y-int(g.MapY))*tileSize + mapCentrePixel
+	g.pointerCentreX = (p.X-int(g.MapX))*tileSize + mapCentreX
+	g.pointerCentreY = (p.Y-int(g.MapY))*tileSize + mapCentreY
 	g.printf("Direction-")
 	if g.getch() != cmdAdvance {
 		g.printf("nowhere\n")
@@ -1890,7 +1891,7 @@ func (g *Game) telekinesis(targeted bool) {
 			g.computeView()
 		}
 	}
-	g.pointerCentreX, g.pointerCentreY = mapCentrePixel, mapCentrePixel
+	g.pointerCentreX, g.pointerCentreY = mapCentreX, mapCentreY
 	g.updatePointerShape()
 }
 
@@ -2295,8 +2296,8 @@ func (g *Game) windSpell(spell, tile int, targeted bool) {
 func (g *Game) magicWind(n, x, y, tile int) []int {
 	p := g.object(n).Pos
 	// fix: the original read outside its table for a place more than 5 tiles away
-	row := min(max(y-p.Y+viewCenter, 0), viewTiles-1)
-	col := min(max(x-p.X+viewCenter, 0), viewTiles-1)
+	row := min(max(y-p.Y+classicViewCenter, 0), classicViewTiles-1)
+	col := min(max(x-p.X+classicViewCenter, 0), classicViewTiles-1)
 	dirs := int(tripleDirections[row][col])
 	left, right := dirs>>nibble, dirs&(1<<nibble-1)
 	deltaX := []int{x, x + dirStepX[left], x + dirStepX[right], 0, 0}

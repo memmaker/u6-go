@@ -268,7 +268,7 @@ func (g *Game) tryTeleport(n int, offScreen bool) bool {
 	for range tries {
 		x := g.rand(1, spread) + g.rand(1, spread) + p.X - spread - 1
 		y := g.rand(1, spread) + g.rand(1, spread) + p.Y - spread - 1
-		if offScreen && closeEnough(viewCenter, x, y, int(g.MapX), int(g.MapY)) {
+		if offScreen && g.onScreen(x, y) { // original: 11x11 view
 			continue
 		}
 		if g.passable(n, x, y) {
@@ -480,13 +480,15 @@ func (g *Game) hatchEggs() {
 		return
 	}
 	g.serpentPart = 0
-	const nearEgg = 8
+	// The original hatched beyond 8 tiles (its 11x11 view radius plus 3);
+	// keep the same margin around the visible view.
+	const nearEgg = 8 - classicViewCenter
 	for n := g.SearchArea(g.AreaX, g.AreaY, g.AreaX+areaSize-1, g.AreaY+areaSize-1); n >= 0; n = g.NextArea() {
 		o := g.object(n)
 		if o.Type() != ObjEgg || o.Pos.Z != int(g.MapZ) {
 			continue
 		}
-		if g.forceHatching || !closeEnough(nearEgg, o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY)) || o.Has(StatusLocal) {
+		if g.forceHatching || !g.inView(nearEgg, o.Pos.X, o.Pos.Y) || o.Has(StatusLocal) {
 			g.hatch(n)
 		}
 	}

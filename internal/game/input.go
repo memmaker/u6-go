@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/vga"
 )
 
 // Commands (cmd.h CMD_xx): what a key or a mouse click asks for. The values continue the
@@ -110,13 +111,16 @@ type input struct {
 	mousePressed, mouseTriggered bool
 	mouseButtons                 int
 	mousePressCommand            int
-	// PointerX, PointerY is where the pointer (or the keyboard cursor) points.
+	// PointerX, PointerY is where the pointer (or the keyboard cursor) points: on the back
+	// buffer's map view, or on a panel of the canvas when pointerOverUI.
 	PointerX, PointerY int
+	pointerOverUI      bool
 	// pointerCentreX/Y is the centre of the map view, where the mouse directions start
 	// (D_04CA, D_04CB)
 	pointerCentreX, pointerCentreY int
 	mouse                          struct {
 		x, y        int
+		overUI      bool
 		left, right bool
 	}
 	// Selection is the target picked for a command.
@@ -141,12 +145,16 @@ func (in *input) initInput() {
 	in.pendingCommand = cmdPass
 	in.mouseMapX, in.mouseMapY = -1, -1
 	in.mouseTileX, in.mouseTileY = -1, -1
-	in.pointerCentreX, in.pointerCentreY = mapCentrePixel, mapCentrePixel
+	in.pointerCentreX, in.pointerCentreY = mapCentreX, mapCentreY
 	in.statusCursorX = 3
 }
 
-// mapCentrePixel is the centre of the map view on the screen (88).
-const mapCentrePixel = viewCenter*tileSize + tileSize/2
+// mapCentreX, mapCentreY is the centre of the map view on the back buffer, where the
+// pointer's map coordinates are counted.
+const (
+	mapCentreX = viewCenterX*tileSize + tileSize/2
+	mapCentreY = viewCenterY*tileSize + tileSize/2
+)
 
 const (
 	tileSize   = 16
@@ -160,9 +168,9 @@ const (
 // serveMouse reads the mouse and moves the pointer.
 // C: MOUSE.ASM MOUSE_SERVE
 func (g *Game) serveMouse() {
-	g.mouse.x, g.mouse.y = host.MouseX, host.MouseY
+	g.mouse.x, g.mouse.y, g.mouse.overUI = g.pointAt(host.MouseX, host.MouseY)
 	g.mouse.left, g.mouse.right = host.MouseLeft, host.MouseRight
-	g.gr.MovePointer(g.mouse.x, g.mouse.y)
+	g.gr.MovePointer(host.MouseX, host.MouseY)
 	g.updatePointerShape()
 }
 
@@ -229,8 +237,7 @@ const (
 // C: seg_0C9C:01FB (C_0C9C_01FB)
 func (g *Game) updatePointerShape() {
 	x, y := g.mouse.x, g.mouse.y
-	const viewEnd = borderSize + viewTiles*tileSize - borderSize*2 + borderSize
-	if x >= borderSize && x < viewEnd && y >= borderSize && y < viewEnd {
+	if !g.mouse.overUI {
 		if g.MouseMode == 0 {
 			if d := g.pointerDirection(x, y); d >= 0 {
 				g.gr.SetPointer(pointerNorth + d)
@@ -260,7 +267,9 @@ func (g *Game) prompt() int {
 		g.putch0(0)
 	}
 	x, y := c.curX+c.x0, c.curY+c.y0
-	ch := readKey(g.drainKeys)
+	g.prompting = true
+	defer func() { g.prompting = false }()
+	ch := g.hotKey(readKey(g.drainKeys))
 	if ch == 0 {
 		g.putCharAt(byte(g.promptChar+g.promptCount&3), x, y)
 		g.promptCount++
@@ -281,25 +290,29 @@ func (g *Game) prompt() int {
 }
 
 // screen zones for the mouse (D_052B)
-var mouseZones = [4][4]int{
+var mouseZones = [...][4]int{
 	{8, 8, 167, 167},   // map view
 	{8, 176, 167, 191}, // command icons
 	{168, 8, 311, 103}, // status area
-	{0, 0, 319, 199},   // the rest of the screen
+	{partyColumnX, partyColumnY, partyColumnX + tileSize - 1, partyColumnY + partyListRows*partyRowHeight - 1},
+	{0, 0, vga.ScreenWidth - 1, vga.CanvasHeight - 1}, // the rest of the canvas
 }
 
 const (
 	zoneMap = iota
 	zoneIcons
 	zoneStatus
+	zoneParty
 	zoneScreen
 )
 
 // mouseCommand returns the command of a mouse press.
 // C: seg_0C9C:1714 (mkMouseCommand)
 func (g *Game) mouseCommand() int {
-	zone := 0
-	for ; ; zone++ {
+	// the port: the map fills the screen, the other zones are the panels over it
+	zone := zoneMap
+	for g.pointerOverUI {
+		zone++
 		z := mouseZones[zone]
 		if z[0] <= g.PointerX && z[2] >= g.PointerX && z[1] <= g.PointerY && z[3] >= g.PointerY {
 			break
@@ -362,6 +375,10 @@ func (g *Game) mouseCommand() int {
 		case cmdStatusSpellbook:
 			cmd = g.clickSpellbook()
 		}
+	case zoneParty:
+		if g.mouseTriggered {
+			cmd = g.clickPartyView()
+		}
 	case zoneScreen:
 		if g.mouseTriggered {
 			cmd = cmdPass
@@ -386,8 +403,8 @@ func (g *Game) mouseDirection() int {
 		g.mouseMapX == mx && abs(g.mouseMapY-my) < 2 ||
 		g.mouseMapY == my && abs(g.mouseMapX-mx) < 2 ||
 		tx != g.mouseTileX || ty != g.mouseTileY {
-		g.mouseMapX = tx + mx - viewCenter
-		g.mouseMapY = ty + my - viewCenter
+		g.mouseMapX = tx + mx - viewCenterX
+		g.mouseMapY = ty + my - viewCenterY
 		g.mouseTileX, g.mouseTileY = tx, ty
 	}
 	return dir
@@ -399,14 +416,13 @@ func (g *Game) mouseDirection() int {
 // C: seg_0C9C:1107 (mkMouseSelection)
 func (g *Game) mouseSelection() int {
 	g.selectedDark = false
-	const statusAreaX = 168
 	switch {
-	case g.PointerX < statusAreaX:
+	case !g.pointerOverUI:
 		tx, ty := g.PointerX/tileSize, g.PointerY/tileSize
-		g.Selection.x = tx + int(g.MapX) - viewCenter
-		g.Selection.y = ty + int(g.MapY) - viewCenter
+		g.Selection.x = tx + int(g.MapX) - viewCenterX
+		g.Selection.y = ty + int(g.MapY) - viewCenterY
 		// fix: the original reads past the view for points on its border
-		tx, ty = min(tx, viewTiles-1), min(ty, viewTiles-1)
+		tx, ty = min(tx, viewTilesX-1), min(ty, viewTilesY-1)
 		if g.objectView[ty][tx] != 0 || g.tileView[ty][tx] >= firstObjectTile {
 			g.Selection.obj = g.objectAtForSelection(int(g.Party[g.Active]), g.Selection.x, g.Selection.y)
 			return cmdSelectMap
@@ -428,41 +444,16 @@ func (g *Game) mouseSelection() int {
 	return 0
 }
 
-// clickPartyView returns the command of a click in the party list.
-// C: seg_0C9C:121F (do_CMD_91)
+// clickPartyView returns the command of a click on the party column: the member's
+// equipment.
+// C: seg_0C9C:121F (do_CMD_91), for the port's party column
 func (g *Game) clickPartyView() int {
-	const (
-		partyNameX       = 192 // the names are right of the icons
-		partyNameRowY    = partyRowY + 4
-		partyScrollUpY1  = partyRowY + tileSize
-		partyScrollDownY = buttonsY
-	)
-	if g.PointerY <= partyRowY {
+	row := (g.PointerY - partyColumnY) / partyRowHeight
+	if g.PointerY < partyColumnY || row+g.partyScroll >= int(g.PartySize) {
 		return 0
 	}
-	switch {
-	case g.PointerX > partyNameX:
-		g.Selection.obj = (g.PointerY-partyNameRowY)/tileSize + g.partyScroll
-		if int(g.PartySize) <= g.Selection.obj {
-			return 0
-		}
-		return cmdStatusPortrait
-	case g.PointerX > partyIconX:
-		g.Selection.obj = (g.PointerY-partyRowY)/tileSize + g.partyScroll
-		if int(g.PartySize) <= g.Selection.obj {
-			return 0
-		}
-		return cmdStatusEquipment
-	case g.PointerY >= partyRowY && g.PointerY < partyScrollUpY1:
-		if g.partyScroll != 0 {
-			return cmdPartyScrollUp
-		}
-	case g.PointerY >= partyScrollDownY:
-		if g.partyScroll < int(g.PartySize)-partyListRows {
-			return cmdPartyScrollDown
-		}
-	}
-	return 0
+	g.Selection.obj = row + g.partyScroll
+	return cmdStatusEquipment
 }
 
 // statusButton returns the command of the buttons under the portrait and equipment views.
@@ -603,6 +594,7 @@ func (g *Game) readCommand() int {
 			g.mouseTriggered = !g.mousePressed
 			g.mousePressed = true
 			g.PointerX, g.PointerY = g.mouse.x, g.mouse.y
+			g.pointerOverUI = g.mouse.overUI
 			g.mouseButtons = buttons
 			ch = g.mouseCommand()
 			if g.mouseTriggered {
@@ -673,7 +665,7 @@ func (g *Game) readCommand() int {
 				g.SelectMode = 1
 			}
 			if g.SelectMode != 0 {
-				g.AimX, g.AimY = viewCenter, viewCenter
+				g.AimX, g.AimY = viewCenterX, viewCenterY
 				g.SelectRange = 7
 				g.selectByTab = true
 				g.drawMap(true)
@@ -724,6 +716,7 @@ func (g *Game) selectTarget(ch int) int {
 			}
 			g.SelectMode = 0
 			g.PointerX, g.PointerY = g.AimX*tileSize, g.AimY*tileSize
+			g.pointerOverUI = false
 			g.mouseSelection()
 		} else if g.SelectMode == 2 && (g.StatusDisplay == cmdStatusEquipment || g.StatusDisplay == cmdStatusPortrait) {
 			g.drawStatusCursor(2)
@@ -740,11 +733,12 @@ func (g *Game) selectTarget(ch int) int {
 	case ch == cmdAdvance:
 		if g.SelectMode == 1 {
 			x, y := g.AimX+dirStepX[g.AdvanceDir], g.AimY+dirStepY[g.AdvanceDir]
-			if x >= 0 && x < viewTiles && y >= 0 && y < viewTiles && g.combatRange(x, y, viewCenter, viewCenter) <= g.SelectRange {
+			if x >= 0 && x < viewTilesX && y >= 0 && y < viewTilesY && g.combatRange(x, y, viewCenterX, viewCenterY) <= g.SelectRange {
 				g.AimX, g.AimY = x, y
 				g.drawMap(true)
 			} else if g.SelectRange == -1 {
 				g.PointerX, g.PointerY = x*tileSize, y*tileSize
+				g.pointerOverUI = false
 				g.mouseSelection()
 				return cmdSelected
 			}
@@ -856,6 +850,7 @@ func (g *Game) statusKey(ch int) int {
 			return cmdPreviousMember
 		case (ch == '`' || ch == '~') && g.StatusDisplay == cmdStatusEquipment:
 			g.PointerX, g.PointerY = buttonCombat+tileSize/2, buttonsY+tileSize/2
+			g.pointerOverUI = true
 			g.clickEquipmentView()
 			return 0
 		}

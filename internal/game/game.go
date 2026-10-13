@@ -32,9 +32,14 @@ const (
 	pathSlots = 8
 	pathSteps = 32
 
-	// the view of the map: 11x11 tiles around the party
-	viewTiles  = 11
-	viewCenter = 5
+	// the view of the map: 21x13 tiles around the party, filling the screen
+	viewTilesX  = 21
+	viewTilesY  = 13
+	viewCenterX = 10
+	viewCenterY = 6
+	// the original's view was 11x11 tiles; the rules that measured "on screen" by it still do
+	classicViewTiles  = 11
+	classicViewCenter = 5
 	// AreaTiles and friends hold 40x40 tiles around the view
 	areaSize = 40
 )
@@ -267,6 +272,7 @@ type Game struct {
 	combat
 	paths   pathfinder
 	colours colours
+	layout
 
 	random randomState
 	// osiTicks counts timer ticks for osiDelay (OSILIB delay counter)

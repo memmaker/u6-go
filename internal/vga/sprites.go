@@ -69,7 +69,7 @@ func (d *Driver) DrawSprite(slot, x, y int) {
 	if slot < 0 || slot >= spriteSlots {
 		return
 	}
-	drawTile(d.BackBuffer[:], BackBufferSize, &Tile{Kind: Transparent, Pixels: d.sprites[slot]},
+	drawTile(d.BackBuffer[:], BackBufferWidth, &Tile{Kind: Transparent, Pixels: d.sprites[slot]},
 		x-spriteOrigin, y-spriteOrigin)
 }
 
@@ -82,12 +82,12 @@ func (d *Driver) SaveUnderSprite(slot, x, y int) {
 	if slot < 0 || slot >= spriteSlots {
 		return
 	}
-	const lastStart = (BackBufferSize-tileSize)*BackBufferSize + BackBufferSize - tileSize
-	start := (y-spriteOrigin)*BackBufferSize + x - spriteOrigin
+	const lastStart = (BackBufferHeight-tileSize)*BackBufferWidth + BackBufferWidth - tileSize
+	start := (y-spriteOrigin)*BackBufferWidth + x - spriteOrigin
 	if start < 0 || start >= lastStart {
 		return
 	}
 	for row := range tileSize {
-		copy(d.sprites[slot][row*tileSize:(row+1)*tileSize], d.BackBuffer[start+row*BackBufferSize:])
+		copy(d.sprites[slot][row*tileSize:(row+1)*tileSize], d.BackBuffer[start+row*BackBufferWidth:])
 	}
 }

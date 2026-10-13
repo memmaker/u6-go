@@ -3,6 +3,7 @@
 GAME.EXE calls the driver through `D_ECB8` with the entry offset (gr.h `GR_xx`). Driver
 calls use the Pascal convention. Coordinates are pixels; "back buffer" is the 176x176
 picture (game `ScratchBuf`, `tGr._1c`) in which the map view is composed at (8,8)..(167,167).
+The port widens it to 336x208 for its full-screen view.
 
 | GR | offset | Go | arguments | semantics |
 |---|---|---|---|---|
@@ -30,9 +31,9 @@ picture (game `ScratchBuf`, `tGr._1c`) in which the map view is composed at (8,8
 | 3F | 63 | `AnimateCoasts()` | | rebuild coast tiles 16..47 from water tiles + ANIMMASK |
 | 42 | 66 | `DrawTileOffscreen(tile, x, y)` | tile bits 11-12: silhouette | tile on the back buffer; silhouette draws black pixels in colour 11/12/9 |
 | 45 | 69 | `CopyBackBufferToScreen(x0, y0, x1, y1, toX, toY)` | inclusive | x rounded to pixel pairs |
-| 48 | 72 | `FadeIn(x0, y0, x1, y1)` | inclusive | back buffer to the same place on screen, dissolving (LFSR order) |
+| 48 | 72 | `FadeIn(view, viewWidth, offX, offY, x0, y0, x1, y1)` | inclusive | back buffer to the port's view picture, dissolving (LFSR order) |
 | 4B | 75 | `SetTileFrame(tile, frame)` | | tile shows frame's picture (frame < 512 only) |
-| 4E | 78 | `Vortex()` | | swirl of the map view (C_2FC1_1BCE) |
+| 4E | 78 | `Vortex(view, viewWidth, viewHeight, offX, offY)` | | swirl of the port's view picture (C_2FC1_1BCE) |
 
 ## Shared structure (tGr) fields
 

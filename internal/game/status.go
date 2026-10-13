@@ -3,8 +3,18 @@ package game
 // The status area at the right of the screen: the party list, a member's portrait or
 // equipment (seg_155D).
 
-// partyListRows is how many party members the party list shows at once.
-const partyListRows = 5
+// The party column: each member's picture with a health bar under it, on the canvas below
+// the shown screen; layout.go shows it along the screen's right border.
+const (
+	partyListRows   = 9 // how many members the column shows at once
+	partyColumnX    = 8
+	partyColumnY    = 208
+	partyRowHeight  = 21
+	healthBarHeight = 2
+	healthBarGap    = 1
+	healthBarColour = 2 // green
+	healthBarEmpty  = 8 // dark grey
+)
 
 // tileStatusSlot is the background a party member's picture is drawn on (TIL_19B).
 const tileStatusSlot = 411
@@ -44,38 +54,34 @@ func (g *Game) RefreshStatus() {
 	g.StatusDirty = false
 }
 
-// partyView draws the party list from member first.
-// C: seg_155D:000C (C_155D_000C)
+// partyView draws the sky and the party column from member first.
+// C: seg_155D:000C (C_155D_000C), the port's party column
 func (g *Game) partyView(first int) {
 	g.gr.SetColor(g.colours.background)
 	g.gr.FillRect(statusX0, statusY0, statusX1, statusY1)
 	g.drawSky()
-	g.setClip(clipScreen)
-	if first != 0 {
-		g.gotoxy(partyArrowColumn, partyUpRow)
-		g.putch(upArrowChar)
-	}
-	if first < partyMax && int(g.PartySize) > first+partyListRows {
-		g.gotoxy(partyArrowColumn, partyDnRow)
-		g.putch(downArrowChar)
-	}
-	g.setClip(clipParty)
+	g.gr.FillRect(partyColumnX, partyColumnY, partyColumnX+tileSize-1, partyColumnY+partyListRows*partyRowHeight-1)
 	for i := first; i < int(g.PartySize) && i < first+partyListRows; i++ {
 		n := int(g.Party[i])
 		t := ObjectType(g.NPCs[n].OrigShape & typeMask)
 		const south = 4
 		tile := directionFrame(t, south) + int(g.BaseTile[t])
-		g.drawTileOver(tile, tileStatusSlot, partyIconX, (i-first)*tileSize+partyRowY)
-		g.gotoxy(partyHitPointsColumn, (i-first)<<1+2)
-		if g.NPCs[n].Has(Poisoned) {
-			g.current.fg = g.colours.poisoned
-		} else if g.NPCs[n].HitPoints < lowHitPoints {
-			g.current.fg = g.colours.highlight
+		y := partyColumnY + (i-first)*partyRowHeight
+		g.drawTileOver(tile, tileStatusSlot, partyColumnX, y)
+		npc := &g.NPCs[n]
+		colour := byte(healthBarColour)
+		if npc.Has(Poisoned) {
+			colour = g.colours.poisoned
+		} else if npc.HitPoints < lowHitPoints {
+			colour = g.colours.highlight
 		}
-		g.printf("%3d\n", int(g.NPCs[n].HitPoints))
-		g.current.fg = g.colours.text
-		g.gotoxy(partyNameColumn, (i-first)<<1+3)
-		g.printf("%s\n", cString(g.Names[i][:]))
+		barY := y + tileSize + healthBarGap
+		g.gr.SetColor(healthBarEmpty)
+		g.gr.FillRect(partyColumnX, barY, partyColumnX+tileSize-1, barY+healthBarHeight-1)
+		if full := g.maxHitPoints(n); npc.HitPoints > 0 {
+			g.gr.SetColor(colour)
+			g.gr.FillRect(partyColumnX, barY, partyColumnX+min(int(npc.HitPoints), full)*tileSize/full-1, barY+healthBarHeight-1)
+		}
 	}
 	g.setClip(clipMessage)
 }

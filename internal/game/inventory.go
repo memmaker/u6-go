@@ -5,6 +5,7 @@ package game
 
 import (
 	"encoding/binary"
+	"image"
 	"io/fs"
 
 	"github.com/memmaker/u6-go/internal/data"
@@ -13,14 +14,10 @@ import (
 
 // The status area at the right of the screen.
 const (
-	statusX0, statusY0     = 168, 6
-	statusX1, statusY1     = 312, 103
-	statusTextColumns      = 17 // the width of the party clip, for centring names
-	partyIconX, partyRowY  = 176, 24
-	partyArrowColumn       = 21
-	partyUpRow, partyDnRow = 3, 12
-	partyHitPointsColumn   = 14
-	partyNameColumn        = 3
+	statusX0, statusY0 = 168, 6
+	statusX1, statusY1 = 312, 103
+	statusTextColumns  = 17 // the width of the party clip, for centring names
+	partyRowY          = 24
 	// the buttons under the portrait and equipment views
 	buttonsY       = 88
 	buttonsBottom  = 104
@@ -830,6 +827,7 @@ func (g *Game) drawPortrait(n, x, y int) {
 		return
 	}
 	g.gr.DrawPixmap(&vga.Pixmap{Width: portraitWidth, Height: portraitHeight, Pixels: pixels}, x, y)
+	g.talkPortrait = image.Rect(x, y, x+portraitWidth, y+portraitHeight)
 }
 
 // smallFont is the 3x5 font of the counts on inventory tiles, '0'-'9' then 'A'-'P' (D_04E3).
@@ -983,6 +981,7 @@ func (g *Game) drawStatusCursor(mode int) {
 	}
 	var x, y int
 	cursorX, cursorY := g.statusCursorX, g.statusCursorY
+	g.pointerOverUI = true
 	switch {
 	case cursorY < 0:
 		x, y = containerX, containerY
@@ -1039,13 +1038,13 @@ func (g *Game) magicalHalo(n, on int) {
 	if o.CoordUse() != OnMap {
 		return
 	}
-	deltaX := (o.Pos.X - int(g.MapX) + viewCenter) & coordMask
-	deltaY := (o.Pos.Y - int(g.MapY) + viewCenter) & coordMask
+	deltaX := (o.Pos.X - int(g.MapX) + viewCenterX) & coordMask
+	deltaY := (o.Pos.Y - int(g.MapY) + viewCenterY) & coordMask
 	tile := g.tileFrame(n) + haloOff
 	if on != 0 {
 		tile = g.tileFrame(n) + haloOn
 	}
-	if deltaX < viewTiles && deltaY < viewTiles {
+	if deltaX < viewTilesX && deltaY < viewTilesY {
 		const overlay = 2
 		g.showObject(tile, deltaX, deltaY, overlay)
 		g.screenFade = true

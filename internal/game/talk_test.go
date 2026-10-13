@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"image"
 	"image/color"
 	"image/png"
@@ -11,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/vga"
 )
 
 // tholden lives in Lord British's castle; Lord British himself would first ask the copy
@@ -34,10 +36,11 @@ func TestKeywordMatches(t *testing.T) {
 	}
 }
 
-// scrollText reads the message scroll off the screen, matching each cell with the font.
-func scrollText(g *Game) string {
-	frame := g.Frame()
-	c := g.clips[clipMessage]
+// scrollText reads the message clip off the canvas, matching each cell with the font.
+func scrollText(g *Game) string { return clipText(g, g.clips[clipMessage]) }
+
+// clipText reads the characters drawn in c.
+func clipText(g *Game, c clip) string {
 	var lines []string
 	for row := range c.height {
 		var line []byte
@@ -46,7 +49,7 @@ func scrollText(g *Game) string {
 			var cell [cellSize]byte
 			for y := range cellSize {
 				for x := range cellSize {
-					if frame.Pixels[(y0+y)*host.ScreenWidth+x0+x] != c.bg {
+					if g.gr.Screen[(y0+y)*vga.ScreenWidth+x0+x] != c.bg {
 						cell[y] |= 1 << (cellSize - 1 - x)
 					}
 				}
@@ -91,6 +94,7 @@ func TestTalkToTholden(t *testing.T) {
 			started <- err
 			return
 		}
+		g.SpellFx[spellTimeStop] = 1 // the same first view each run: nothing fidgets
 		started <- nil
 		g.Play()
 	})
@@ -100,16 +104,32 @@ func TestTalkToTholden(t *testing.T) {
 		t.Fatal(err)
 	}
 	const settle = 30
+	// the first view drawn
+	for g.gr.BackBuffer == [len(g.gr.BackBuffer)]byte{} && host.Step() {
+	}
+	compareClassicView(t, g)
+	g.SpellFx[spellTimeStop] = 0
 	steps := func(n int) {
 		for range n {
 			host.Step()
 		}
 	}
 	steps(settle)
+	compareClassicTiles(t, g)
 	me := g.object(int(g.Party[g.Active])).Pos
 	g.MoveObj(tholden, me.X+1, me.Y, me.Z)
 	g.NPCs[tholden].Mode = AIMotionless
 	steps(settle)
+	// the overlays for docs/ui
+	writePNG(t, g, "world.png")
+	g.dockOffset = iconsPanel.Dy()
+	writePNG(t, g, "dock.png")
+	g.dockOffset = 0
+	g.showLog = true
+	writePNG(t, g, "log.png")
+	g.showLog, g.showDate = false, true
+	writePNG(t, g, "date.png")
+	g.showDate = false
 
 	var transcript strings.Builder
 	// wait answers the paging prompts until the script asks for input
@@ -121,7 +141,7 @@ func TestTalkToTholden(t *testing.T) {
 				host.PushChar(' ')
 				continue
 			}
-			if !g.InConversation || strings.HasSuffix(strings.TrimSpace(scrollText(g)), "you say:") {
+			if !g.InConversation || len(g.talkOptions) > 0 {
 				break
 			}
 		}
@@ -149,13 +169,16 @@ func TestTalkToTholden(t *testing.T) {
 	say("name")
 	say("job")
 	writePNG(t, g, "talk.png")
+	writePNG(t, g, "conversation.png")
 	say("bye")
+	// the farewell stays on the speech scroll after the log clip comes back
+	transcript.WriteString(clipText(g, clip{x0: speechX0, y0: speechY0, width: speechColumns, height: speechRows, bg: g.clips[clipMessage].bg}))
 	text := transcript.String()
 	t.Logf("transcript:\n%s", text)
 	if g.InConversation {
 		t.Error("still talking after bye")
 	}
-	for _, want := range []string{"You see a", "you say:name", "I am Tholden von", "paperwork", "Tholden bows"} {
+	for _, want := range []string{"You see a", "I am Tholden von", "paperwork", "Tholden bows"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("transcript lacks %q", want)
 		}
@@ -184,5 +207,56 @@ func writePNG(t *testing.T, g *Game, name string) {
 	defer file.Close()
 	if err := png.Encode(file, img); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// compareClassicView checks tiles of the middle 11x11 against the original's screen from
+// the same save: testdata/original_rows.bin is GAME.EXE's view in DOSBox-X, the inner
+// columns 1..9 of rows 8 and 9, which hold the carpet, the steps and the windows but no one
+// who moves.
+func compareClassicView(t *testing.T, g *Game) {
+	want, err := os.ReadFile(filepath.Join("testdata", "original_rows.bin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const (
+		firstColumn = 1
+		firstRow    = 8
+		width       = (classicViewTiles - 2*firstColumn) * tileSize
+		offsetX     = (viewCenterX - classicViewCenter + firstColumn) * tileSize
+		offsetY     = (viewCenterY - classicViewCenter + firstRow) * tileSize
+	)
+	bad := 0
+	for y := range len(want) / width {
+		for x := range width {
+			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*width+x] {
+				bad++
+			}
+		}
+	}
+	if bad != 0 {
+		t.Errorf("%d pixels of the original's view differ", bad)
+	}
+}
+
+// compareClassicTiles checks the middle 11x11 tiles of the view, the hidden ones and the
+// walls cut to the sides one sees included, against the original's view from the same
+// place: testdata/classic_tiles.json is the main branch's.
+func compareClassicTiles(t *testing.T, g *Game) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "classic_tiles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var classic [classicViewTiles][classicViewTiles]int
+	if err := json.Unmarshal(raw, &classic); err != nil {
+		t.Fatal(err)
+	}
+	for y := range classicViewTiles {
+		for x := range classicViewTiles {
+			vx, vy := viewCenterX-classicViewCenter+x, viewCenterY-classicViewCenter+y
+			if want, got := classic[y][x], g.tileView[vy][vx]; want != got {
+				t.Errorf("tile (%d,%d) of the view is %d, the original shows %d", vx, vy, got, want)
+			}
+		}
 	}
 }

@@ -3,7 +3,7 @@ package vga
 // target is the picture PutPixel and FillRect draw on, and its width.
 func (d *Driver) target() ([]byte, int) {
 	if d.Offscreen {
-		return d.BackBuffer[:], BackBufferSize
+		return d.BackBuffer[:], BackBufferWidth
 	}
 	return d.Screen[:], ScreenWidth
 }
@@ -123,21 +123,25 @@ func (d *Driver) CopyBackBufferToScreen(x0, y0, x1, y1, toX, toY int) {
 	toX &^= 1
 	width := x1 - x0 + 1
 	for row := 0; row <= y1-y0; row++ {
-		from := (y0+row)*BackBufferSize + x0
+		from := (y0+row)*BackBufferWidth + x0
 		to := (toY+row)*ScreenWidth + toX
 		copy(d.Screen[to:to+width], d.BackBuffer[from:from+width])
 	}
 }
 
-// FadeIn copies the back buffer's rectangle between (x0, y0) and (x1, y1) (inclusive) to the
-// same place on the screen pixel by pixel in a scattered order, so the new picture dissolves
-// in. The order comes from a maximal-length linear feedback shift register, which visits every
-// number from 1 to 2^n-1 once; numbers past the rectangle are skipped and pixel 0 comes last.
+// FadeIn copies the back buffer's rectangle between (x0, y0) and (x1, y1) (inclusive) to
+// view, a picture viewWidth pixels wide whose (0, 0) is back buffer place (offX, offY), pixel
+// by pixel in a scattered order, so the new picture dissolves in. The order comes from a
+// maximal-length linear feedback shift register, which visits every number from 1 to 2^n-1
+// once; numbers past the rectangle are skipped and pixel 0 comes last. The port's view is not
+// the screen (the original copied to the same place on the screen), and however big, it
+// dissolves in as many presents as the original's 160x160 view.
 //
 // GR_48 (driver offset 72).
 // C: U6MCGA.DRV:29A1
-func (d *Driver) FadeIn(x0, y0, x1, y1 int) {
+func (d *Driver) FadeIn(view []byte, viewWidth, offX, offY, x0, y0, x1, y1 int) {
 	width, height := x1-x0+1, y1-y0+1
+	perPresent := max(1, width*height/fadePresents)
 	bits := 0
 	for n := width*height - 1; n != 0; n >>= 1 {
 		bits++
@@ -145,7 +149,7 @@ func (d *Driver) FadeIn(x0, y0, x1, y1 int) {
 	taps := feedbackTaps[bits-minFeedbackBits]
 	copyPixel := func(i int) {
 		x, y := x0+i%width, y0+i/width
-		d.Screen[y*ScreenWidth+x] = d.BackBuffer[y*BackBufferSize+x]
+		view[(y-offY)*viewWidth+x-offX] = d.BackBuffer[y*BackBufferWidth+x]
 	}
 	for state, step := 1, 0; ; step++ {
 		if state/width < height {
@@ -159,15 +163,16 @@ func (d *Driver) FadeIn(x0, y0, x1, y1 int) {
 		if state == 1 {
 			break
 		}
-		if step%fadePixelsPerPresent == 0 {
+		if step%perPresent == 0 {
 			d.present()
 		}
 	}
 	copyPixel(0)
 }
 
-// fadePixelsPerPresent paces FadeIn when Present is set.
-const fadePixelsPerPresent = 1024
+// fadePresents paces FadeIn when Present is set: the original presented every 1024 pixels
+// of its 160x160 view.
+const fadePresents = 160 * 160 / 1024
 
 // feedbackTaps are the shift register taps for 2 to 17 bit states.
 const minFeedbackBits = 2
@@ -175,34 +180,34 @@ const minFeedbackBits = 2
 var feedbackTaps = [...]int{3, 6, 12, 20, 48, 96, 184, 272, 576, 1280, 3232, 6912, 13568, 24576, 46080, 35669}
 
 // Vortex swirls the map view: eight spiral arms turn around the view's centre, each dragging
-// the pixels it passes along, in 22 rounds of shrinking reach. Pixels near the edge are taken
-// from the back buffer.
+// the pixels it passes along, in 22 rounds of shrinking reach. view is a picture viewWidth
+// by viewHeight pixels whose (0, 0) is back buffer place (offX, offY); pixels the arms take
+// from outside it come from the back buffer. The original swirled its 160x160 view on the
+// screen; the port's view is bigger, so the arms reach as far as its corners, in as many
+// rounds and passes.
 //
 // GR_4E (driver offset 78).
 // C: U6MCGA.DRV:2D80
-func (d *Driver) Vortex() {
+func (d *Driver) Vortex(view []byte, viewWidth, viewHeight, offX, offY int) {
 	const (
-		centre      = 88  // of the 160x160 map view, in screen and back buffer pixels
-		startReach  = 88  // spiral length in the first round
-		reachStep   = 4   // how much shorter each round's spiral is
-		maxReach    = 76  // the swirl stays within this distance of the centre
-		turns       = 12  // passes per round
-		turnStep    = 8   // angle the arms turn per pass
-		trail       = 8   // steps a pixel is carried along an arm
-		viewStart   = 16  // the screen part of the view; outside it, pixels come from the back buffer
-		viewEnd     = 160 //
-		unitShift   = 6   // the triangle wave is 64 times the radius
-		quarterTurn = 128 // of the triangle wave's 512 step period
+		rounds      = 22
+		turns       = 12 // passes per round
+		turnStep    = 8  // angle the arms turn per pass
+		trail       = 8  // steps a pixel is carried along an arm
+		unitShift   = 6  // the triangle wave is 64 times the radius
+		quarterTurn = 128
 	)
+	centreX, centreY := viewWidth/2, viewHeight/2
+	startReach := max(centreX, centreY)
 	angle := 0
-	for reach := startReach; reach > 0; reach -= reachStep {
-		half := min(reach, maxReach)
+	for round := range rounds {
+		reach := startReach - round*startReach/rounds
 		for range turns {
 			var arms [len(armAngles)]int
 			for i := range arms {
 				arms[i] = armAngles[i] - angle
 			}
-			// where each arm put its pixels in the last steps, as screen indexes (-1: nowhere)
+			// where each arm put its pixels in the last steps, as view indexes (-1: nowhere)
 			var placed [trail][len(armAngles)]int
 			for i := range placed {
 				for j := range placed[i] {
@@ -210,24 +215,23 @@ func (d *Driver) Vortex() {
 				}
 			}
 			newest, oldest := 0, 1
-			for radius := range half {
+			for radius := range reach {
 				for arm := len(arms) - 1; arm >= 0; arm-- {
 					a := arms[arm]
 					arms[arm]++
-					y := triangleWave(a-quarterTurn)*radius>>unitShift + centre
-					x := triangleWave(a)*radius>>unitShift + centre
+					y := triangleWave(a-quarterTurn)*radius>>unitShift + centreY
+					x := (triangleWave(a)*radius>>unitShift + centreX) &^ 1
 					var pair [2]byte
-					if x >= centre-half && x < centre+half && y >= centre-half && y < centre+half {
-						at := y*ScreenWidth + x&^1
+					switch {
+					case x >= 0 && x+1 < viewWidth && y >= 0 && y < viewHeight:
+						at := y*viewWidth + x
 						placed[newest][arm] = at
-						if x >= viewStart && x < viewEnd && y >= viewStart && y < viewEnd {
-							copy(pair[:], d.Screen[at:])
-						} else {
-							copy(pair[:], d.BackBuffer[y*BackBufferSize+x:])
-						}
+						copy(pair[:], view[at:])
+					case x+offX >= 0 && x+offX+1 < BackBufferWidth && y+offY >= 0 && y+offY < BackBufferHeight:
+						copy(pair[:], d.BackBuffer[(y+offY)*BackBufferWidth+x+offX:])
 					}
 					if to := placed[oldest][arm]; to != -1 {
-						copy(d.Screen[to:to+2], pair[:])
+						copy(view[to:to+2], pair[:])
 					}
 				}
 				newest = (newest + 1) % trail
