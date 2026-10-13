@@ -238,7 +238,7 @@ func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(str
 	host.MouseY = (p.Y+1-int(g.MapY)+g.viewCenterY)*tileSize + 4 - g.viewPixels().Min.Y
 	for _, down := range []bool{true, false, true, false} {
 		host.MouseLeft = down
-		for range doubleClickTicks / 4 {
+		for range 4 {
 			host.Step()
 		}
 	}

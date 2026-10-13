@@ -2,6 +2,7 @@ package game
 
 import (
 	"image"
+	"time"
 
 	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/vga"
@@ -113,6 +114,9 @@ type input struct {
 	mousePressed, mouseTriggered bool
 	mouseButtons                 int
 	mousePressCommand            int
+	// the last click on a thing, for telling a double click
+	lastClickObj  int
+	lastClickTime time.Time
 	// PointerX, PointerY is where the pointer (or the keyboard cursor) points: on the back
 	// buffer's map view, or on a panel of the canvas when pointerOverUI.
 	PointerX, PointerY int
@@ -602,8 +606,8 @@ func (g *Game) readCommand() int {
 				ch, dragged = g.closePointedGump(), true
 			} else if atPrompt {
 				ch, dragged = g.drag()
-				// a click on a thing waits for a second one, as Nuvie's MouseDelayed
-				if !dragged && g.mouseSelection() != 0 && g.Selection.obj != noObject && g.Selection.obj != g.container && g.secondClick() {
+				// a second click on the same thing soon after the first is a double click
+				if !dragged && g.mouseSelection() != 0 && g.Selection.obj != noObject && g.Selection.obj != g.container && g.secondClick(g.Selection.obj) {
 					ch, dragged = g.doubleClick(), true
 				}
 			}

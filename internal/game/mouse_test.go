@@ -159,3 +159,25 @@ func TestDoubleClick(t *testing.T) {
 		}
 	})
 }
+
+func TestSecondClick(t *testing.T) {
+	g := &Game{}
+	g.lastClickObj = noObject
+	if g.secondClick(7) {
+		t.Fatal("a first click is a double click")
+	}
+	if !g.secondClick(7) {
+		t.Fatal("a quick second click on the same thing is no double click")
+	}
+	if g.secondClick(7) {
+		t.Fatal("a third click makes another double click")
+	}
+	g.secondClick(8)
+	g.lastClickTime = g.lastClickTime.Add(-2 * doubleClickTime)
+	if g.secondClick(8) {
+		t.Fatal("a slow second click is a double click")
+	}
+	if g.secondClick(9) {
+		t.Fatal("a click on another thing is a double click")
+	}
+}

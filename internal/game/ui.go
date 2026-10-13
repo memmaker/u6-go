@@ -4,6 +4,7 @@ import (
 	"image"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/memmaker/u6-go/internal/host"
 )
@@ -380,19 +381,20 @@ func (g *Game) dockTooltip() string {
 	return "Begin combat"
 }
 
-// doubleClickTicks is how soon a second click makes a double click (Nuvie's
-// GUI::mouseclick_delay, 300 ms).
-const doubleClickTicks = host.TicksPerSecond * 3 / 10
+// doubleClickTime is how soon a second click makes a double click (Nuvie's
+// GUI::mouseclick_delay). Wall time: the first click's command may take game ticks.
+const doubleClickTime = 300 * time.Millisecond
 
-// secondClick waits for the button to go down again soon after a click: a double click.
-func (g *Game) secondClick() bool {
-	for range doubleClickTicks {
-		if host.MouseLeft {
-			return true
-		}
-		host.Yield()
+// secondClick says whether a click on obj follows one on it soon enough to make a double
+// click. The first click acts at once (a step), so nothing waits for the second.
+func (g *Game) secondClick(obj int) bool {
+	now := time.Now()
+	double := obj == g.lastClickObj && now.Sub(g.lastClickTime) <= doubleClickTime
+	g.lastClickObj, g.lastClickTime = obj, now
+	if double {
+		g.lastClickObj = noObject
 	}
-	return false
+	return double
 }
 
 // readable things are looked at by a double click (U6UseCode::is_readable).
