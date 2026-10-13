@@ -8,8 +8,8 @@
 
 ## B. Go port (~/Projects/u6-go), rules in ~/notes/c-to-go.md
 - [x] Repo skeleton: go.mod, cmd/u6, host (Ebiten lockstep), gameimport (-import)
-- [ ] Data layer: file loading, LZW decompression [x], tiles/palette/fonts
-- [ ] Graphics: VGA driver semantics (U6MCGA.DRV) in Go
+- [x] Data layer: file loading, LZW decompression [x], tiles/palette/fonts [x]
+- [x] Graphics: VGA driver semantics (U6MCGA.DRV) in Go
 - [ ] Game state with readable names (globals, objects, NPCs)
 - [ ] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
 - [ ] Mouse + keyboard input
