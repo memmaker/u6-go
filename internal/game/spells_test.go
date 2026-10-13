@@ -50,6 +50,7 @@ func TestCastSpells(t *testing.T) {
 	}
 	const settle = 30
 	steps(settle)
+	removeGargoyles(g)
 
 	avatar := int(g.Party[g.Active])
 	book := g.AddInvObj(shapeOf(ObjSpellbook, 0), StatusLocal|Equipped, 0, avatar)

@@ -210,29 +210,32 @@ func writePNG(t *testing.T, g *Game, name string) {
 	}
 }
 
-// compareClassicView checks that the middle 11x11 tiles of the view are drawn as the
-// original drew its whole view: testdata/classic_view.bin is the main branch's back buffer
-// (before the frame went over it) when this test's game first drew it.
+// compareClassicView checks tiles of the middle 11x11 against the original's screen from
+// the same save: testdata/original_rows.bin is GAME.EXE's view in DOSBox-X, the inner
+// columns 1..9 of rows 8 and 9, which hold the carpet, the steps and the windows but no one
+// who moves.
 func compareClassicView(t *testing.T, g *Game) {
-	want, err := os.ReadFile(filepath.Join("testdata", "classic_view.bin"))
+	want, err := os.ReadFile(filepath.Join("testdata", "original_rows.bin"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	const (
-		classicSize = classicViewTiles * tileSize
-		offsetX     = (viewCenterX - classicViewCenter) * tileSize
-		offsetY     = (viewCenterY - classicViewCenter) * tileSize
+		firstColumn = 1
+		firstRow    = 8
+		width       = (classicViewTiles - 2*firstColumn) * tileSize
+		offsetX     = (viewCenterX - classicViewCenter + firstColumn) * tileSize
+		offsetY     = (viewCenterY - classicViewCenter + firstRow) * tileSize
 	)
 	bad := 0
-	for y := range classicSize {
-		for x := range classicSize {
-			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*classicSize+x] {
+	for y := range len(want) / width {
+		for x := range width {
+			if g.gr.BackBuffer[(y+offsetY)*vga.BackBufferWidth+x+offsetX] != want[y*width+x] {
 				bad++
 			}
 		}
 	}
 	if bad != 0 {
-		t.Errorf("%d pixels of the classic 11x11 view differ", bad)
+		t.Errorf("%d pixels of the original's view differ", bad)
 	}
 }
 
