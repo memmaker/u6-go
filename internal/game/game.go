@@ -232,6 +232,7 @@ const (
 
 // Game is the state of GAME.EXE.
 type Game struct {
+	magic // the spellbook and the spell being cast
 	// Ending is set when the game handed over to the ending (Run returns then).
 	Ending *ending.Args
 

@@ -360,7 +360,7 @@ func (g *Game) mouseCommand() int {
 				cmd = cmdSelected
 			}
 		case cmdStatusSpellbook:
-			// TODO(port): do_CMD_A1
+			cmd = g.clickSpellbook()
 		}
 	case zoneScreen:
 		if g.mouseTriggered {
@@ -613,11 +613,10 @@ func (g *Game) readCommand() int {
 				ch = keyEnter
 			}
 			if g.pendingCommand == cmdCast && g.SelectMode == 3 {
-				// TODO(port): C_0C9C_1D59 spell incantation (__Incant2Spell, C_0C9C_19D6)
-				ch = 0
-				continue
+				ch = g.incantationKey(ch)
+			} else {
+				ch = g.selectTarget(ch)
 			}
-			ch = g.selectTarget(ch)
 		case ch == keyTab && g.StatusDisplay != cmdStatusContainer && !g.InConversation:
 			if g.StatusDisplay == cmdStatusEquipment {
 				g.SelectMode = 2
@@ -773,7 +772,7 @@ func (g *Game) statusKey(ch int) int {
 			return cmdStatusEquipment
 		}
 	case cmdStatusSpellbook:
-		// TODO(port): C_0C9C_1D59 spellbook keys
+		return g.spellbookKey(ch)
 	}
 	return ch
 }
@@ -824,8 +823,9 @@ func (g *Game) getch() int {
 		case cmdPartyScrollDown:
 			g.partyScroll++
 			g.StatusDirty = true
-		case cmdInventoryUp, cmdInventoryDown, cmdCloseContainer, cmdOpenContainer, cmdReady, cmdUnready,
-			cmdSpellPrevious, cmdSpellNext, cmdSpellPageLeft, cmdSpellPageRight:
+		case cmdSpellPrevious, cmdSpellNext, cmdSpellPageLeft, cmdSpellPageRight:
+			g.spellbookCommand(ch)
+		case cmdInventoryUp, cmdInventoryDown, cmdCloseContainer, cmdOpenContainer, cmdReady, cmdUnready:
 			// TODO(port): CON_getch inventory, container and spellbook commands
 		case cmdSpellNothing:
 		default:

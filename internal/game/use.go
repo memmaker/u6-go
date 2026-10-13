@@ -253,7 +253,7 @@ func (g *Game) useObject(n int, t ObjectType) {
 		if g.MapZ != 0 && g.MapZ != gargoyleLevel {
 			g.notUsable()
 		} else {
-			// TODO(port): C_1944_42AC (the sextant, with the spells)
+			g.locate()
 		}
 	case ObjSilverHorn:
 		g.blowHorn()
@@ -262,7 +262,7 @@ func (g *Game) useObject(n int, t ObjectType) {
 		case OnMap:
 			g.notUsable()
 		case Equipped:
-			// TODO(port): C_27A1_3537 (cast the staff's charge, C_1944_43D5)
+			g.useStaff(n)
 		default:
 			g.printf("\nNot readied.\n")
 		}
@@ -271,8 +271,9 @@ func (g *Game) useObject(n int, t ObjectType) {
 	case ObjTorch:
 		g.lightTorch(n)
 	case ObjVortexCube:
-		// TODO(port): C_27A1_5FAC (the vortex cube ends the game)
-		g.printf("\n%s\n", noEffectMsg)
+		if g.armageddon || !g.openVortex(n) {
+			g.printf("\n%s\n", noEffectMsg)
+		}
 	}
 }
 
@@ -546,7 +547,7 @@ func (g *Game) lightTorch(n int) {
 // useGem shows the map around the party and uses up the gem.
 // C: seg_27A1:319F (C_27A1_319F)
 func (g *Game) useGem(n int) {
-	// TODO(port): C_2FC1_1FD6 (peer at the map)
+	g.peer()
 	if n != 0 {
 		if o := g.object(n); o.Quantity() > 1 {
 			o.setQuantity(o.Quantity() - 1)
@@ -775,7 +776,7 @@ func (g *Game) drinkPotion(n int) {
 			noEffect()
 		}
 	case potionHeal:
-		// TODO(port): C_1944_114D (SPELL_06, heal)
+		g.healSpell(castHeal, sel.obj)
 	case potionPoison:
 		if !classHas(monsterClass(g.object(sel.obj).Type()), immunePoison) {
 			npc.Status |= Poisoned
@@ -806,7 +807,7 @@ func (g *Game) drinkPotion(n int) {
 			noEffect()
 		}
 	case potionXray:
-		// TODO(port): C_1944_310C (SPELL_49, x-ray)
+		g.xrayVision(castXray)
 	}
 	g.DeleteObj(n)
 	if g.StatusDisplay == cmdStatusParty || g.StatusDisplay == cmdStatusPortrait {
@@ -1265,7 +1266,7 @@ func (g *Game) useRune(n int) {
 		}
 	}
 	if freed {
-		// TODO(port): C_1944_0085 (the success sound and flash of a spell)
+		g.spellFlash(1)
 		g.printf("\n%s\n", doneMsg)
 	} else {
 		g.printf("\n%s\n", noEffectMsg)
@@ -1535,8 +1536,7 @@ func (g *Game) gazeCrystalBall() {
 		g.displaySeverity(n)
 		return
 	}
-	// TODO(port): C_27A1_5935 the latitude and longitude prompt and C_1944_39A1 (the view)
-	g.printf("\n%s\n", noEffectMsg)
+	g.gazeAt()
 }
 
 // lookThrough looks far in a direction through telescope n.

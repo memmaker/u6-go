@@ -539,9 +539,7 @@ func (g *Game) look() {
 			g.putch('\n')
 		case t == ObjSpellbook && g.FindInv(sel.obj) >= 0 &&
 			(closeEnough(1, sel.x, sel.y, pp.X, pp.Y) || g.object(sel.obj).CoordUse() != OnMap):
-			// TODO(port): C_27A1_0C67 the spellbook page (SPELL_RefreshList, SPELL_DrawBG,
-			// SPELL_RefreshPage, the spell's words and reagents)
-			g.printf(".\n")
+			g.lookSpellbook(sel.obj)
 		case t == ObjClock || t == ObjSundial && g.Hour >= 5 && g.Hour < 20:
 			g.printTime()
 		default:

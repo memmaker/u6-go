@@ -311,8 +311,8 @@ func (g *Game) command(ch int) bool {
 		g.updatePointerShape()
 		g.printf("%s-", commandNames[ch-cmdAttack])
 		if ch == cmdCast {
-			// TODO(port): C_1944_4C2F (cast)
-			g.printf(whatMsg)
+			g.letterCount = 0
+			g.cast()
 		} else if g.getch() == cmdSelected {
 			switch g.pendingCommand {
 			case cmdTalk:
@@ -390,9 +390,9 @@ func (g *Game) command(ch int) bool {
 		g.printf(versionMsg)
 	case keyAlt213:
 		g.printf("%s\n", fmt.Sprintf("%02d%02d%02d%03x%03x%1x", g.Karma, g.Hour, g.Minute, g.MapX, g.MapY, g.MapZ))
-		// TODO(port): C_2FC1_1FD6 (peer)
+		g.peer()
 	case keyAlt214:
-		// TODO(port): go to a coordinate (PartyTeleport)
+		g.goTo()
 	case keyAlt215:
 		const hour = 60
 		g.passTime(hour)
