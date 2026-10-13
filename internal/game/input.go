@@ -146,7 +146,7 @@ func (in *input) initInput() {
 }
 
 // mapCentrePixel is the centre of the map view on the screen (88).
-const mapCentrePixel = viewCenter*tileSize + tileSize/2 + borderSize
+const mapCentrePixel = viewCenter*tileSize + tileSize/2
 
 const (
 	tileSize   = 16
