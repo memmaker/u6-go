@@ -22,11 +22,11 @@
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
 - [x] Port END.EXE: ending (internal/ending)
 - [x] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
-- [ ] Runs from original data files natively
+- [x] Runs from original data files natively and in the browser (intro → creation → game)
 - [ ] Parity checks against DOSBox-X screenshots
 
 ## C. Publish
 - [x] -import SRC (folders, zip, ISO/BIN/CUE, floppy images, GOG installers, loose files) + COVER.PNG
 - [x] wasm build works
-- [ ] Registered in goplay (games.js, deploy.sh, README table)
-- [ ] Deployed live and checked at https://ruzzoli.de/goplay/
+- [x] Registered in goplay (games.js, deploy.sh, README table)
+- [x] Deployed live at https://ruzzoli.de/goplay/ (2026-10-13; redeploy after each phase)

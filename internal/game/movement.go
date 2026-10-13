@@ -5,21 +5,6 @@ import "github.com/memmaker/u6-go/internal/sound"
 // Moving characters: where they can go, how they turn, the party walking and following,
 // and the turn scheduler (seg_1E0F).
 
-// More AI modes (ai.h).
-const (
-	AIFront     AIMode = 3
-	AIRetreat   AIMode = 7
-	AIImmobile  AIMode = 14
-	AI10        AIMode = 16
-	AIFindPath  AIMode = 129
-	AIOnPath    AIMode = 131
-	AI86        AIMode = 134
-	AISleep     AIMode = 145
-	AIFarm      AIMode = 148
-	AIPlay      AIMode = 149
-	AIVigilante AIMode = 155
-)
-
 // turns is the state of the movement module.
 type turns struct {
 	// followers are the party members already placed by MoveFollowers (D_EBD5)
@@ -876,7 +861,7 @@ func (g *Game) runTurns() {
 	g.placeScheduledNPCs()
 	g.teleportNPCs()
 	n := int(g.Party[g.Active])
-	if g.NPCs[n].Mode > AIFollow && g.NPCs[n].Mode < AI10 {
+	if g.NPCs[n].Mode > AIFollow && g.NPCs[n].Mode < AIGuard2 {
 		g.NPCs[n].Leader = byte(n)
 	}
 	mask := surfaceMask
@@ -902,10 +887,10 @@ func (g *Game) runTurns() {
 					continue
 				}
 				if (o.Pos.X-areaX)&mask > areaSize-1 || (o.Pos.Y-areaY)&mask > areaSize-1 {
-					if npc.Mode >= AIOnPath && npc.Mode <= AI86 {
+					if npc.Mode >= AIOnPath && npc.Mode <= AIPathLost {
 						g.leavePath(i)
 					}
-					if npc.Mode >= AIOnPath && npc.Mode < AI86 {
+					if npc.Mode >= AIOnPath && npc.Mode < AIPathLost {
 						g.PathObject[npc.Leader] = 0
 						npc.Mode = AIFindPath
 					}
@@ -941,7 +926,7 @@ func (g *Game) runTurns() {
 			if mode := g.NPCs[n].Mode; mode != AICommand && mode != AIFollow {
 				g.npcTurn(n)
 				g.updateLeaders()
-				if mode := g.NPCs[n].Mode; mode > AIFollow && mode < AI10 {
+				if mode := g.NPCs[n].Mode; mode > AIFollow && mode < AIGuard2 {
 					g.NPCs[n].Leader = byte(n)
 				}
 			}

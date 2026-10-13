@@ -178,9 +178,56 @@ type AIMode byte
 const (
 	AIMotionless AIMode = 0
 	AIFollow     AIMode = 1
-	AICommand    AIMode = 2
-	AIAssault    AIMode = 8
-	AISchedule   AIMode = 128
+	// AICommand is the character the player moves.
+	AICommand AIMode = 2
+	// the combat modes, chosen in the equipment view
+	AIFront   AIMode = 3
+	AIRear    AIMode = 4
+	AIFlank   AIMode = 5
+	AIBerserk AIMode = 6
+	AIRetreat AIMode = 7
+	AIAssault AIMode = 8
+	// the modes of creatures
+	AIShy        AIMode = 9
+	AILike       AIMode = 10
+	AIUnfriendly AIMode = 11
+	AIGraze      AIMode = 12
+	AITangle     AIMode = 13
+	AIImmobile   AIMode = 14
+	// AIGuard and AIGuard2 pace back and forth (AI_0F, AI_10); AIGuard2 is also the end of
+	// the modes that keep a leader
+	AIGuard  AIMode = 15
+	AIGuard2 AIMode = 16
+	AIArrest AIMode = 18
+	AIFear   AIMode = 19
+	// AISchedule and above follow the NPC's schedule
+	AISchedule AIMode = 128
+	AIFindPath AIMode = 129
+	AISeekObj  AIMode = 130
+	AIOnPath   AIMode = 131
+	// AIPathBlocked, AIPathBlocked2 and AIPathLost count the tries of a blocked path
+	// (AI_84, AI_85, AI_86)
+	AIPathBlocked  AIMode = 132
+	AIPathBlocked2 AIMode = 133
+	AIPathLost     AIMode = 134
+	// the schedule activities
+	AIStandNorth AIMode = 135
+	AIGuardWest  AIMode = 142
+	AIGuardNorth AIMode = 139
+	AIWander     AIMode = 143
+	AILoiter     AIMode = 144
+	AISleep      AIMode = 145
+	AISit        AIMode = 146
+	AIEat        AIMode = 147
+	AIFarm       AIMode = 148
+	AIPlay       AIMode = 149
+	AIConverse   AIMode = 150
+	AIThief      AIMode = 151
+	AIRingBell   AIMode = 152
+	AIBrawl      AIMode = 153
+	// AIFlee runs from the party (AI_9A)
+	AIFlee      AIMode = 154
+	AIVigilante AIMode = 155
 )
 
 // Game is the state of GAME.EXE.

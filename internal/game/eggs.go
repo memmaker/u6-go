@@ -283,8 +283,6 @@ const (
 	eggNight             = 2
 	statusHatched        = StatusCursed // the same bit (HATCHED, MUTANT)
 	eggSure              = 100          // a quantity of 100 hatches all the creatures
-	AITangle      AIMode = 13
-	AI0F          AIMode = 15
 )
 
 // silver serpent bodies (D_28A9..D_28B5)
@@ -399,9 +397,9 @@ func (g *Game) hatchCreatures(egg int, offScreen, gargoylesGraze bool) {
 			npc := &g.NPCs[n]
 			npc.Mode, npc.CombatMode = mode, mode
 			switch mode {
-			case AI0F:
+			case AIGuard:
 				npc.SetDirection(2)
-			case AI10:
+			case AIGuard2:
 				npc.SetDirection(0)
 			}
 			if (t == ObjGargoyle || t == ObjWingedGargoyle) && npc.Mode == AIBerserk {

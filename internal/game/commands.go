@@ -36,12 +36,6 @@ const (
 	textAttrLook     = clipPaging
 )
 
-// More AI modes (ai.h).
-const (
-	AIBerserk AIMode = 6
-	AIGraze   AIMode = 12
-)
-
 // dirNames are the eight directions (DirNames).
 var dirNames = [8]string{"North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"}
 
@@ -406,7 +400,7 @@ func (g *Game) reportCrime() {
 		switch {
 		case npc.Mode < AISchedule:
 			npc.Mode = AIFear
-		case npc.Mode > AI86:
+		case npc.Mode > AIPathLost:
 			if o.Type() == ObjMusician2 {
 				o.Shape = npc.OrigShape
 			}

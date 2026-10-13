@@ -47,12 +47,7 @@ const (
 	alignChaotic NPCStatus = 96
 )
 
-// AI modes only conversations test (ai.h).
-const (
-	AIArrest AIMode = 18
-	AIFear   AIMode = 19
-	AIWander AIMode = 143
-)
+
 
 // talk is the state of a conversation.
 type talk struct {
