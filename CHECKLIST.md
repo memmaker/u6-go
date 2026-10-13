@@ -23,7 +23,12 @@
 - [x] Port END.EXE: ending (internal/ending)
 - [x] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
 - [x] Runs from original data files natively and in the browser (intro → creation → game)
-- [ ] Parity checks against DOSBox-X screenshots
+- [x] Parity checks against DOSBox-X screenshots (parity/, 2026-10-13; VRAM dumps via QMP, same keys from the same save)
+  - [x] intro, main menu, character creation, gypsy: pixel-identical where frames line up (rest is timing)
+  - [x] castle view after load, walking, look, talk to Lord British, get/use, equipment view (F1), party view, combat toggle: text/status identical; map differs only by NPC wandering, animation phase and random wind
+  - [x] ending (END.EXE VMN 1 2 3): 0 px diff on static scenes, star field timing only
+  - [x] mouse tile mapping: tile i spans screen x 16i..16i+15 in both (map back buffer copied 1:1), so PointerX>>4 is right; direction centre fixed to 88
+  - [ ] spellbook view: the opening Avatar carries no spellbook ("No spellbook is readied" matches); needs a save with one
 
 ## C. Publish
 - [x] -import SRC (folders, zip, ISO/BIN/CUE, floppy images, GOG installers, loose files) + COVER.PNG
