@@ -98,6 +98,16 @@ var (
 	MouseLeft, MouseRight bool
 )
 
+// The captured mouse: its position with fractions, the host position last tick, and the
+// ticks to ignore after locking.
+var (
+	mouseFX, mouseFY float64
+	lastX, lastY     int
+	mouseSettle      int
+)
+
+const settleTicks = 2
+
 func pollInput(g *game) {
 	ShiftDown = ebiten.IsKeyPressed(ebiten.KeyShift)
 	CtrlDown = ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyMeta)
@@ -125,11 +135,34 @@ func pollInput(g *game) {
 		KeyQueue = KeyQueue[len(KeyQueue)-biosBufferKeys:]
 	}
 
+	// The mouse is captured like DOSBox's: a click locks the pointer, the game's own cursor
+	// follows its motion, Ctrl+F10 (or Esc in a browser) lets it go.
 	x, y := ebiten.CursorPosition()
-	if g.scaleX > 0 {
-		MouseX = min(max(int((float64(x)-g.offsetX)/g.scaleX), 0), ScreenWidth-1)
-		MouseY = min(max(int((float64(y)-g.offsetY)/g.scaleY), 0), ScreenHeight-1)
+	clicked := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
+	switch {
+	case CtrlDown && inpututil.IsKeyJustPressed(ebiten.KeyF10):
+		ebiten.SetCursorMode(ebiten.CursorModeVisible)
+	case clicked && ebiten.CursorMode() != ebiten.CursorModeCaptured:
+		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+		mouseSettle = settleTicks
 	}
+	if g.scaleX > 0 {
+		if ebiten.CursorMode() == ebiten.CursorModeCaptured {
+			if mouseSettle > 0 { // the first positions after locking jump
+				mouseSettle--
+			} else {
+				mouseFX += float64(x-lastX) / g.scaleX
+				mouseFY += float64(y-lastY) / g.scaleY
+			}
+		} else {
+			mouseFX, mouseFY = (float64(x)-g.offsetX)/g.scaleX, (float64(y)-g.offsetY)/g.scaleY
+		}
+		mouseFX = min(max(mouseFX, 0), ScreenWidth-1)
+		mouseFY = min(max(mouseFY, 0), ScreenHeight-1)
+		MouseX, MouseY = int(mouseFX), int(mouseFY)
+	}
+	lastX, lastY = x, y
 	MouseLeft = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	MouseRight = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
 }
