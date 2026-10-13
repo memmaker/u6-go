@@ -133,16 +133,16 @@ func (g *Game) beginCombat() {
 		}
 		g.NPCs[m].Leader = byte(m)
 	}
-	si := int(g.SoloMember)
-	if si < 0 {
+	member := int(g.SoloMember)
+	if member < 0 {
 		// fix: the original tests the member before the bound
-		for si = 0; si < int(g.PartySize) && (g.incapacitated(int(g.Party[si])) || g.draggedUnder(int(g.Party[si]))); si++ {
+		for member = 0; member < int(g.PartySize) && (g.incapacitated(int(g.Party[member])) || g.draggedUnder(int(g.Party[member]))); member++ {
 		}
-		if si == int(g.PartySize) {
-			si = 0
+		if member == int(g.PartySize) {
+			member = 0
 		}
 	}
-	m := int(g.Party[si])
+	m := int(g.Party[member])
 	g.SavedMode = int8(g.NPCs[m].Mode)
 	g.NPCs[m].Mode = AICommand
 	g.gr.DrawTile(tileCombatOn, combatIconX, iconsY)
@@ -950,16 +950,16 @@ func (g *Game) tryHit(a, x, y, w int) int {
 		(wt == ObjCrossbow || wt == ObjTripleCrossbow) && g.FindInvType(a, ObjBolt, -1) < 0 {
 		return hitDone
 	}
-	dx, dy := x-ap.X, y-ap.Y
+	deltaX, deltaY := x-ap.X, y-ap.Y
 	var dir int
-	if abs(dx) > abs(dy) {
+	if abs(deltaX) > abs(deltaY) {
 		dir = dirEast
-		if dx < 0 {
+		if deltaX < 0 {
 			dir = dirWest
 		}
 	} else {
 		dir = dirNorth
-		if dy >= 0 {
+		if deltaY >= 0 {
 			dir = dirSouth
 		}
 	}
@@ -982,7 +982,7 @@ func (g *Game) tryHit(a, x, y, w int) int {
 	g.missileHit = g.Selection.obj
 	ranged := false
 	if wt != ObjMorningStar && wt != ObjHalberd {
-		ranged = dx > 1 || dx < -1 || dy > 1 || dy < -1 || rangedWeapons[wt]
+		ranged = deltaX > 1 || deltaX < -1 || deltaY > 1 || deltaY < -1 || rangedWeapons[wt]
 	}
 	if ranged && g.interferes(a) {
 		return hitInterfered
@@ -1189,12 +1189,12 @@ func (g *Game) attack() {
 // combatRange is the distance used for ranges.
 // C: seg_2337:2BEE (COMBAT_range)
 func (g *Game) combatRange(x0, y0, x1, y1 int) int {
-	dx, dy := abs(x0-x1), abs(y0-y1)
-	if dx >= len(rangeTable) || dy >= len(rangeTable) {
+	deltaX, deltaY := abs(x0-x1), abs(y0-y1)
+	if deltaX >= len(rangeTable) || deltaY >= len(rangeTable) {
 		const outOfReach = 9
 		return outOfReach
 	}
-	return rangeTable[dx][dy]
+	return rangeTable[deltaX][deltaY]
 }
 
 // pickWeapon picks the weapon a fights d with: sometimes a spell, else the strongest
@@ -1259,8 +1259,8 @@ func (g *Game) pickOpponent(n int) int {
 
 // inReach says whether (x, y) is within rng of (x0, y0).
 func inReach(x, y, x0, y0, rng int) bool {
-	dx, dy := abs(x-x0), abs(y-y0)
-	return dx < len(rangeTable) && dy < len(rangeTable) && rangeTable[dx][dy] <= rng
+	deltaX, deltaY := abs(x-x0), abs(y-y0)
+	return deltaX < len(rangeTable) && deltaY < len(rangeTable) && rangeTable[deltaX][deltaY] <= rng
 }
 
 // sidestep returns the place beside (x, y) a quarter turn from the selection.
@@ -1325,40 +1325,40 @@ func (g *Game) holdLine(n int) bool {
 		return true
 	}
 	p := g.object(n).Pos
-	var ox, oy, dx, dy, front int
+	var ox, oy, deltaX, deltaY, front int
 	if player {
 		lp := g.object(int(g.Party[0])).Pos
 		ox, oy = lp.X, lp.Y
-		dx, dy = g.enemyGravityX-ox, g.enemyGravityY-oy
+		deltaX, deltaY = g.enemyGravityX-ox, g.enemyGravityY-oy
 		front = int(g.Party[0])
 	} else {
 		ox, oy = g.partyGravityX, g.partyGravityY
 		fp := g.object(g.enemyFront).Pos
-		dx, dy = fp.X-ox, fp.Y-oy
+		deltaX, deltaY = fp.X-ox, fp.Y-oy
 		front = g.enemyFront
 	}
-	side := (p.X-ox)*dy - (p.Y-oy)*dx
+	side := (p.X-ox)*deltaY - (p.Y-oy)*deltaX
 	right := side > 0
 	if side == 0 {
 		right = g.rand(0, 1) != 0
 	}
 	stepX, stepY := -1, 1
-	if dy > 0 {
+	if deltaY > 0 {
 		stepX = 1
 	}
-	if dx > 0 {
+	if deltaX > 0 {
 		stepY = -1
 	}
 	if !right {
 		stepX, stepY = -stepX, -stepY
 	}
 	fp := g.object(front).Pos
-	depth := (fp.X-ox)*dx + (fp.Y-oy)*dy
+	depth := (fp.X-ox)*deltaX + (fp.Y-oy)*deltaY
 	if int(g.Party[0]) == front {
-		depth += abs(dx) + abs(dy)
+		depth += abs(deltaX) + abs(deltaY)
 	}
-	length := max(dx*dx+dy*dy, 1)
-	tx, ty := depth*dx/length+ox, depth*dy/length+oy
+	length := max(deltaX*deltaX+deltaY*deltaY, 1)
+	tx, ty := depth*deltaX/length+ox, depth*deltaY/length+oy
 	g.allowPartySwap = false
 	for {
 		if tx < g.AreaX || g.AreaX+areaLast < tx || ty < g.AreaY || g.AreaY+areaLast < ty || p.X == tx && p.Y == ty {
@@ -1368,8 +1368,8 @@ func (g *Game) holdLine(n int) bool {
 		if g.livingAt(0, tx, ty) < 0 {
 			break
 		}
-		a := (tx+stepX-ox)*dx + (ty-oy)*dy
-		b := (tx-ox)*dx + (ty+stepY-oy)*dy
+		a := (tx+stepX-ox)*deltaX + (ty-oy)*deltaY
+		b := (tx-ox)*deltaX + (ty+stepY-oy)*deltaY
 		if abs(a-depth) < abs(b-depth) {
 			tx += stepX
 		} else {
@@ -1420,7 +1420,7 @@ func (g *Game) front(n int) {
 // rear stays behind the front line.
 // C: seg_2337:34C9 (COMBAT_AI_Rear)
 func (g *Game) rear(n int) {
-	var left, right, ox, oy, dx, dy int
+	var left, right, ox, oy, deltaX, deltaY int
 	if g.isPlayerControlled(n) {
 		if g.enemyCount == 0 {
 			g.TryMoveTo(n, int(g.MapX), int(g.MapY))
@@ -1428,7 +1428,7 @@ func (g *Game) rear(n int) {
 		}
 		left, right = g.partyLeft, g.partyRight
 		ox, oy = g.partyGravityX, g.partyGravityY
-		dx, dy = g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
+		deltaX, deltaY = g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
 	} else {
 		if g.enemyCount == 0 {
 			g.subMove(n, waitMovePoints)
@@ -1442,33 +1442,33 @@ func (g *Game) rear(n int) {
 			right = n
 		}
 		ox, oy = g.enemyGravityX, g.enemyGravityY
-		dx, dy = g.partyGravityX-g.enemyGravityX, g.partyGravityY-g.enemyGravityY
+		deltaX, deltaY = g.partyGravityX-g.enemyGravityX, g.partyGravityY-g.enemyGravityY
 	}
 	frontDepth := 1<<15 - 1
 	align := g.alignment(n)
 	for i := range npcCount {
 		if !g.NPCs[i].Has(Dead) && g.NPCs[i].Mode == AIFront && g.alignment(i) == align {
 			q := g.object(i).Pos
-			frontDepth = min(frontDepth, (q.X-ox)*dx+(q.Y-oy)*dy)
+			frontDepth = min(frontDepth, (q.X-ox)*deltaX+(q.Y-oy)*deltaY)
 		}
 	}
 	p := g.object(n).Pos
-	depth := (p.X-ox)*dx + (p.Y-oy)*dy
+	depth := (p.X-ox)*deltaX + (p.Y-oy)*deltaY
 	points := g.NPCs[n].MovePoints
 	var stuck bool
-	cross := func(i int) int { q := g.object(i).Pos; return (q.X-ox)*dy - (q.Y-oy)*dx }
+	cross := func(i int) int { q := g.object(i).Pos; return (q.X-ox)*deltaY - (q.Y-oy)*deltaX }
 	switch {
 	case g.isPlayerControlled(n) && g.distance(n, int(g.MapX), int(g.MapY)) > 3:
 		stuck = !g.TryMoveTo(n, int(g.MapX), int(g.MapY))
 	case depth >= frontDepth:
-		stuck = !g.TryMoveTo(n, p.X-dx, p.Y-dy)
+		stuck = !g.TryMoveTo(n, p.X-deltaX, p.Y-deltaY)
 	default:
-		c := (p.X-ox)*dy - (p.Y-oy)*dx
+		c := (p.X-ox)*deltaY - (p.Y-oy)*deltaX
 		switch {
 		case cross(left) < c:
-			stuck = !g.TryMoveTo(n, p.X-dy, p.Y+dx)
+			stuck = !g.TryMoveTo(n, p.X-deltaY, p.Y+deltaX)
 		case cross(right) > c:
-			stuck = !g.TryMoveTo(n, p.X+dy, p.Y-dx)
+			stuck = !g.TryMoveTo(n, p.X+deltaY, p.Y-deltaX)
 		default:
 			stuck = true
 		}
@@ -1502,15 +1502,15 @@ func (g *Game) flank(n int) {
 	}
 	align := g.alignment(n)
 	p := g.object(n).Pos
-	dx, dy := g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
-	side := (p.X-g.partyGravityX)*dy - (p.Y-g.partyGravityY)*dx
+	deltaX, deltaY := g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
+	side := (p.X-g.partyGravityX)*deltaY - (p.Y-g.partyGravityY)*deltaX
 	right := side > 0
 	if side == 0 {
 		right = g.rand(0, 1) != 0
 	}
-	sx, sy := dy, -dx
+	sx, sy := deltaY, -deltaX
 	if !right {
-		sx, sy = -dy, dx
+		sx, sy = -deltaY, deltaX
 	}
 	best, target := -1<<15, noObject
 	for i := range npcCount {
@@ -1525,7 +1525,7 @@ func (g *Game) flank(n int) {
 			continue
 		}
 		if closeEnough(7, q.X, q.Y, int(g.MapX), int(g.MapY)) || closeEnough(5, q.X, q.Y, p.X, p.Y) {
-			c := (q.X-g.partyGravityX)*dy - (q.Y-g.partyGravityY)*dx
+			c := (q.X-g.partyGravityX)*deltaY - (q.Y-g.partyGravityY)*deltaX
 			if !right {
 				c = -c
 			}
@@ -1626,15 +1626,15 @@ func (g *Game) retreat(n int) {
 		return
 	}
 	p, q := g.object(n).Pos, g.object(o).Pos
-	dx, dy := q.X-p.X, q.Y-p.Y
+	deltaX, deltaY := q.X-p.X, q.Y-p.Y
 	keep := 3
 	if npc.Mode == AIRetreat {
 		keep = opponentRange
 	}
 	switch {
-	case closeEnough(keep-1, dx, dy, 0, 0):
+	case closeEnough(keep-1, deltaX, deltaY, 0, 0):
 		points := npc.MovePoints
-		if !g.TryMoveTo(n, p.X-dx, p.Y-dy) {
+		if !g.TryMoveTo(n, p.X-deltaX, p.Y-deltaY) {
 			npc.MovePoints = points
 			if npc.Mode != AIFlee && npc.Mode != AIShy {
 				g.assault(n)
@@ -1768,15 +1768,15 @@ func (g *Game) tangle(n int) {
 			return
 		}
 		if closeEnough(4, q.X, q.Y, p.X, p.Y) && g.rand(0, 3) == 0 {
-			dx, dy := q.X-p.X, q.Y-p.Y
+			deltaX, deltaY := q.X-p.X, q.Y-p.Y
 			h, v := dirWest, dirNorth
-			if dx > 0 {
+			if deltaX > 0 {
 				h = dirEast
 			}
-			if dy > 0 {
+			if deltaY > 0 {
 				v = dirSouth
 			}
-			if abs(dx) <= abs(dy) {
+			if abs(deltaX) <= abs(deltaY) {
 				h, v = v, h
 			}
 			if !g.growTangle(n, h) {
@@ -1812,12 +1812,12 @@ const (
 // explosion blows up (x, y) with flames of tile; it returns the characters hit.
 // C: seg_2FC1:10D2 (Explosion)
 func (g *Game) explosion(x, y, tile int) []int {
-	var dx, dy [maxMissiles]int
-	for i := range dx {
-		dx[i], dy[i] = explosionStepsX[i]+x, explosionStepsY[i]+y
+	var deltaX, deltaY [maxMissiles]int
+	for i := range deltaX {
+		deltaX[i], deltaY[i] = explosionStepsX[i]+x, explosionStepsY[i]+y
 	}
 	const blastRange = 3
-	g.missiles(x, y, dx[:], dy[:], blastRange, tile, missileAltSound|missileTrail)
+	g.missiles(x, y, deltaX[:], deltaY[:], blastRange, tile, missileAltSound|missileTrail)
 	for i := g.FindLoc(x, y, int(g.MapZ)); i >= 0 && len(g.hitList) <= maxHits; i = g.NextLoc() {
 		if i < npcCount && g.object(i).Shape != shapeOf(ObjCorpser, 0) && !g.draggedUnder(i) {
 			g.hitList = append(g.hitList, i)

@@ -208,8 +208,8 @@ func (g *Game) putch0(ch int) {
 		}
 		g.promptChar = promptChar
 		g.flushOnGetch = true
-		for si := range c.width {
-			g.putCharAt(' ', c.x0+si, bottom)
+		for column := range c.width {
+			g.putCharAt(' ', c.x0+column, bottom)
 		}
 		g.linesLeft = c.height - 1
 	}
@@ -232,13 +232,13 @@ func (g *Game) putch0(ch int) {
 	}
 	y := c.y0 + c.curY
 	if c.attr&clipCentre != 0 {
-		for si := g.lineShown; si < (c.width-end)>>1+g.lineShown; si++ {
-			g.putCharAt(' ', c.x0+si, y)
+		for column := g.lineShown; column < (c.width-end)>>1+g.lineShown; column++ {
+			g.putCharAt(' ', c.x0+column, y)
 		}
 	}
-	for si := g.lineShown; si < end; si++ {
-		c.fg = g.lineColour[si]
-		g.putCharAt(g.line[si], c.x0+si, y)
+	for column := g.lineShown; column < end; column++ {
+		c.fg = g.lineColour[column]
+		g.putCharAt(g.line[column], c.x0+column, y)
 	}
 	c.fg = g.colours.text
 	if g.lineShown < end {
@@ -249,13 +249,13 @@ func (g *Game) putch0(ch int) {
 		if g.line[end] == ' ' {
 			end++
 		}
-		si := end
-		for ; si <= g.lineLen; si++ {
-			g.line[si-end] = g.line[si]
-			g.lineColour[si-end] = g.lineColour[si]
+		from := end
+		for ; from <= g.lineLen; from++ {
+			g.line[from-end] = g.line[from]
+			g.lineColour[from-end] = g.lineColour[from]
 		}
 		g.lineShown = 0
-		g.lineLen = si - end
+		g.lineLen = from - end
 		if ch == ' ' {
 			g.lineWord = false
 		}

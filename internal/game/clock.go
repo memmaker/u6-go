@@ -135,8 +135,8 @@ func (g *Game) passTime(minutes int) {
 		if g.isPlayerControlled(i) {
 			ringWorn = false
 			vanished, what := false, "ring"
-			for di := g.FindInv(i); di >= 0; di = g.NextInv() {
-				item := g.object(di)
+			for held := g.FindInv(i); held >= 0; held = g.NextInv() {
+				item := g.object(held)
 				if item.CoordUse() == InInventory {
 					continue
 				}
@@ -148,7 +148,7 @@ func (g *Game) passTime(minutes int) {
 					if g.rand(0, 1) != 0 {
 						if item.Quantity() <= minutes {
 							g.printf(burnOutMsg)
-							g.DeleteObj(di)
+							g.DeleteObj(held)
 							g.promptFlag = true
 						} else {
 							torchLit = true
@@ -188,7 +188,7 @@ func (g *Game) passTime(minutes int) {
 				if vanished {
 					g.printf(ringVanishedMsg, what)
 					g.sfx(sound.EffectSweep, 0)
-					g.DeleteObj(di)
+					g.DeleteObj(held)
 					g.promptFlag = true
 					vanished = false
 				}
@@ -457,12 +457,12 @@ func (g *Game) checkStepOn(n int) {
 		g.terrainDamage(n, tile)
 		return
 	}
-	for di := g.FindLoc(x, y, int(g.MapZ)); di >= 0; di = g.NextLoc() {
-		if di == n {
+	for other := g.FindLoc(x, y, int(g.MapZ)); other >= 0; other = g.NextLoc() {
+		if other == n {
 			continue
 		}
-		if tile := g.tileFrame(di); g.isDamaging(tile) {
-			g.object(di).Status &^= StatusInvisible
+		if tile := g.tileFrame(other); g.isDamaging(tile) {
+			g.object(other).Status &^= StatusInvisible
 			g.terrainDamage(n, tile)
 			break
 		}

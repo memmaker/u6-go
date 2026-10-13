@@ -1956,7 +1956,7 @@ func (g *Game) pickpocket(targeted bool) {
 	}
 	g.spellPeek = true
 	p := g.object(caster).Pos
-	cx, cy := p.X, p.Y
+	casterX, casterY := p.X, p.Y
 	victim := sel.obj
 	g.showNPC = victim
 	g.equipmentView()
@@ -1983,7 +1983,7 @@ func (g *Game) pickpocket(targeted bool) {
 		if g.weightOf(n)+g.weightInven+g.weightEquip > int(g.NPCs[caster].Strength)*carryPerStrength {
 			g.printf("\nCan't carry!\n")
 		} else {
-			g.throw(victim, &cx, &cy, spellRange, g.tileFrame(n))
+			g.throw(victim, &casterX, &casterY, spellRange, g.tileFrame(n))
 			g.stopWornEffect(n, victim)
 			if quantityType(t) != countSingle {
 				amount := int(g.object(n).Amount)
@@ -2080,13 +2080,13 @@ func (g *Game) webSpell(targeted bool) {
 // webMissiles flies webs from n to (x, y) and the eight places around it.
 // C: seg_2FC1:131E (C_2FC1_131E)
 func (g *Game) webMissiles(n, x, y int) bool {
-	var dx, dy [len(dirStepX) + 1]int
+	var deltaX, deltaY [len(dirStepX) + 1]int
 	for d := range dirStepX {
-		dx[d], dy[d] = x+dirStepX[d], y+dirStepY[d]
+		deltaX[d], deltaY[d] = x+dirStepX[d], y+dirStepY[d]
 	}
-	dx[len(dirStepX)], dy[len(dirStepX)] = x, y
+	deltaX[len(dirStepX)], deltaY[len(dirStepX)] = x, y
 	p := g.object(n).Pos
-	return g.missiles(p.X, p.Y, dx[:], dy[:], widerRange, int(g.BaseTile[ObjWeb]), missileNoSpin|missileAltSound)
+	return g.missiles(p.X, p.Y, deltaX[:], deltaY[:], widerRange, int(g.BaseTile[ObjWeb]), missileNoSpin|missileAltSound)
 }
 
 // enchant puts a charge of a spell of the spellbooks into a staff.
@@ -2297,11 +2297,11 @@ func (g *Game) magicWind(n, x, y, tile int) []int {
 	col := min(max(x-p.X+viewCenter, 0), viewTiles-1)
 	dirs := int(tripleDirections[row][col])
 	left, right := dirs>>nibble, dirs&(1<<nibble-1)
-	dx := []int{x, x + dirStepX[left], x + dirStepX[right], 0, 0}
-	dy := []int{y, y + dirStepY[left], y + dirStepY[right], 0, 0}
-	dx[3], dy[3] = dx[1]+dirStepX[left], dy[1]+dirStepY[left]
-	dx[4], dy[4] = dx[2]+dirStepX[right], dy[2]+dirStepY[right]
-	g.missiles(p.X, p.Y, dx, dy, widerRange, tile, missileAltSound|missileTrail)
+	deltaX := []int{x, x + dirStepX[left], x + dirStepX[right], 0, 0}
+	deltaY := []int{y, y + dirStepY[left], y + dirStepY[right], 0, 0}
+	deltaX[3], deltaY[3] = deltaX[1]+dirStepX[left], deltaY[1]+dirStepY[left]
+	deltaX[4], deltaY[4] = deltaX[2]+dirStepX[right], deltaY[2]+dirStepY[right]
+	g.missiles(p.X, p.Y, deltaX, deltaY, widerRange, tile, missileAltSound|missileTrail)
 	return g.hitList
 }
 

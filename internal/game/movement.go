@@ -190,8 +190,8 @@ func (g *Game) blockedAt(x, y int) bool {
 	if g.isImpassable(g.GetTileAtXYZ(x, y, int(g.MapZ))) {
 		return true
 	}
-	for si := g.FindLoc(x, y, int(g.MapZ)); si >= 0; si = g.NextLoc() {
-		if (si >= npcCount || !g.isPlayerControlled(si)) && g.isImpassable(g.tileFrame(si)-g.locPart) {
+	for obj := g.FindLoc(x, y, int(g.MapZ)); obj >= 0; obj = g.NextLoc() {
+		if (obj >= npcCount || !g.isPlayerControlled(obj)) && g.isImpassable(g.tileFrame(obj)-g.locPart) {
 			return true
 		}
 	}
@@ -421,17 +421,17 @@ func (g *Game) draggedUnderTurn(n int) bool {
 func (g *Game) alreadyNear(count, x, y int) bool {
 	near := false
 	isMouse := g.object(int(g.followers[count])).Type() == ObjMouse
-	check := func(dx, dy int, t ObjectType) (bool, bool) {
-		if dx == 0 && dy == 0 && t != ObjMouse && !isMouse {
+	check := func(deltaX, deltaY int, t ObjectType) (bool, bool) {
+		if deltaX == 0 && deltaY == 0 && t != ObjMouse && !isMouse {
 			return false, true
 		}
-		return dx > -2 && dx < 2 && dy > -2 && dy < 2, false
+		return deltaX > -2 && deltaX < 2 && deltaY > -2 && deltaY < 2, false
 	}
 	for k := range count {
 		f := g.object(int(g.followers[k]))
 		t := f.Type()
-		dx, dy := f.Pos.X-x, f.Pos.Y-y
-		n, on := check(dx, dy, t)
+		deltaX, deltaY := f.Pos.X-x, f.Pos.Y-y
+		n, on := check(deltaX, deltaY, t)
 		if on {
 			return false
 		}
@@ -439,9 +439,9 @@ func (g *Game) alreadyNear(count, x, y int) bool {
 		if t != ObjMountedHorse {
 			continue
 		}
-		dx -= dirStepX[f.Frame()&6]
-		dy -= dirStepY[f.Frame()&6]
-		if n, on = check(dx, dy, t); on {
+		deltaX -= dirStepX[f.Frame()&6]
+		deltaY -= dirStepY[f.Frame()&6]
+		if n, on = check(deltaX, deltaY, t); on {
 			return false
 		}
 		near = near || n
@@ -476,20 +476,20 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 	for pass := range 2 {
 		place := 1
 		for k := range int(g.PartySize) {
-			si := int(g.Party[k])
-			g.followers[place] = byte(si)
+			member := int(g.Party[k])
+			g.followers[place] = byte(member)
 			// fix: the formation has places for ten followers
 			slot := min(place, len(followSide)-1)
 			tx := x - dirStepX[facing]*followBack[slot] - dirStepY[facing]*followSide[slot]
 			ty := y + dirStepX[facing]*followSide[slot] - dirStepY[facing]*followBack[slot]
-			o := g.object(si)
-			if si == n || o.Pos.Z != int(g.MapZ) || g.NPCs[si].Mode != AIFollow {
+			o := g.object(member)
+			if member == n || o.Pos.Z != int(g.MapZ) || g.NPCs[member].Mode != AIFollow {
 				continue
 			}
-			if g.draggedUnderTurn(si) || g.incapacitated(si) || g.draggedUnder(si) {
+			if g.draggedUnderTurn(member) || g.incapacitated(member) || g.draggedUnder(member) {
 				continue
 			}
-			saved := g.NPCs[si].MovePoints
+			saved := g.NPCs[member].MovePoints
 			fx, fy := o.Pos.X, o.Pos.Y
 			behind := (tx-fx)*dirStepX[facing]+(ty-fy)*dirStepY[facing] > 0
 			if !g.alreadyNear(place, fx, fy) ||
@@ -498,7 +498,7 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 				best, bestDir := 0, -1
 				for d := range len(dirStepX) {
 					nx, ny := fx+dirStepX[d], fy+dirStepY[d]
-					if !g.passable(si, nx, ny) {
+					if !g.passable(member, nx, ny) {
 						continue
 					}
 					eager := 256
@@ -519,12 +519,12 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 					}
 				}
 				if bestDir >= 0 {
-					g.MoveObj(si, fx+dirStepX[bestDir], fy+dirStepY[bestDir], int(g.MapZ))
+					g.MoveObj(member, fx+dirStepX[bestDir], fy+dirStepY[bestDir], int(g.MapZ))
 					g.turnParts = true
-					g.turnTo(si, bestDir)
+					g.turnTo(member, bestDir)
 				}
 			}
-			g.NPCs[si].MovePoints = saved
+			g.NPCs[member].MovePoints = saved
 			g.subMove(int(g.Party[k]), 5)
 			place++
 		}
@@ -556,8 +556,8 @@ const drunk = 3
 // C: seg_1E0F:1B0E (C_1E0F_1B0E)
 func (g *Game) advance(dir int) {
 	g.warnNoQuest = true
-	si := int(g.Party[g.Active])
-	o := g.object(si)
+	leader := int(g.Party[g.Active])
+	o := g.object(leader)
 	g.MapX, g.MapY = int16(o.Pos.X), int16(o.Pos.Y)
 	mx, my := int(g.MapX), int(g.MapY)
 	g.moveBlocked = false
@@ -584,37 +584,37 @@ func (g *Game) advance(dir int) {
 		if dir < 0 {
 			g.printf(noWindMsg)
 			g.promptFlag = true
-			g.NPCs[si].MovePoints = 0
+			g.NPCs[leader].MovePoints = 0
 			return
 		}
 	}
 	newX := (mx + dirStepX[dir]) & surfaceMask
 	newY := (my + dirStepY[dir]) & surfaceMask
 	diagonal := dirStepX[dir] != 0 && dirStepY[dir] != 0
-	if !g.passable(si, newX, newY) {
+	if !g.passable(leader, newX, newY) {
 		g.moveBlocked = true
 		if g.mousePressed && diagonal {
 			// slide along the obstacle toward the pointer
 			if abs(g.mouseMapX-mx) > abs(g.mouseMapY-my) {
-				if g.passable(si, newX, my) {
+				if g.passable(leader, newX, my) {
 					g.moveBlocked = false
 					newY = my
-				} else if g.passable(si, mx, newY) {
+				} else if g.passable(leader, mx, newY) {
 					g.moveBlocked = false
 					newX = mx
 				}
 			} else {
-				if g.passable(si, mx, newY) {
+				if g.passable(leader, mx, newY) {
 					g.moveBlocked = false
 					newX = mx
-				} else if g.passable(si, newX, my) {
+				} else if g.passable(leader, newX, my) {
 					g.moveBlocked = false
 					newY = my
 				}
 			}
 		}
-	} else if diagonal && !g.passable(si, (mx+dirStepX[dir])&surfaceMask, my) &&
-		!g.passable(si, mx, (my+dirStepY[dir])&surfaceMask) {
+	} else if diagonal && !g.passable(leader, (mx+dirStepX[dir])&surfaceMask, my) &&
+		!g.passable(leader, mx, (my+dirStepY[dir])&surfaceMask) {
 		g.moveBlocked = true
 	}
 	if g.moveBlocked {
@@ -642,39 +642,39 @@ func (g *Game) advance(dir int) {
 			}
 		}
 	}
-	si = int(g.Party[g.Active])
-	switch t := g.object(si).Type(); {
+	leader = int(g.Party[g.Active])
+	switch t := g.object(leader).Type(); {
 	case t == ObjShip && g.WindDir >= 0:
-		g.subMove(si, sailCost[(dir-int(g.WindDir))&7])
+		g.subMove(leader, sailCost[(dir-int(g.WindDir))&7])
 	case t == ObjSkiff:
 		flow := dir
 		if tile := g.GetTileAtXYZ(mx, my, int(g.MapZ)); tile >= tileFlow && tile < tileFlow+8 {
 			flow = tile - tileFlow
 		}
-		g.subMove(si, rowCost[(dir-flow)&7])
+		g.subMove(leader, rowCost[(dir-flow)&7])
 	case t == ObjRaft || t == ObjBalloon2:
-		g.subMove(si, 5)
+		g.subMove(leader, 5)
 	case diagonal:
-		g.subTerrainMove(si)
-		g.subMove(si, 5)
+		g.subTerrainMove(leader)
+		g.subMove(leader, 5)
 	default:
-		g.subTerrainMove(si)
+		g.subTerrainMove(leader)
 	}
 	g.MapX, g.MapY = int16(newX), int16(newY)
 	g.enterArea()
-	if g.MoveObj(si, newX, newY, int(g.MapZ)) >= 0 {
-		g.NPCs[si].SetDirection(dir)
+	if g.MoveObj(leader, newX, newY, int(g.MapZ)) >= 0 {
+		g.NPCs[leader].SetDirection(dir)
 		g.turnParts = true
-		g.turnTo(si, dir)
+		g.turnTo(leader, dir)
 		g.viewChanged = true
 	} else {
-		o := g.object(si)
+		o := g.object(leader)
 		g.MapX, g.MapY = int16(o.Pos.X), int16(o.Pos.Y)
 		g.enterArea()
 		g.printf("Object mismatch\n")
 	}
 	g.warnNoQuest = false
-	g.MoveFollowers(si, false)
+	g.MoveFollowers(leader, false)
 	g.enterGates()
 	g.warnNoQuest = false
 }
@@ -711,8 +711,8 @@ func (g *Game) subTerrainMove(n int) {
 	if tile := g.GetTileAtXYZ(p.X, p.Y, p.Z); !g.isImpassable(tile) {
 		points += int(g.TerrainType[tile]) >> terrainCostShift
 	}
-	for di := g.FindLoc(p.X, p.Y, p.Z); di >= 0; di = g.NextLoc() {
-		if tile := g.tileFrame(di); !g.isImpassable(tile) {
+	for obj := g.FindLoc(p.X, p.Y, p.Z); obj >= 0; obj = g.NextLoc() {
+		if tile := g.tileFrame(obj); !g.isImpassable(tile) {
 			points += int(g.TerrainType[tile]) >> terrainCostShift
 		}
 	}
@@ -728,8 +728,8 @@ func (g *Game) openDoorUnder(n, step int) {
 		return
 	}
 	p := g.object(n).Pos
-	for si := g.FindLoc(p.X, p.Y, p.Z); si >= 0; si = g.NextLoc() {
-		door := g.object(si)
+	for obj := g.FindLoc(p.X, p.Y, p.Z); obj >= 0; obj = g.NextLoc() {
+		door := g.object(obj)
 		switch t := door.Type(); {
 		case t >= ObjOakenDoor && t <= ObjSteelDoor:
 			door.SetFrame(step<<2 + door.Frame()&3)
@@ -737,7 +737,7 @@ func (g *Game) openDoorUnder(n, step int) {
 			return
 		case t == ObjPassthrough || t == ObjPassthrough2:
 			g.TextOn = false
-			g.usePassthrough(si)
+			g.usePassthrough(obj)
 			g.TextOn = true
 		}
 	}
@@ -810,36 +810,36 @@ func (g *Game) TryMoveTo(n, x, y int) bool {
 	avoid := !g.tryHarder
 	moved := true
 	p := g.object(n).Pos
-	dx, dy := x-p.X, y-p.Y
-	if dx == 0 && dy == 0 || g.NPCs[n].Mode == AIImmobile {
+	deltaX, deltaY := x-p.X, y-p.Y
+	if deltaX == 0 && deltaY == 0 || g.NPCs[n].Mode == AIImmobile {
 		g.subMove(n, 5)
 		return false
 	}
 	hDir := 2
 	switch {
-	case dx == 0:
+	case deltaX == 0:
 		if g.rand(0, 1) == 0 {
 			hDir = 6
 		}
-	case dx < 0:
+	case deltaX < 0:
 		hDir = 6
 	}
 	vDir := 4
 	switch {
-	case dy == 0:
+	case deltaY == 0:
 		if g.rand(0, 1) != 0 {
 			vDir = 0
 		}
-	case dy < 0:
+	case deltaY < 0:
 		vDir = 0
 	}
 	g.allowPartySwap = false
 	var vertical bool
 	const near = 4
-	if abs(dx) < near && abs(dy) < near {
-		vertical = abs(dx) < abs(dy) || abs(dx) == abs(dy) && g.rand(0, 1) != 0
+	if abs(deltaX) < near && abs(deltaY) < near {
+		vertical = abs(deltaX) < abs(deltaY) || abs(deltaX) == abs(deltaY) && g.rand(0, 1) != 0
 	} else {
-		vertical = g.rand(1, abs(dx)+abs(dy)) > abs(dx)
+		vertical = g.rand(1, abs(deltaX)+abs(deltaY)) > abs(deltaX)
 	}
 	first, second := hDir, vDir
 	if vertical {
@@ -972,31 +972,31 @@ func (g *Game) startTurns() {
 // C: seg_1E0F:5165 (C_1E0F_5165)
 func (g *Game) followSchedules() {
 	const hourMask, dayShift = 31, 5
-	for si := 2; si < firstMonster; si++ {
-		npc := &g.NPCs[si]
+	for npcID := 2; npcID < firstMonster; npcID++ {
+		npc := &g.NPCs[npcID]
 		if npc.Mode == AIVigilante {
 			npc.Mode = AIFindPath
 		}
-		if g.object(si).Shape == 0 {
+		if g.object(npcID).Shape == 0 {
 			continue
 		}
 		if npc.Mode < AISchedule && npc.Mode != AIRetreat {
 			continue
 		}
-		if g.isPlayerControlled(si) {
+		if g.isPlayerControlled(npcID) {
 			continue
 		}
-		first, last := int(g.schedulePointer[si]), int(g.schedulePointer[si+1])-1
-		for di := last; di >= first; di-- {
-			e := g.schedule[di]
+		first, last := int(g.schedulePointer[npcID]), int(g.schedulePointer[npcID+1])-1
+		for entry := last; entry >= first; entry-- {
+			e := g.schedule[entry]
 			const everyDay = 0
 			if int(e.Time)&hourMask == int(g.Hour) &&
 				(int(e.Time)>>dayShift == (int(g.Day)-1)%daysPerWeek+1 || int(e.Time)>>dayShift == everyDay) {
-				npc.ScheduleIndex = byte(di - first)
+				npc.ScheduleIndex = byte(entry - first)
 				npc.Mode = AIFindPath
-				if g.object(si).Type() == ObjMusician2 && AIMode(e.Action) != AIPlay {
-					g.object(si).Shape = npc.OrigShape
-					g.turnTo(si, 4)
+				if g.object(npcID).Type() == ObjMusician2 && AIMode(e.Action) != AIPlay {
+					g.object(npcID).Shape = npc.OrigShape
+					g.turnTo(npcID, 4)
 				}
 				break
 			}

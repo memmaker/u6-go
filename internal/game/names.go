@@ -150,39 +150,39 @@ func (g *Game) giveObj(owner int, t ObjectType, amount int) int {
 		how = InInventory
 		if t == ObjAmuletOfSubmission {
 			how = Equipped
-			for si := g.FindInv(owner); si >= 0; si = g.NextInv() {
-				if g.object(si).CoordUse() == Equipped && g.equipSlot(si) == slotNeck {
-					g.object(si).SetCoordUse(InInventory)
+			for item := g.FindInv(owner); item >= 0; item = g.NextInv() {
+				if g.object(item).CoordUse() == Equipped && g.equipSlot(item) == slotNeck {
+					g.object(item).SetCoordUse(InInventory)
 					break
 				}
 			}
 		}
 	}
-	si := noObject
+	item := noObject
 	switch quantityType(t) {
 	case countGold:
-		if si = g.FindInvType(owner, t, -1); si < 0 {
-			si = g.AddInvObj(uint16(t), how|StatusOwned, 0, owner)
+		if item = g.FindInvType(owner, t, -1); item < 0 {
+			item = g.AddInvObj(uint16(t), how|StatusOwned, 0, owner)
 		}
-		if si >= 0 {
-			g.object(si).Amount += uint16(amount)
+		if item >= 0 {
+			g.object(item).Amount += uint16(amount)
 		}
 	case countQuantity:
 		g.invCarriedOnly = true
-		si = g.FindInvType(owner, t, quality)
+		item = g.FindInvType(owner, t, quality)
 		g.invCarriedOnly = false
 		for count != 0 {
-			if si < 0 {
-				si = g.AddInvObj(uint16(t), how|StatusOwned, uint16(quality<<byteBits), owner)
+			if item < 0 {
+				item = g.AddInvObj(uint16(t), how|StatusOwned, uint16(quality<<byteBits), owner)
 			}
-			if si < 0 {
+			if item < 0 {
 				break
 			}
-			o := g.object(si)
+			o := g.object(item)
 			if o.Quantity()+count > maxStack {
 				count -= maxStack - o.Quantity()
 				o.setQuantity(maxStack)
-				si = noObject
+				item = noObject
 			} else {
 				o.setQuantity(o.Quantity() + count)
 				count = 0
@@ -190,12 +190,12 @@ func (g *Game) giveObj(owner int, t ObjectType, amount int) int {
 		}
 	default:
 		for range count {
-			if si = g.AddInvObj(uint16(t), how|StatusOwned, uint16(quality<<byteBits), owner); si < 0 {
+			if item = g.AddInvObj(uint16(t), how|StatusOwned, uint16(quality<<byteBits), owner); item < 0 {
 				break
 			}
 		}
 	}
-	return si
+	return item
 }
 
 // takeObj takes amount objects of type t (of the quality in the high byte, unless it is
@@ -211,15 +211,15 @@ func (g *Game) takeObj(owner int, t ObjectType, amount int) int {
 		amount &= byteMask
 	}
 	took := false
-	si := g.link[owner]
-	for si >= 0 && g.object(si).CoordUse() != OnMap && g.isHeldBy(si, owner) {
-		o := g.object(si)
+	item := g.link[owner]
+	for item >= 0 && g.object(item).CoordUse() != OnMap && g.isHeldBy(item, owner) {
+		o := g.object(item)
 		if o.Type() == t && (kind == countGold || quality == 0 || o.Quality() == quality) {
-			if have := g.amountOf(si); amount >= have {
+			if have := g.amountOf(item); amount >= have {
 				amount -= have
-				next := g.link[si]
-				g.DeleteObj(si)
-				si = next
+				next := g.link[item]
+				g.DeleteObj(item)
+				item = next
 				took = true
 				continue
 			}
@@ -231,21 +231,21 @@ func (g *Game) takeObj(owner int, t ObjectType, amount int) int {
 			took = true
 			break
 		}
-		si = g.link[si]
+		item = g.link[item]
 	}
 	if took && g.StatusDisplay == cmdStatusEquipment && int(g.Party[g.statusMember]) == owner {
 		g.StatusDirty = true
 	}
-	return si
+	return item
 }
 
 // countObj returns how many objects of type t n holds.
 // C: seg_1184:252D (TestObj)
 func (g *Game) countObj(n int, t ObjectType) int {
 	total := 0
-	for _, si := range g.heldBy(n) {
-		if g.object(si).Type() == t {
-			total += g.amountOf(si)
+	for _, item := range g.heldBy(n) {
+		if g.object(item).Type() == t {
+			total += g.amountOf(item)
 		}
 	}
 	return total

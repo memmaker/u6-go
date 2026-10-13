@@ -291,12 +291,12 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 			if tx == tileX[d] && ty == tileY[d] {
 				continue
 			}
-			dx, dy := abs(tx-srcX), abs(ty-srcY)
+			offsetX, offsetY := abs(tx-srcX), abs(ty-srcY)
 			blocked := true
-			if dx <= missileReach && dy <= missileReach && rangeTable[dx][dy] <= maxRange {
+			if offsetX <= missileReach && offsetY <= missileReach && rangeTable[offsetX][offsetY] <= maxRange {
 				tileX[d], tileY[d] = tx, ty
 				t := g.GetTileAtXYZ(tx, ty, int(g.MapZ))
-				if dx <= 1 && dy <= 1 && g.isWindow(t) || !g.isNoShoot(t) {
+				if offsetX <= 1 && offsetY <= 1 && g.isWindow(t) || !g.isNoShoot(t) {
 					n := g.FindLoc(tx, ty, int(g.MapZ))
 					for ; n >= 0; n = g.NextLoc() {
 						o := g.object(n)
@@ -377,10 +377,10 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 // C: seg_2337:0B3F (COMBAT_Missile)
 func (g *Game) throw(n int, x, y *int, maxRange, tile int) bool {
 	g.thrower = n
-	dx, dy := []int{*x}, []int{*y}
+	deltaX, deltaY := []int{*x}, []int{*y}
 	p := g.object(n).Pos
-	ok := g.missiles(p.X, p.Y, dx, dy, maxRange, tile, 0)
-	*x, *y = dx[0], dy[0]
+	ok := g.missiles(p.X, p.Y, deltaX, deltaY, maxRange, tile, 0)
+	*x, *y = deltaX[0], deltaY[0]
 	g.thrower = noObject
 	return ok
 }

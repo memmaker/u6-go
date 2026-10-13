@@ -2080,13 +2080,13 @@ func (g *Game) notWilderness() bool {
 // C: seg_3200:0160 (C_3200_0160)
 func (g *Game) foesNear() bool {
 	mask := coordMaskFor(int(g.MapZ))
-	ax, ay := (int(g.MapX)-areaMargin)&areaAlign, (int(g.MapY)-areaMargin)&areaAlign
+	areaX, areaY := (int(g.MapX)-areaMargin)&areaAlign, (int(g.MapY)-areaMargin)&areaAlign
 	const inArea = 39
 	for n := range npcCount {
 		o := g.object(n)
 		a := g.NPCs[n].Status & alignmentMask
-		if o.Shape != 0 && (a == alignEvil || a == alignChaotic) && (o.Pos.X-ax)&mask < inArea &&
-			(o.Pos.Y-ay)&mask < inArea && o.Pos.Z == int(g.MapZ) {
+		if o.Shape != 0 && (a == alignEvil || a == alignChaotic) && (o.Pos.X-areaX)&mask < inArea &&
+			(o.Pos.Y-areaY)&mask < inArea && o.Pos.Z == int(g.MapZ) {
 			return true
 		}
 	}

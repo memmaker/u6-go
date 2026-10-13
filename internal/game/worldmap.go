@@ -113,9 +113,9 @@ func (w *worldMap) chunkTile(c, x, y int) byte {
 func (w *worldMap) GetTileAtXYZ(x, y, z int) int {
 	x &= w.coordMask
 	y &= w.coordMask
-	ax, ay := (x-w.AreaX)&w.coordMask, (y-w.AreaY)&w.coordMask
-	if ax < areaSize && ay < areaSize {
-		return int(w.AreaTiles[ay*areaSize+ax])
+	areaX, areaY := (x-w.AreaX)&w.coordMask, (y-w.AreaY)&w.coordMask
+	if areaX < areaSize && areaY < areaSize {
+		return int(w.AreaTiles[areaY*areaSize+areaX])
 	}
 	return int(w.chunkTile(w.chunkAt(x, y, z), x, y))
 }
@@ -140,9 +140,9 @@ func (g *Game) refreshArea() {
 		g.gameLoaded = false
 		for i := range npcCount {
 			o := g.object(i)
-			ax, ay := (o.Pos.X-g.AreaX)&g.coordMask, (o.Pos.Y-g.AreaY)&g.coordMask
-			if o.Shape != 0 && o.CoordUse() == OnMap && o.Pos.Z == z && ax < areaSize && ay < areaSize &&
-				g.areaObjects[ay*areaSize+ax] != i {
+			areaX, areaY := (o.Pos.X-g.AreaX)&g.coordMask, (o.Pos.Y-g.AreaY)&g.coordMask
+			if o.Shape != 0 && o.CoordUse() == OnMap && o.Pos.Z == z && areaX < areaSize && areaY < areaSize &&
+				g.areaObjects[areaY*areaSize+areaX] != i {
 				g.MoveObj(i, o.Pos.X, o.Pos.Y, z)
 			}
 		}

@@ -142,7 +142,7 @@ func (g *Game) queue(x, y int) {
 	}
 }
 
-// lightFalloff is how far the light of (0, 0) is from (dx, dy) (D_05EA).
+// lightFalloff is how far the light of (0, 0) is from (deltaX, deltaY) (D_05EA).
 var lightFalloff = [8][8]int{
 	{0, 1, 2, 3, 4, 5, 6, 7},
 	{1, 1, 2, 3, 4, 5, 6, 7},

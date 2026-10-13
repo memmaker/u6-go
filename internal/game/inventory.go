@@ -419,9 +419,9 @@ func (g *Game) drawInventory() {
 	if g.inventoryScroll >= rowStep && g.inventoryScroll+inventorySlots-rowStep >= g.invenSize {
 		g.inventoryScroll -= rowStep
 	}
-	di := g.FindInv(g.container)
-	for skipped := 0; g.inventoryScroll > skipped; di = g.NextInv() {
-		if isCarried(g.object(di)) {
+	item := g.FindInv(g.container)
+	for skipped := 0; g.inventoryScroll > skipped; item = g.NextInv() {
+		if isCarried(g.object(item)) {
 			skipped++
 		}
 	}
@@ -433,10 +433,10 @@ func (g *Game) drawInventory() {
 		g.drawTileOver(g.tileFrame(g.container), tileStatusSlot, containerX, containerY)
 	}
 	slot := 0
-	for ; di >= 0 && slot < inventorySlots; di = g.NextInv() {
-		if isCarried(g.object(di)) {
-			g.drawObjectCount(di, inventoryX+slot%inventoryColumns*tileSize, inventoryY+slot/inventoryColumns*tileSize)
-			g.inventoryShown[slot] = di
+	for ; item >= 0 && slot < inventorySlots; item = g.NextInv() {
+		if isCarried(g.object(item)) {
+			g.drawObjectCount(item, inventoryX+slot%inventoryColumns*tileSize, inventoryY+slot/inventoryColumns*tileSize)
+			g.inventoryShown[slot] = item
 			slot++
 		}
 	}
@@ -974,23 +974,23 @@ func (g *Game) drawStatusCursor(mode int) {
 		g.statusCursorX = min(g.statusCursorX, cursorButtonsRow)
 	}
 	var x, y int
-	cx, cy := g.statusCursorX, g.statusCursorY
+	cursorX, cursorY := g.statusCursorX, g.statusCursorY
 	switch {
-	case cy < 0:
+	case cursorY < 0:
 		x, y = containerX, containerY
 		g.PointerX, g.PointerY = x, y
-	case cy > cursorRowsCount-1:
+	case cursorY > cursorRowsCount-1:
 		g.statusCursorX = min(g.statusCursorX, cursorLastButton)
-		cx = g.statusCursorX
-		x, y = cx*tileSize+buttonPrevious, buttonsY
+		cursorX = g.statusCursorX
+		x, y = cursorX*tileSize+buttonPrevious, buttonsY
 		g.PointerX, g.PointerY = x, y
-	case cx < cursorDollColumns:
-		g.PointerX, g.PointerY = cx*cursorDollStepX+buttonPrevious, cy*cursorDollStepY+partyRowY
+	case cursorX < cursorDollColumns:
+		g.PointerX, g.PointerY = cursorX*cursorDollStepX+buttonPrevious, cursorY*cursorDollStepY+partyRowY
 	default:
-		g.PointerX, g.PointerY = cx*tileSize+cursorGridX, cy*tileSize+cursorGridY
+		g.PointerX, g.PointerY = cursorX*tileSize+cursorGridX, cursorY*tileSize+cursorGridY
 	}
-	if cy >= 0 && cy < cursorRowsCount {
-		x, y = cursorColumns[cx], cursorRows[cy][cx]
+	if cursorY >= 0 && cursorY < cursorRowsCount {
+		x, y = cursorColumns[cursorX], cursorRows[cursorY][cursorX]
 	}
 	switch mode {
 	case 1:
@@ -998,17 +998,17 @@ func (g *Game) drawStatusCursor(mode int) {
 	case 0:
 		selected := g.mouseSelection()
 		switch {
-		case cy > cursorRowsCount-1:
-			g.gr.DrawTile(icons[cx], x, y)
+		case cursorY > cursorRowsCount-1:
+			g.gr.DrawTile(icons[cursorX], x, y)
 		case (selected == cmdSelectEquipment || selected == cmdSelectInventory) && g.Selection.obj >= 0:
-			if cy < 0 {
+			if cursorY < 0 {
 				t := g.object(g.Selection.obj).Type()
 				const south = 4
 				g.drawTileOver(directionFrame(t, south)+int(g.BaseTile[t]), tileStatusSlot, x, y)
 			} else {
 				g.drawObjectCount(g.Selection.obj, x, y)
 			}
-		case cy == 1 && cx == 2 && g.leftHandTaken():
+		case cursorY == 1 && cursorX == 2 && g.leftHandTaken():
 			g.gr.DrawTile(tileOneHanded, x, y)
 		default:
 			g.gr.DrawTile(tileEmptySlot, x, y)
@@ -1031,15 +1031,15 @@ func (g *Game) magicalHalo(n, on int) {
 	if o.CoordUse() != OnMap {
 		return
 	}
-	dx := (o.Pos.X - int(g.MapX) + viewCenter) & coordMask
-	dy := (o.Pos.Y - int(g.MapY) + viewCenter) & coordMask
+	deltaX := (o.Pos.X - int(g.MapX) + viewCenter) & coordMask
+	deltaY := (o.Pos.Y - int(g.MapY) + viewCenter) & coordMask
 	tile := g.tileFrame(n) + haloOff
 	if on != 0 {
 		tile = g.tileFrame(n) + haloOn
 	}
-	if dx < viewTiles && dy < viewTiles {
+	if deltaX < viewTiles && deltaY < viewTiles {
 		const overlay = 2
-		g.showObject(tile, dx, dy, overlay)
+		g.showObject(tile, deltaX, deltaY, overlay)
 		g.screenFade = true
 		g.drawMap(true)
 		g.ShowObjects()

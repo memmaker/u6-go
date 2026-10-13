@@ -102,16 +102,16 @@ func (g *Game) loiter(n, x, y int) {
 		return
 	}
 	p := g.object(n).Pos
-	dx, dy := p.X-x, p.Y-y
+	deltaX, deltaY := p.X-x, p.Y-y
 	var dir int
-	if abs(dy)-abs(dx) < g.randomBias() {
+	if abs(deltaY)-abs(deltaX) < g.randomBias() {
 		dir = dirWest
-		if g.randomBias() > dx {
+		if g.randomBias() > deltaX {
 			dir = dirEast
 		}
 	} else {
 		dir = dirNorth
-		if g.randomBias() > dy {
+		if g.randomBias() > deltaY {
 			dir = dirSouth
 		}
 	}
@@ -338,41 +338,41 @@ func (g *Game) tracePath(x, y int) {
 	path[steps] = 0
 }
 
-// visit queues place (x, y) of the area at cost; side is fromGoal for the search from
+// visit queues place (x, y) of the area at cost; search is fromGoal for the search from
 // the goal.
 // C: seg_1E0F:2A74 (C_1E0F_2A74)
-func (g *Game) visit(cost, x, y, side int) {
+func (g *Game) visit(cost, search, y, side int) {
 	pf := &g.paths
-	if pf.found || cost > costMask || !inArea(x, y) {
+	if pf.found || cost > costMask || !inArea(search, y) {
 		return
 	}
-	if c := pf.cost[y][x]; c != unreached && int(c)&fromGoal != side {
+	if c := pf.cost[y][search]; c != unreached && int(c)&fromGoal != side {
 		pf.found = true
-		g.tracePath(x, y)
+		g.tracePath(search, y)
 		return
 	}
 	if pf.seek >= 0 {
-		ax, ay := g.pathArea()
-		for i := g.FindLoc(x+ax, y+ay, int(g.MapZ)); i >= 0; i = g.NextLoc() {
+		areaX, areaY := g.pathArea()
+		for i := g.FindLoc(search+areaX, y+areaY, int(g.MapZ)); i >= 0; i = g.NextLoc() {
 			t := g.object(i).Type()
-			if ObjectType(pf.seek) == ObjTable && t == ObjChair && g.plateNear(x+ax, y+ay, int(g.MapZ)) != 0 ||
+			if ObjectType(pf.seek) == ObjTable && t == ObjChair && g.plateNear(search+areaX, y+areaY, int(g.MapZ)) != 0 ||
 				ObjectType(pf.seek) != ObjTable && t == ObjectType(pf.seek) {
 				pf.found = true
-				g.tracePath(x, y)
+				g.tracePath(search, y)
 				return
 			}
 		}
 	}
 	if pf.edge >= 0 {
-		if x == 0 && pf.edge == edgeWest || x == areaSize-1 && pf.edge == edgeEast ||
+		if search == 0 && pf.edge == edgeWest || search == areaSize-1 && pf.edge == edgeEast ||
 			y == 0 && pf.edge == edgeNorth || y == areaSize-1 && pf.edge == edgeSouth {
 			pf.found = true
-			pf.exitX, pf.exitY = x, y
-			g.tracePath(x, y)
+			pf.exitX, pf.exitY = search, y
+			g.tracePath(search, y)
 			return
 		}
 	}
-	if int(pf.cost[y][x])&costMask <= cost {
+	if int(pf.cost[y][search])&costMask <= cost {
 		return
 	}
 	slot := pf.free
@@ -382,9 +382,9 @@ func (g *Game) visit(cost, x, y, side int) {
 	pf.highest = max(pf.highest, cost)
 	pf.free = pf.next[slot]
 	pf.next[slot] = pf.rank[cost]
-	pf.queueX[slot], pf.queueY[slot] = byte(x), byte(y)
+	pf.queueX[slot], pf.queueY[slot] = byte(search), byte(y)
 	pf.rank[cost] = slot
-	pf.cost[y][x] = byte(cost | side)
+	pf.cost[y][search] = byte(cost | side)
 }
 
 // reversePath turns path slot around.
@@ -417,12 +417,12 @@ func (g *Game) findPath(n, x, y int) {
 	pf.found = false
 	swapped := false
 	pf.edge = -1
-	ax, ay := g.pathArea()
+	areaX, areaY := g.pathArea()
 	p := g.object(n).Pos
-	sx, sy := p.X-ax, p.Y-ay
+	sx, sy := p.X-areaX, p.Y-areaY
 	if x >= 0 {
-		x -= ax
-		y -= ay
+		x -= areaX
+		y -= areaY
 		pf.seek = -1
 		if sx == x && sy == y {
 			g.atDestination(n)
@@ -481,12 +481,12 @@ func (g *Game) findPath(n, x, y int) {
 		pf.next[slot] = pf.free
 		pf.free = slot
 		c := int(pf.cost[y][x])
-		side := c & fromGoal
+		search := c & fromGoal
 		c &= costMask
-		g.visit(pf.resistanceAt(x-1, y)+c, x-1, y, side)
-		g.visit(pf.resistanceAt(x+1, y)+c, x+1, y, side)
-		g.visit(pf.resistanceAt(x, y-1)+c, x, y-1, side)
-		g.visit(pf.resistanceAt(x, y+1)+c, x, y+1, side)
+		g.visit(pf.resistanceAt(x-1, y)+c, x-1, y, search)
+		g.visit(pf.resistanceAt(x+1, y)+c, x+1, y, search)
+		g.visit(pf.resistanceAt(x, y-1)+c, x, y-1, search)
+		g.visit(pf.resistanceAt(x, y+1)+c, x, y+1, search)
 		if pf.rank[pf.current] < 0 {
 			for pf.current < pf.highest && pf.rank[pf.current] < 0 {
 				pf.current++
@@ -498,7 +498,7 @@ func (g *Game) findPath(n, x, y int) {
 	case pf.found:
 		if swapped {
 			g.gameLoaded = false
-			g.MoveObj(n, pf.exitX+ax, pf.exitY+ay, p.Z)
+			g.MoveObj(n, pf.exitX+areaX, pf.exitY+areaY, p.Z)
 			g.gameLoaded = true
 			g.reversePath(pf.slot)
 		}
@@ -535,7 +535,7 @@ func (g *Game) addResistance(tile, x, y int) {
 // C: seg_1E0F:436A (__ComputeResistance)
 func (g *Game) computeResistance() {
 	pf := &g.paths
-	ax, ay := g.pathArea()
+	areaX, areaY := g.pathArea()
 	for y := range areaSize {
 		for x := range areaSize {
 			tile := int(g.AreaTiles[y*areaSize+x])
@@ -546,9 +546,9 @@ func (g *Game) computeResistance() {
 			}
 		}
 	}
-	for i := g.SearchArea(ax, ay, ax+areaSize-1, ay+areaSize-1); i >= 0; i = g.NextArea() {
+	for i := g.SearchArea(areaX, areaY, areaX+areaSize-1, areaY+areaSize-1); i >= 0; i = g.NextArea() {
 		o := g.object(i)
-		x, y := o.Pos.X-ax, o.Pos.Y-ay
+		x, y := o.Pos.X-areaX, o.Pos.Y-areaY
 		t := o.Type()
 		tile := g.tileFrame(i)
 		flags := g.TileFlag[tile]
@@ -1006,7 +1006,7 @@ func (g *Game) computeGravity() {
 	if count != 0 {
 		g.enemyGravityX = (count>>1 + sumX) / count
 		g.enemyGravityY = (count>>1 + sumY) / count
-		dx, dy := g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
+		deltaX, deltaY := g.enemyGravityX-g.partyGravityX, g.enemyGravityY-g.partyGravityY
 		g.enemyFront, g.enemyLeft, g.enemyRight = noObject, noObject, noObject
 		bestFront := -1 << 15
 		left, right, enemyLeft, enemyRight := 0, 0, 0, 0
@@ -1015,8 +1015,8 @@ func (g *Game) computeGravity() {
 				continue
 			}
 			q := g.object(i).Pos
-			depth := (q.X-g.partyGravityX)*dx + (q.Y-g.partyGravityY)*dy
-			side := (q.X-g.partyGravityX)*dy - (q.Y-g.partyGravityY)*dx
+			depth := (q.X-g.partyGravityX)*deltaX + (q.Y-g.partyGravityY)*deltaY
+			side := (q.X-g.partyGravityX)*deltaY - (q.Y-g.partyGravityY)*deltaX
 			if g.isPlayerControlled(i) {
 				if depth > bestFront {
 					bestFront, g.partyFront = depth, i

@@ -170,44 +170,44 @@ func (g *Game) serveMouse() {
 // when it points at the party.
 // C: seg_0C9C:0069 (MkDirection)
 func (g *Game) pointerDirection(x, y int) int {
-	cx, cy := g.pointerCentreX, g.pointerCentreY
-	dx, dy := abs(x-cx), abs(y-cy)
-	if cx-directionZone <= x && cx+directionZone > x && cy-directionZone <= y && cy+directionZone > y {
+	centreX, centreY := g.pointerCentreX, g.pointerCentreY
+	distX, distY := abs(x-centreX), abs(y-centreY)
+	if centreX-directionZone <= x && centreX+directionZone > x && centreY-directionZone <= y && centreY+directionZone > y {
 		column := 2
-		if cx-directionDeadZone > x {
+		if centreX-directionDeadZone > x {
 			column = 0
-		} else if cx+directionDeadZone > x {
+		} else if centreX+directionDeadZone > x {
 			column = 1
 		}
 		row := 2
-		if cy-directionDeadZone > y {
+		if centreY-directionDeadZone > y {
 			row = 0
-		} else if cy+directionDeadZone > y {
+		} else if centreY+directionDeadZone > y {
 			row = 1
 		}
 		return [3][3]int{{7, 6, 5}, {0, -1, 4}, {1, 2, 3}}[column][row]
 	}
 	dir := -1
-	if dx > dy {
-		if dy == 0 || dx/dy >= 2 {
+	if distX > distY {
+		if distY == 0 || distX/distY >= 2 {
 			dir = 6
-			if cx <= x {
+			if centreX <= x {
 				dir = 2
 			}
 		}
-	} else if dx == 0 || dy/dx >= 2 {
+	} else if distX == 0 || distY/distX >= 2 {
 		dir = 0
-		if cy <= y {
+		if centreY <= y {
 			dir = 4
 		}
 	}
 	if dir == -1 {
 		switch {
-		case cx <= x && cy <= y:
+		case centreX <= x && centreY <= y:
 			dir = 3
-		case cx <= x:
+		case centreX <= x:
 			dir = 1
-		case cy <= y:
+		case centreY <= y:
 			dir = 5
 		default:
 			dir = 7

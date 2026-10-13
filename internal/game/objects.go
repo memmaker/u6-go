@@ -56,9 +56,9 @@ func posKey(x, y int) int { return y<<coordBits | x }
 // areaIndex returns the index in areaObjects of map position (x, y), or false when it is
 // outside the area.
 func (g *Game) areaIndex(x, y int) (int, bool) {
-	ax, ay := (x-g.AreaX)&coordMask, (y-g.AreaY)&coordMask
-	if ax < areaSize && ay < areaSize {
-		return ay*areaSize + ax, true
+	areaX, areaY := (x-g.AreaX)&coordMask, (y-g.AreaY)&coordMask
+	if areaX < areaSize && areaY < areaSize {
+		return areaY*areaSize + areaX, true
 	}
 	return 0, false
 }
@@ -335,16 +335,16 @@ func (g *Game) livingAt(first, x, y int) int {
 // updateSlimeFrames makes each slime show which of its neighbours are slimes.
 // C: seg_1184:0BC1 (C_1184_0BC1)
 func (g *Game) updateSlimeFrames() {
-	for si := firstMonster; si < npcCount; si++ {
-		o := g.object(si)
-		if o.Type() != ObjSlime || g.NPCs[si].Has(Dead) {
+	for slime := firstMonster; slime < npcCount; slime++ {
+		o := g.object(slime)
+		if o.Type() != ObjSlime || g.NPCs[slime].Has(Dead) {
 			continue
 		}
 		frame := 0
 		for dir, bit := 0, 1; dir < 8; dir, bit = dir+2, bit<<1 {
 			nx, ny := o.Pos.X+dirStepX[dir], o.Pos.Y+dirStepY[dir]
-			for di := g.livingAt(firstMonster, nx, ny); di >= 0; di = g.livingAt(di+1, nx, ny) {
-				if g.object(di).Type() == ObjSlime && !g.NPCs[di].Has(Dead) {
+			for neighbour := g.livingAt(firstMonster, nx, ny); neighbour >= 0; neighbour = g.livingAt(neighbour+1, nx, ny) {
+				if g.object(neighbour).Type() == ObjSlime && !g.NPCs[neighbour].Has(Dead) {
 					frame |= bit
 					break
 				}
@@ -418,23 +418,23 @@ func (g *Game) moveSerpent(n, x, y int, remove bool) {
 	segment := head.Quality() + 1
 	segmentFrame := 0
 	for {
-		si := g.FindLoc(atX-dirStepX[dir], atY-dirStepY[dir], z)
-		for ; si >= 0; si = g.NextLoc() {
-			o := g.object(si)
-			if si >= mapList && o.Type() == ObjSilverSerpent && o.Quality() == segment && o.Quantity() == n {
-				prev, last = last, si
+		part := g.FindLoc(atX-dirStepX[dir], atY-dirStepY[dir], z)
+		for ; part >= 0; part = g.NextLoc() {
+			o := g.object(part)
+			if part >= mapList && o.Type() == ObjSilverSerpent && o.Quality() == segment && o.Quantity() == n {
+				prev, last = last, part
 				segmentFrame = o.Frame()
 				segment++
 				o.Amount = uint16(segment<<byteBits | o.Quantity())
 				atX, atY = o.Pos.X, o.Pos.Y
-				dir = directionFromEdges(g.TerrainType[g.tileFrame(si)]&clearEdge(dir), dir)
+				dir = directionFromEdges(g.TerrainType[g.tileFrame(part)]&clearEdge(dir), dir)
 				if remove {
-					g.DeleteObj(si)
+					g.DeleteObj(part)
 				}
 				break
 			}
 		}
-		if si < 0 || segmentFrame&15 < 8 {
+		if part < 0 || segmentFrame&15 < 8 {
 			break
 		}
 	}
@@ -474,9 +474,9 @@ var dragonPartFrames = [16]int{8, 32, 16, 24, 26, 10, 34, 18, 20, 28, 12, 36, 38
 // C: seg_1184:10F1 (C_1184_10F1)
 func (g *Game) dragonPart(x, y, z, dir, facing int) int {
 	frame := dragonPartFrames[dir>>1+(facing&6)<<1]
-	for si := g.FindLoc(x+dirStepX[dir], y+dirStepY[dir], z); si >= 0; si = g.NextLoc() {
-		if o := g.object(si); o.Type() == ObjDragon && o.Frame()&62 == frame {
-			return si
+	for part := g.FindLoc(x+dirStepX[dir], y+dirStepY[dir], z); part >= 0; part = g.NextLoc() {
+		if o := g.object(part); o.Type() == ObjDragon && o.Frame()&62 == frame {
+			return part
 		}
 	}
 	return noObject
@@ -501,30 +501,30 @@ func (g *Game) moveBigCreature(n, x, y int, remove bool) {
 		if t != ObjHydra2 && (dir&1 != 0 || edges&edgeOf[dir] == 0) {
 			continue
 		}
-		var di int
+		var other int
 		if t == ObjDragon {
-			di = g.dragonPart(x, y, z, dir, facing<<1)
+			other = g.dragonPart(x, y, z, dir, facing<<1)
 		} else {
-			for di = g.FindLoc(dirStepX[dir]+x, dirStepY[dir]+y, z); di >= 0; di = g.NextLoc() {
-				part := g.object(di)
-				if di < mapList || part.Type() != t {
+			for other = g.FindLoc(dirStepX[dir]+x, dirStepY[dir]+y, z); other >= 0; other = g.NextLoc() {
+				part := g.object(other)
+				if other < mapList || part.Type() != t {
 					continue
 				}
 				if t == ObjHydra2 && part.Frame()>>2 == dir {
 					break
 				}
-				if t != ObjHydra2 && g.TerrainType[g.tileFrame(di)]&edgeOf[dir^4] != 0 {
+				if t != ObjHydra2 && g.TerrainType[g.tileFrame(other)]&edgeOf[dir^4] != 0 {
 					break
 				}
 			}
 		}
-		if di < 0 {
+		if other < 0 {
 			continue
 		}
 		if remove {
-			g.DeleteObj(di)
+			g.DeleteObj(other)
 		} else {
-			g.MoveObj(di, dirStepX[dir]+ox, dirStepY[dir]+oy, z)
+			g.MoveObj(other, dirStepX[dir]+ox, dirStepY[dir]+oy, z)
 		}
 	}
 }
@@ -639,11 +639,11 @@ func (g *Game) unlinkFromArea(x, y, z, removed, next int) {
 		return
 	}
 	mask := coordMaskFor(z)
-	ax, ay := (x-g.AreaX)&mask, (y-g.AreaY)&mask
-	if ax >= areaSize || ay >= areaSize || g.areaObjects[ay*areaSize+ax] != removed {
+	areaX, areaY := (x-g.AreaX)&mask, (y-g.AreaY)&mask
+	if areaX >= areaSize || areaY >= areaSize || g.areaObjects[areaY*areaSize+areaX] != removed {
 		return
 	}
-	i := ay*areaSize + ax
+	i := areaY*areaSize + areaX
 	if next >= 0 && g.object(next).CoordUse() == OnMap && (g.object(next).Pos.X != x || g.object(next).Pos.Y != y) {
 		g.areaObjects[i] = noObject
 	} else {
@@ -722,16 +722,16 @@ func (g *Game) forgetFarObjects(x, y, z int) {
 	far := func(p Coord) bool {
 		return x-regionReach > p.X || x+regionReach <= p.X || y-regionReach > p.Y || y+regionReach <= p.Y || p.Z != z
 	}
-	for si := firstMonster; si < npcCount; si++ {
-		if o := g.object(si); o.Shape != 0 && far(o.Pos) && o.Has(StatusLocal) {
-			g.DeleteObj(si)
+	for obj := firstMonster; obj < npcCount; obj++ {
+		if o := g.object(obj); o.Shape != 0 && far(o.Pos) && o.Has(StatusLocal) {
+			g.DeleteObj(obj)
 		}
 	}
-	for si := g.link[mapList]; si >= 0; {
-		next := g.link[si]
-		if o := g.object(si); o.CoordUse() == OnMap && far(o.Pos) {
+	for obj := g.link[mapList]; obj >= 0; {
+		next := g.link[obj]
+		if o := g.object(obj); o.CoordUse() == OnMap && far(o.Pos) {
 			if o.Has(StatusLocal) || o.Shape == 0 {
-				g.DeleteObj(si)
+				g.DeleteObj(obj)
 				if g.lastMovedContent >= 0 {
 					next = g.lastMovedContent
 				}
@@ -739,7 +739,7 @@ func (g *Game) forgetFarObjects(x, y, z int) {
 				o.Status &^= StatusCursed
 			}
 		}
-		si = next
+		obj = next
 	}
 }
 
@@ -787,11 +787,11 @@ func (g *Game) MoveObj(n, toX, toY, toZ int) int {
 		return noObject
 	}
 	if t == ObjSilverSerpent && n < npcCount {
-		dx, dy := o.Pos.X-toX, o.Pos.Y-toY
+		deltaX, deltaY := o.Pos.X-toX, o.Pos.Y-toY
 		facing := o.Frame()
 		// fix: the original indexes the direction tables with the frame unchecked
-		if dx != 0 && dy != 0 || dx == 0 && dy == 0 || abs(dx) > 1 || abs(dy) > 1 ||
-			facing < 8 && dirStepX[facing] == dx && dirStepY[facing] == dy {
+		if deltaX != 0 && deltaY != 0 || deltaX == 0 && deltaY == 0 || abs(deltaX) > 1 || abs(deltaY) > 1 ||
+			facing < 8 && dirStepX[facing] == deltaX && dirStepY[facing] == deltaY {
 			return noObject
 		}
 	}
@@ -889,26 +889,26 @@ func (g *Game) resetObjectLists() {
 // C: seg_1184:3B7D (C_1184_3B7D)
 func (g *Game) linkCharacters() {
 	lastFree := mapList
-	for si := range npcCount {
-		if g.object(si).Shape == 0 {
-			if si >= firstMonster {
-				lastFree = si
+	for slot := range npcCount {
+		if g.object(slot).Shape == 0 {
+			if slot >= firstMonster {
+				lastFree = slot
 			}
 			continue
 		}
-		if si >= firstMonster {
+		if slot >= firstMonster {
 			if lastFree == mapList {
-				g.freeMonsters = si + 1
+				g.freeMonsters = slot + 1
 			} else {
-				g.link[lastFree] = si + 1
+				g.link[lastFree] = slot + 1
 			}
 			g.freeMonsterCount--
 		}
-		di := mapList
-		for ; g.link[di] >= 0 && g.compareListOrder(g.link[di], si) < 0; di = g.link[di] {
+		after := mapList
+		for ; g.link[after] >= 0 && g.compareListOrder(g.link[after], slot) < 0; after = g.link[after] {
 		}
-		g.link[si] = g.link[di]
-		g.link[di] = si
+		g.link[slot] = g.link[after]
+		g.link[after] = slot
 	}
 }
 

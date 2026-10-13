@@ -100,33 +100,33 @@ func (g *Game) unloadObjects(block int, inBlock func(Coord) bool) {
 	var records []objectRecord
 	indexes := make([]int, objectCount)
 	before := mapList
-	si := g.link[mapList]
-	for len(records) < objectCount && si >= 0 {
-		o := g.object(si)
+	obj := g.link[mapList]
+	for len(records) < objectCount && obj >= 0 {
+		o := g.object(obj)
 		if o.CoordUse() != OnMap || !inBlock(o.Pos) {
-			before, si = si, g.link[si]
+			before, obj = obj, g.link[obj]
 			continue
 		}
-		if si < npcCount {
-			before = si
+		if obj < npcCount {
+			before = obj
 		} else {
-			indexes[len(records)] = si
-			records = g.serializeObject(si, records, indexes)
+			indexes[len(records)] = obj
+			records = g.serializeObject(obj, records, indexes)
 			g.freeObjectCount++
 		}
-		last := si
-		si = g.link[si]
-		for si >= 0 && g.object(si).CoordUse() != OnMap {
+		last := obj
+		obj = g.link[obj]
+		for obj >= 0 && g.object(obj).CoordUse() != OnMap {
 			if len(records) < objectCount {
-				indexes[len(records)] = si
-				records = g.serializeObject(si, records, indexes)
+				indexes[len(records)] = obj
+				records = g.serializeObject(obj, records, indexes)
 			}
 			g.freeObjectCount++
-			last, si = si, g.link[si]
+			last, obj = obj, g.link[obj]
 		}
 		g.link[last] = g.freeObjects
 		g.freeObjects = g.link[before]
-		g.link[before] = si
+		g.link[before] = obj
 	}
 	g.writeBlock(records, block)
 }
@@ -157,22 +157,22 @@ func (g *Game) unloadLevel(z int) {
 func (g *Game) moveHeldAfterHolders() {
 	prev := mapList
 	for g.link[prev] >= 0 {
-		si := g.link[prev]
-		if g.object(si).Status&InInventory != 0 {
-			holder := g.object(si).Pos.Owner()
-			di := g.link[holder]
-			for ; di >= 0 && g.object(di).CoordUse() != OnMap && di != si; di = g.link[di] {
+		held := g.link[prev]
+		if g.object(held).Status&InInventory != 0 {
+			holder := g.object(held).Pos.Owner()
+			scan := g.link[holder]
+			for ; scan >= 0 && g.object(scan).CoordUse() != OnMap && scan != held; scan = g.link[scan] {
 			}
-			if di != si {
-				last := g.lastHeld(si)
+			if scan != held {
+				last := g.lastHeld(held)
 				holderLast := g.lastHeld(holder)
 				g.link[prev] = g.link[last]
 				g.link[last] = g.link[holderLast]
-				g.link[holderLast] = si
+				g.link[holderLast] = held
 				continue
 			}
 		}
-		prev = si
+		prev = held
 	}
 }
 
@@ -189,12 +189,12 @@ func (g *Game) loadObjects(records []objectRecord) {
 			}
 			break
 		}
-		si := g.freeObjects
-		slots[n] = si
-		g.freeObjects = g.link[si]
+		free := g.freeObjects
+		slots[n] = free
+		g.freeObjects = g.link[free]
 		g.freeObjectCount--
 		r := records[n]
-		o := g.object(si)
+		o := g.object(free)
 		*o = Object{Status: ObjStatus(r.Status), Pos: decodeCoord(r.Pos), Shape: r.Shape, Amount: r.Amount}
 		if o.CoordUse() == Contained {
 			o.Pos.SetOwner(slots[o.Pos.Owner()])
@@ -204,33 +204,33 @@ func (g *Game) loadObjects(records []objectRecord) {
 		g.link[slots[n-1]] = noObject
 	}
 	// merge the new chain, which is in list order, into the list
-	si, di := mapList, slots[0]
+	listPos, chain := mapList, slots[0]
 	restart := false
-	for si >= 0 && di >= 0 {
-		if g.compareListOrder(g.link[si], di) < 0 {
-			si = g.link[si]
+	for listPos >= 0 && chain >= 0 {
+		if g.compareListOrder(g.link[listPos], chain) < 0 {
+			listPos = g.link[listPos]
 		} else {
-			next := g.link[si]
-			g.link[si] = di
-			si = next
-			for g.link[di] >= 0 && g.compareListOrder(si, g.link[di]) > 0 {
-				if g.compareListOrder(di, g.link[di]) > 0 {
+			next := g.link[listPos]
+			g.link[listPos] = chain
+			listPos = next
+			for g.link[chain] >= 0 && g.compareListOrder(listPos, g.link[chain]) > 0 {
+				if g.compareListOrder(chain, g.link[chain]) > 0 {
 					restart = true
 					break
 				}
-				di = g.link[di]
+				chain = g.link[chain]
 			}
-			next = g.link[di]
-			g.link[di] = si
-			di = next
+			next = g.link[chain]
+			g.link[chain] = listPos
+			chain = next
 			if restart {
-				si, restart = mapList, false
+				listPos, restart = mapList, false
 				continue
 			}
 		}
-		if g.link[si] < 0 {
-			g.link[si] = di
-			si = noObject
+		if g.link[listPos] < 0 {
+			g.link[listPos] = chain
+			listPos = noObject
 		}
 	}
 }
@@ -294,20 +294,20 @@ func (g *Game) LoadNewRegions(x, y, z int) {
 			regions[0] = regionAt(x-regionSize/2, y-regionSize/2)
 		} else {
 			// keep the regions until the party is near their edge
-			dx := 0
+			deltaX := 0
 			rx := x - g.topLeftRegion%regionsPerSide<<regionShift
-			for ; rx < regionEdge; rx, dx = rx+regionSize, dx-1 {
+			for ; rx < regionEdge; rx, deltaX = rx+regionSize, deltaX-1 {
 			}
-			for ; rx >= 2*regionSize-regionEdge; rx, dx = rx-regionSize, dx+1 {
+			for ; rx >= 2*regionSize-regionEdge; rx, deltaX = rx-regionSize, deltaX+1 {
 			}
-			dy := 0
+			deltaY := 0
 			ry := y - g.topLeftRegion/regionsPerSide<<regionShift
-			for ; ry < regionEdge; ry, dy = ry+regionSize, dy-regionsPerSide {
+			for ; ry < regionEdge; ry, deltaY = ry+regionSize, deltaY-regionsPerSide {
 			}
-			for ; ry >= 2*regionSize-regionEdge; ry, dy = ry-regionSize, dy+regionsPerSide {
+			for ; ry >= 2*regionSize-regionEdge; ry, deltaY = ry-regionSize, deltaY+regionsPerSide {
 			}
 			const rowMask = surfaceRegions - regionsPerSide
-			regions[0] = (g.topLeftRegion%regionsPerSide+dx)&(regionsPerSide-1) + (g.topLeftRegion&rowMask+dy)&rowMask
+			regions[0] = (g.topLeftRegion%regionsPerSide+deltaX)&(regionsPerSide-1) + (g.topLeftRegion&rowMask+deltaY)&rowMask
 		}
 		const rowMask = surfaceRegions - regionsPerSide
 		regions[1] = (regions[0]+1)&(regionsPerSide-1) + regions[0]&rowMask
@@ -327,7 +327,7 @@ func (g *Game) LoadNewRegions(x, y, z int) {
 		return false
 	}
 	if g.loadedLevel == 0 {
-		for si, r := range g.loadedRegions {
+		for slot, r := range g.loadedRegions {
 			if contains(regions, r) || r == noObject {
 				continue
 			}
@@ -336,7 +336,7 @@ func (g *Game) LoadNewRegions(x, y, z int) {
 			}
 			g.unloadRegion(r)
 			unloaded++
-			g.loadedRegions[si] = noObject
+			g.loadedRegions[slot] = noObject
 		}
 	}
 	if z == 0 {
@@ -344,14 +344,14 @@ func (g *Game) LoadNewRegions(x, y, z int) {
 			if contains(g.loadedRegions, r) {
 				continue
 			}
-			si := 0
-			for ; si < 4 && g.loadedRegions[si] != noObject; si++ {
+			slot := 0
+			for ; slot < 4 && g.loadedRegions[slot] != noObject; slot++ {
 			}
 			g.loadRegion(r)
 			loaded++
 			// fix: the original writes past the four entries when none is free
-			if si < 4 {
-				g.loadedRegions[si] = r
+			if slot < 4 {
+				g.loadedRegions[slot] = r
 			}
 		}
 	} else if g.loadedLevel != z {
@@ -370,10 +370,10 @@ func (g *Game) rebuildAreaObjects() {
 	for i := range g.areaObjects {
 		g.areaObjects[i] = noObject
 	}
-	for si := g.link[mapList]; si >= 0; si = g.link[si] {
-		if o := g.object(si); o.CoordUse() == OnMap {
+	for obj := g.link[mapList]; obj >= 0; obj = g.link[obj] {
+		if o := g.object(obj); o.CoordUse() == OnMap {
 			if i, ok := g.areaIndex(o.Pos.X, o.Pos.Y); ok && g.areaObjects[i] == noObject {
-				g.areaObjects[i] = si
+				g.areaObjects[i] = obj
 			}
 		}
 	}
