@@ -996,9 +996,7 @@ func (g *Game) tryHit(a, x, y, w int) int {
 	hit := unknown
 	opponent := g.combatHead(g.missileHit)
 	if wt == ObjCharge || wt == ObjSpellbook {
-		// TODO(port): C_1944_43D5 (spells cast in combat; the wisp's teleport and the
-		// spellbook's cost come with it)
-		return hitDone
+		return g.castInCombat(a, opponent, w)
 	}
 	if g.missileHit >= 0 && opponent < npcCount {
 		if h := g.hits(a, opponent, w); !h && ranged {
@@ -1979,4 +1977,45 @@ func (g *Game) terrainDamage(n, tile int) {
 		npc.Status |= Asleep
 		g.setUnconscious(n)
 	}
+}
+
+// castInCombat casts the spell of the charge or spellbook w at opponent for the monster a.
+// C: seg_2337 (inside C_2337_0D8D, the spell branch)
+func (g *Game) castInCombat(a, opponent, w int) int {
+	spell := g.object(w).Quality()
+	if spell == castWispTeleport && g.object(a).Type() == ObjWisp {
+		x, y := g.object(a).Pos.X, g.object(a).Pos.Y
+		g.MoveObj(a, int(g.MapX), int(g.MapY), int(g.MapZ))
+		if g.tryTeleport(a, false) {
+			g.printf(wispTeleportMsg)
+			g.promptFlag = true
+		} else {
+			g.MoveObj(a, x, y, int(g.MapZ))
+		}
+		return hitDone
+	}
+	if g.object(w).Type() == ObjSpellbook {
+		cost := circleOf(spell)
+		if int(g.NPCs[a].Magic) < cost || int(g.NPCs[a].Level) < cost {
+			return hitDone
+		}
+		g.NPCs[a].Magic -= byte(cost)
+	}
+	active := g.Active
+	g.Active = partyMax
+	g.npcCaster = a
+	g.Selection.obj = opponent
+	if opponent >= 0 { // fix: C reads the position of object -1 when the spell aims at nothing
+		g.Selection.x, g.Selection.y = g.object(opponent).Pos.X, g.object(opponent).Pos.Y
+	}
+	g.TextOn = false
+	g.castSpell(spell, true)
+	g.TextOn = true
+	if spell == castCharm && g.spellResult == resultHit {
+		g.printf("%s is charmed.\n", g.objectString(g.Selection.obj))
+	} else if spell == castParalyze && g.spellResult == resultSuccess {
+		g.printf("%s is paralyzed.\n", g.objectString(g.Selection.obj))
+	}
+	g.Active = active
+	return hitDone
 }

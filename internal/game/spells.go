@@ -113,6 +113,8 @@ const (
 const (
 	// castSelfInvisibility makes the caster invisible (SPELL_80); no spellbook holds it.
 	castSelfInvisibility = circleCount * circleSlots
+	// castWispTeleport is the wisp's teleport in combat (SPELL_81); it is never cast.
+	castWispTeleport = castSelfInvisibility + 1
 
 	circleCount   = 8
 	circleSlots   = 16 // spell numbers per circle
@@ -479,6 +481,8 @@ type magic struct {
 	pageTurned bool
 	// spellResult is what the effect did (SpellResult).
 	spellResult int
+	// npcCaster is the monster casting in combat (Party[16], past the party).
+	npcCaster int
 }
 
 // circleOf is the circle of spell (MK_CIRCLE).
@@ -499,8 +503,14 @@ func incantation(spell int) string {
 	return s
 }
 
-// caster is the party member who casts (Party[Active]).
-func (g *Game) caster() int { return int(g.Party[g.Active]) }
+// caster is the party member who casts (Party[Active]), or the monster casting in combat
+// when Active is partyMax.
+func (g *Game) caster() int {
+	if int(g.Active) == partyMax {
+		return g.npcCaster
+	}
+	return int(g.Party[g.Active])
+}
 
 // spellFailed prints why a spell failed and sounds the failure.
 func (g *Game) spellFailed(msg string) {
