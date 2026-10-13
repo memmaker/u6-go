@@ -31,6 +31,19 @@ func TestUI(t *testing.T) {
 			}
 		}
 
+		// the check marks close: a window, and the status area's gump back to the party
+		if !g.onCheck(gp, dollCheck.Add(image.Pt(1, 1))) || g.onCheck(gp, dollCheck.Sub(image.Pt(0, 1))) {
+			t.Error("the doll gump's check mark is not where Nuvie has it")
+		}
+		if len(g.windows) > 0 {
+			g.pointedWindow = g.windows[0]
+			if g.closePointedGump(); len(g.windows) != 0 {
+				t.Error("the window's check mark left it open")
+			}
+		}
+		if cmd := g.closePointedGump(); cmd != cmdStatusParty {
+			t.Errorf("the status gump's check mark gives command %d", cmd)
+		}
 		g.windows = nil
 		g.showLog = false
 		g.StatusDisplay = cmdStatusPortrait

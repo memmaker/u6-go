@@ -602,7 +602,10 @@ func (g *Game) readCommand() int {
 				g.focusWindow()
 			}
 			dragged := false
-			if g.mouseTriggered && buttons == leftButton && g.atMainPrompt && g.MouseMode == 0 && !g.InConversation {
+			atPrompt := g.mouseTriggered && buttons == leftButton && g.atMainPrompt && g.MouseMode == 0 && !g.InConversation
+			if atPrompt && g.pointedCheck {
+				ch, dragged = g.closePointedGump(), true
+			} else if atPrompt {
 				ch, dragged = g.drag()
 			}
 			if !dragged {

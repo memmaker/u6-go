@@ -43,12 +43,37 @@ func (g *Game) toggleWindow(member int) {
 			return
 		}
 	}
-	edge := margin + scrollPadding
-	step := len(g.windows) * tileSize
 	w := &inventoryWindow{member: member}
-	g.placeWindow(w, image.Pt(edge+step, edge+step))
+	// in free space: clear of the panels shown (the scrolls move out of the way) and of the status area's gump, which
+	// can open at any time; else cascaded from the top left, as Nuvie's doll gumps
+	_, panels := g.panels()
+	taken := []image.Rectangle{g.statusGumpPlace()}
+	for _, p := range panels {
+		if !p.keyed { // the scrolls make room for windows
+			taken = append(taken, p.outer())
+		}
+	}
+	size := inventoryGump(w.info).size
+	step := len(g.windows) * tileSize
+	if at, ok := g.freeSpot(size, image.Pt(margin, margin), taken); ok {
+		w.at = at
+	} else {
+		g.placeWindow(w, image.Pt(margin+step, margin+step))
+	}
 	g.windows = append(g.windows, w)
 	g.refreshWindows()
+}
+
+// closePointedGump closes the gump whose check mark the pointer is on, as Nuvie's
+// close_gump: an inventory window goes; the status area's gump goes back to the party.
+// It returns the command that does so, or 0.
+func (g *Game) closePointedGump() int {
+	if w := g.pointedWindow; w != nil {
+		g.toggleWindow(w.member)
+		g.pointedWindow = nil
+		return 0
+	}
+	return cmdStatusParty
 }
 
 // placeWindow moves w's corner to at, kept on the screen.

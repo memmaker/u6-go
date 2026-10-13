@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"image"
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/host"
@@ -38,11 +39,16 @@ func TestWidescreen(t *testing.T) {
 	for _, window := range []struct {
 		name string
 		w, h int
+		free int // inventory windows that fit beside the status area's gump
 	}{
-		{"16x9", 1920, 1080}, {"21x9", 2560, 1080}, {"portrait", 1080, 1920},
+		{"21x9", 2560, 1080, 1}, {"portrait", 1080, 1920, 2}, {"16x9", 1920, 1080, 0}, {"320x200", 1280, 960, 0},
 	} {
 		host.Fit(window.w, window.h)
 		settle()
+		// the last size's windows stay on the new screen
+		g.Frame()
+		assertPanels(t, g, window.name+" resized", false)
+		g.windows = nil
 		if g.screenWidth != host.FitWidth || g.screenHeight != host.FitHeight {
 			t.Fatalf("%s: screen %dx%d, want %dx%d", window.name, g.screenWidth, g.screenHeight, host.FitWidth, host.FitHeight)
 		}
@@ -69,5 +75,40 @@ func TestWidescreen(t *testing.T) {
 			}
 		}
 		writePNG(t, g, fmt.Sprintf("widescreen_%s.png", window.name))
+
+		// the status area's gump, the date, the log and the windows that fit: apart
+		g.StatusDisplay, g.statusMember, g.showDate, g.showLog = cmdStatusEquipment, 0, true, true
+		g.StatusDirty = true
+		g.RefreshStatus()
+		for m := 1; m <= window.free && m < int(g.PartySize); m++ {
+			g.toggleWindow(m)
+		}
+		assertPanels(t, g, window.name, window.name != "320x200")
+		writePNG(t, g, fmt.Sprintf("widescreen_%s_inventory.png", window.name))
+		// one more window than fits: on the screen still
+		if m := window.free + 1; m < int(g.PartySize) {
+			g.toggleWindow(m)
+			assertPanels(t, g, window.name+" crowded", false)
+		}
+		g.StatusDisplay, g.showDate, g.showLog = cmdStatusParty, false, false
+		g.StatusDirty = true
+		g.RefreshStatus()
+	}
+}
+
+// assertPanels fails when a panel leaves the screen or, with apart, two overlap.
+func assertPanels(t *testing.T, g *Game, name string, apart bool) {
+	t.Helper()
+	_, panels := g.panels()
+	screen := image.Rect(0, 0, g.screenWidth, g.screenHeight)
+	for i, p := range panels {
+		if !p.outer().In(screen) {
+			t.Errorf("%s: panel %v at %v leaves the screen", name, p.from, p.outer())
+		}
+		for _, q := range panels[:i] {
+			if apart && p.outer().Overlaps(q.outer()) {
+				t.Errorf("%s: panels at %v and %v overlap", name, p.outer(), q.outer())
+			}
+		}
 	}
 }

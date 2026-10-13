@@ -18,6 +18,8 @@ type gumpPart struct {
 	from image.Rectangle
 	// see is which of the status area's pixels show: all, or those the art shows through
 	see seeThrough
+	// closes marks the gump's check mark (gump_btn), which closes it
+	closes bool
 }
 
 // seeThrough picks the pixels of the status area left transparent on a gump.
@@ -25,7 +27,6 @@ type seeThrough int
 
 const (
 	opaque           seeThrough = iota
-	seeBackground               // the background colour
 	seeSlotBackdrops            // the backdrops of the doll's slots and the grid's cells
 )
 
@@ -64,6 +65,16 @@ func (g *Game) gumpCanvasPoint(gp *gump, pt image.Point) image.Point {
 	return gp.rest
 }
 
+// onCheck says that point pt of gump gp is on its check mark.
+func (g *Game) onCheck(gp *gump, pt image.Point) bool {
+	for _, p := range gp.parts {
+		if p.closes && pt.Sub(p.at).In(image.Rectangle{Max: g.art(p.art).size()}) {
+			return true
+		}
+	}
+	return false
+}
+
 // gumpScreenPoint is where the status area's point pt shows on gump gp at at, or false.
 func (gp *gump) screenPoint(pt, at image.Point) (image.Point, bool) {
 	for _, p := range gp.parts {
@@ -79,7 +90,10 @@ func (gp *gump) screenPoint(pt, at image.Point) (image.Point, bool) {
 var (
 	dollWidget          = image.Pt(26, 16) // the doll's slots, as the status area's from slotsOrigin
 	slotsOrigin         = image.Pt(176, 16)
-	dollFigure          = image.Pt(42, 32)
+	dollFigure          = image.Pt(45, 32) // where DollViewGump draws the doll picture
+	dollCheck           = image.Pt(0, 112)
+	backpackCheck       = image.Pt(0, 27)
+	portraitCheck       = image.Pt(0, 67)
 	previousArrow       = image.Pt(23, 7)
 	nextArrow           = image.Pt(86, 7)
 	combatButton        = image.Pt(23, 92)
@@ -106,7 +120,6 @@ var (
 	statsRight, pointsRight           = 170, 142
 	strengthY, dexterityY, intellectY = 18, 27, 36
 	magicY, healthY, levelY           = 55, 64, 73
-	portraitDollButton                = image.Pt(0, 67)
 )
 
 // statusButton is the status area's button at x under the views.
@@ -120,6 +133,8 @@ type inventoryInfo struct {
 	combatMode                           string
 	inBag                                bool
 	partySize                            int
+	// doll is the doll picture of the owner, as Nuvie's ViewManager picks it
+	doll string
 }
 
 // inventoryInfo is the status area's equipment view's info.
@@ -131,7 +146,7 @@ func (g *Game) inventoryInfo() inventoryInfo {
 	info := inventoryInfo{
 		member: -1, partySize: int(g.PartySize), inBag: g.container >= npcCount,
 		equipWeight: roundWeight(g.weightEquip), carriedWeight: roundWeight(g.weightInven + g.weightEquip),
-		strength: int(g.NPCs[owner].Strength),
+		strength: int(g.NPCs[owner].Strength), doll: g.dollArt(owner),
 	}
 	if g.showNPC == 0 {
 		info.member, info.name = g.statusMember, cString(g.Names[g.statusMember][:])
@@ -140,6 +155,20 @@ func (g *Game) inventoryInfo() inventoryInfo {
 		}
 	}
 	return info
+}
+
+// dollArt is the doll picture of character n (ViewManager::loadAvatarDollImage and
+// loadCustomActorDollImage): the avatar's by its portrait, others' by their number, else
+// the generic one.
+func (g *Game) dollArt(n int) string {
+	name := fmt.Sprintf("actor_u6_%03d", n)
+	if n == avatar {
+		name = fmt.Sprintf("avatar_u6_%02d", max(int(g.PortraitPlusOne)-1, 0))
+	}
+	if _, err := nuvieArt.Open("nuvie/" + name + ".png"); err != nil {
+		return "actor_u6"
+	}
+	return name
 }
 
 // centred is at moved right to centre text in width.
@@ -163,7 +192,9 @@ func inventoryGump(info inventoryInfo) *gump {
 		add(gumpPart{at: dollWidget.Add(from.Min.Sub(slotsOrigin)), from: from, see: seeSlotBackdrops})
 	}
 	figure := image.Rect(dollX, dollY, dollX+2*tileSize, dollY+2*tileSize)
-	add(gumpPart{at: dollFigure, from: figure, see: seeBackground})
+	add(gumpPart{art: info.doll, at: dollFigure, from: figure})
+	add(gumpPart{art: "gump_btn_up", at: dollCheck, closes: true})
+	add(gumpPart{art: "gump_btn_up", at: backpackAt.Add(backpackCheck), closes: true})
 	grid := image.Rect(inventoryX, inventoryY, inventoryRight, inventoryBottom)
 	add(gumpPart{at: backpackAt.Add(backpackGrid), from: grid, see: seeSlotBackdrops})
 	add(gumpPart{art: "cont_up_btn_up", at: backpackAt.Add(backpackUp), from: image.Rect(scrollArrowX, scrollUpY0, scrollArrowRight, scrollUpY1)})
@@ -211,7 +242,7 @@ func (g *Game) portraitGump(i int) *gump {
 	gp.parts = []gumpPart{
 		{art: "portrait_bg"},
 		{at: portraitAt, from: image.Rect(portraitX, portraitY, portraitX+portraitWidth, portraitY+portraitHeight)},
-		{art: "cont_doll_btn_up", at: portraitDollButton, from: statusButton(buttonSwitch)},
+		{art: "gump_btn_up", at: portraitCheck, closes: true},
 	}
 	if i > 0 {
 		gp.parts = append(gp.parts, gumpPart{art: "left_arrow", at: previousArrow, from: statusButton(buttonPrevious)})
@@ -278,8 +309,6 @@ func (g *Game) drawGump(gp *gump, at image.Point, pixel func(x, y int) byte) {
 // seesThrough says that the status area's pixel c at (x, y) is left out of part p.
 func (g *Game) seesThrough(p gumpPart, x, y int, c byte) bool {
 	switch p.see {
-	case seeBackground:
-		return c == g.colours.background
 	case seeSlotBackdrops:
 		cell := (y-p.from.Min.Y)%tileSize*tileSize + (x-p.from.Min.X)%tileSize
 		return c == g.slotBackdrop(tileStatusSlot)[cell] || c == g.slotBackdrop(tileEmptySlot)[cell]

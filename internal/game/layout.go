@@ -120,6 +120,8 @@ type layout struct {
 	// targets the commands of a drag take
 	windows       []*inventoryWindow
 	pointedWindow *inventoryWindow
+	// pointedCheck is set while the pointer is on a gump's check mark
+	pointedCheck  bool
 	dragging      bool
 	draggedTile   int
 	queuedTargets []selection
@@ -141,6 +143,14 @@ func (p panel) onScreen() image.Rectangle {
 		return image.Rectangle{Max: p.gump.size}.Add(p.at)
 	}
 	return p.from.Sub(p.from.Min).Add(p.at)
+}
+
+// outer is what the panel covers on the screen: with its scroll.
+func (p panel) outer() image.Rectangle {
+	if p.keyed {
+		return p.onScreen().Inset(-scrollPadding)
+	}
+	return p.onScreen()
 }
 
 // pixel is the panel's canvas pixel at (x, y).
@@ -198,19 +208,57 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
 	for _, w := range g.windows {
+		g.placeWindow(w, w.at) // on the screen when its size changed
 		panels = append(panels, panel{from: statusPanel, at: w.at, window: w, gump: inventoryGump(w.info)})
 	}
+	// the date and the log go where they want, else to the nearest free place
+	addFree := func(from image.Rectangle, want image.Point) {
+		var taken []image.Rectangle
+		for _, p := range panels {
+			taken = append(taken, p.outer())
+		}
+		pad := image.Pt(scrollPadding, scrollPadding)
+		if at, ok := g.freeSpot(from.Size().Add(pad.Mul(2)), want.Sub(pad), taken); ok {
+			want = at.Add(pad)
+		}
+		add(true, from, want)
+	}
 	if g.showDate || sound.Settings.DisplayedWindDir && g.windBorne() {
-		add(true, datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
+		addFree(datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
 	}
 	if log := g.logPanel(); g.logShown() {
-		at := image.Pt(right-tileSize-margin-scrollPadding-log.Dx(), g.screenHeight-margin-scrollPadding-log.Dy())
-		add(true, log, at)
+		addFree(log, image.Pt(right-tileSize-margin-scrollPadding-log.Dx(), g.screenHeight-margin-scrollPadding-log.Dy()))
 	}
 	if g.dockOffset > 0 {
 		add(false, iconsPanel, image.Pt((g.screenWidth-iconsPanel.Dx())/2, g.screenHeight-g.dockOffset))
 	}
 	return scrolls, panels
+}
+
+// statusGumpPlace is where the status area's inventory gump shows.
+func (g *Game) statusGumpPlace() image.Rectangle {
+	size := inventoryGump(inventoryInfo{}).size
+	return image.Rectangle{Max: size}.Add(image.Pt(g.screenWidth-margin-size.X, margin))
+}
+
+// freeSpot is the corner nearest want of a place of size on the screen clear of the
+// taken rectangles by a margin, or false when there is none.
+// ponytail: scans every margin-th place; fine for a few panels on a small screen.
+func (g *Game) freeSpot(size, want image.Point, taken []image.Rectangle) (image.Point, bool) {
+	best, bestDistance := image.Point{}, -1
+	for y := margin; y+size.Y+margin <= g.screenHeight; y += margin {
+		for x := margin; x+size.X+margin <= g.screenWidth; x += margin {
+			r := image.Rectangle{Max: size}.Add(image.Pt(x, y)).Inset(-margin + 1)
+			free := true
+			for _, t := range taken {
+				free = free && !r.Overlaps(t)
+			}
+			if d := abs(x-want.X) + abs(y-want.Y); free && (bestDistance < 0 || d < bestDistance) {
+				best, bestDistance = image.Pt(x, y), d
+			}
+		}
+	}
+	return best, bestDistance >= 0
 }
 
 // windBorne says whether the party travels by a vehicle the wind drives.
@@ -334,7 +382,7 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 		g.dockOffset = max(g.dockOffset-dockSlide, 0)
 	}
 	_, panels := g.panels()
-	g.pointedWindow = nil
+	g.pointedWindow, g.pointedCheck = nil, false
 	for i := len(panels) - 1; i >= 0; i-- {
 		p := panels[i]
 		if pt := image.Pt(x, y); pt.In(p.onScreen()) {
@@ -342,6 +390,7 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 			at := pt.Sub(p.at).Add(p.from.Min)
 			if p.gump != nil {
 				at = g.gumpCanvasPoint(p.gump, pt.Sub(p.at))
+				g.pointedCheck = g.onCheck(p.gump, pt.Sub(p.at))
 			}
 			if p.from == optionsPanel {
 				g.scrollOptions(-host.TakeWheel())
