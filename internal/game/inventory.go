@@ -225,26 +225,38 @@ var equipTiles = []int{
 	611, 612, 624, 625, 626, 627, 628, 629, 633, 637, 638, 639, 640, 641, 674, 675, 697,
 }
 
+// slotTiles are the tile ranges worn in each slot other than the right hand, checked in order.
+var slotTiles = []struct{ first, last, slot int }{
+	{538, 539, slotFeet},      // TIL_21A, TIL_21B
+	{600, 600, slotRing},      // TIL_258
+	{893, 895, slotRing},      // TIL_37D..37F
+	{537, 537, slotNeck},      // TIL_219
+	{592, 594, slotNeck},      // TIL_250..252
+	{535, 535, slotNeck},      // TIL_217
+	{257, 257, slotNeck},      // TIL_101
+	{512, 519, slotHead},      // TIL_200..207
+	{528, 534, slotChest},     // TIL_210..216
+	{536, 536, slotChest},     // TIL_218
+	{652, 652, slotChest},     // TIL_28C
+	{654, 654, slotChest},     // TIL_28E
+	{669, 669, slotChest},     // TIL_29D
+	{599, 599, slotChest},     // TIL_257
+	{552, 553, slotTwoHanded}, // TIL_228, 229
+	{561, 561, slotTwoHanded}, // TIL_231
+	{565, 565, slotTwoHanded}, // TIL_235
+	{555, 558, slotTwoHanded}, // TIL_22B..22E
+	{520, 527, slotLeftHand},  // TIL_208..20F
+	{546, 546, slotLeftHand},  // TIL_222
+}
+
 // equipSlot returns the slot object n is worn in, or noSlot.
 // C: seg_155D:0516 (STAT_GetEquipSlot)
 func (g *Game) equipSlot(n int) int {
 	t := g.tileFrame(n)
-	between := func(a, b int) bool { return t >= a && t <= b }
-	switch {
-	case t == 538 || t == 539: // TIL_21A, TIL_21B
-		return slotFeet
-	case t == 600 || between(893, 895): // TIL_258, TIL_37D..37F
-		return slotRing
-	case t == 537 || between(592, 594) || t == 535 || t == 257: // TIL_219, 250..252, 217, 101
-		return slotNeck
-	case between(512, 519): // TIL_200..207
-		return slotHead
-	case between(528, 534) || t == 536 || t == 652 || t == 654 || t == 669 || t == 599: // TIL_210..216, 218, 28C, 28E, 29D, 257
-		return slotChest
-	case t == 552 || t == 553 || t == 561 || t == 565 || between(555, 558): // TIL_228, 229, 231, 235, 22B..22E
-		return slotTwoHanded
-	case between(520, 527) || t == 546: // TIL_208..20F, TIL_222
-		return slotLeftHand
+	for _, r := range slotTiles {
+		if t >= r.first && t <= r.last {
+			return r.slot
+		}
 	}
 	for _, e := range equipTiles {
 		if e == t {
@@ -885,16 +897,12 @@ func (g *Game) drawSmallChar(c, x int) {
 func (g *Game) drawCount(tile, v, x, y int) {
 	g.gr.DrawTileOffscreen(tileStatusSlot, 0, 0)
 	g.gr.DrawTileOffscreen(tile, 0, 0)
-	digits := 0
-	switch {
-	case v < 10:
-		digits = 1
-	case v < 100:
-		digits = 2
-	case v < 1000:
-		digits = 3
-	case v < 10000:
-		digits = maxCountDigits
+	digits := 1
+	for limit := 10; v >= limit; limit *= 10 {
+		digits++
+	}
+	if digits > maxCountDigits {
+		digits = 0
 	}
 	for i := range digits {
 		g.drawSmallChar(v%10, digitColumns[digits-1][i])

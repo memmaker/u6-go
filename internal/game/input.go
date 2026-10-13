@@ -431,27 +431,33 @@ func (g *Game) mouseSelection() int {
 // clickPartyView returns the command of a click in the party list.
 // C: seg_0C9C:121F (do_CMD_91)
 func (g *Game) clickPartyView() int {
-	if g.PointerY <= 24 {
+	const (
+		partyNameX       = 192 // the names are right of the icons
+		partyNameRowY    = partyRowY + 4
+		partyScrollUpY1  = partyRowY + tileSize
+		partyScrollDownY = buttonsY
+	)
+	if g.PointerY <= partyRowY {
 		return 0
 	}
 	switch {
-	case g.PointerX > 192:
-		g.Selection.obj = (g.PointerY-28)/tileSize + g.partyScroll
+	case g.PointerX > partyNameX:
+		g.Selection.obj = (g.PointerY-partyNameRowY)/tileSize + g.partyScroll
 		if int(g.PartySize) <= g.Selection.obj {
 			return 0
 		}
 		return cmdStatusPortrait
-	case g.PointerX > 176:
-		g.Selection.obj = (g.PointerY-24)/tileSize + g.partyScroll
+	case g.PointerX > partyIconX:
+		g.Selection.obj = (g.PointerY-partyRowY)/tileSize + g.partyScroll
 		if int(g.PartySize) <= g.Selection.obj {
 			return 0
 		}
 		return cmdStatusEquipment
-	case g.PointerY >= 24 && g.PointerY < 40:
+	case g.PointerY >= partyRowY && g.PointerY < partyScrollUpY1:
 		if g.partyScroll != 0 {
 			return cmdPartyScrollUp
 		}
-	case g.PointerY >= 88:
+	case g.PointerY >= partyScrollDownY:
 		if g.partyScroll < int(g.PartySize)-partyListRows {
 			return cmdPartyScrollDown
 		}
@@ -462,14 +468,14 @@ func (g *Game) clickPartyView() int {
 // statusButton returns the command of the buttons under the portrait and equipment views.
 func (g *Game) statusButton(other int) int {
 	switch {
-	case g.PointerX >= 192 && g.PointerX < 208:
+	case g.PointerX >= buttonParty && g.PointerX < buttonSwitch:
 		return cmdStatusParty
-	case g.PointerX >= 208 && g.PointerX < 224:
+	case g.PointerX >= buttonSwitch && g.PointerX < buttonNext:
 		g.Selection.obj = noObject
 		return other
-	case g.PointerX >= 224 && g.PointerX < 240:
+	case g.PointerX >= buttonNext && g.PointerX < buttonCombat:
 		return cmdNextMember
-	case g.PointerX >= 176 && g.PointerX < 192:
+	case g.PointerX >= buttonPrevious && g.PointerX < buttonParty:
 		return cmdPreviousMember
 	}
 	return 0
@@ -478,7 +484,7 @@ func (g *Game) statusButton(other int) int {
 // clickPortraitView returns the command of a click in the portrait view.
 // C: seg_0C9C:12B7 (do_CMD_90)
 func (g *Game) clickPortraitView() int {
-	if g.PointerY >= 88 {
+	if g.PointerY >= buttonsY {
 		return g.statusButton(cmdStatusEquipment)
 	}
 	return 0
@@ -490,7 +496,7 @@ func (g *Game) clickEquipmentView() int {
 	if g.InConversation {
 		return 0
 	}
-	if g.statusMember != 0 && g.PointerX >= 240 && g.PointerX < 256 && g.PointerY >= 88 && g.PointerY < 104 {
+	if g.statusMember != 0 && g.PointerX >= buttonCombat && g.PointerX < buttonsEnd && g.PointerY >= buttonsY && g.PointerY < buttonsBottom {
 		n := g.Party[g.statusMember]
 		npc := &g.NPCs[n]
 		npc.CombatMode++
@@ -503,7 +509,7 @@ func (g *Game) clickEquipmentView() int {
 		g.refreshCombatMode()
 		return 0
 	}
-	if g.PointerY >= 88 {
+	if g.PointerY >= buttonsY {
 		return g.statusButton(cmdStatusPortrait)
 	}
 	x, y := g.PointerX, g.PointerY
@@ -849,7 +855,7 @@ func (g *Game) statusKey(ch int) int {
 		case ch == '-':
 			return cmdPreviousMember
 		case (ch == '`' || ch == '~') && g.StatusDisplay == cmdStatusEquipment:
-			g.PointerX, g.PointerY = 248, 96
+			g.PointerX, g.PointerY = buttonCombat+tileSize/2, buttonsY+tileSize/2
 			g.clickEquipmentView()
 			return 0
 		}
