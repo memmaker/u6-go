@@ -602,14 +602,14 @@ func (g *Game) gets(maxLen int) string {
 			}
 		}
 		switch {
-		case (ch == keyUp || ch == keyDown) && len(g.talkOptions) > 0:
-			step := 1
-			if ch == keyUp {
-				step = -1
-			}
-			shown := min(len(g.talkOptions), optionsShownMax)
-			g.talkChoice = (g.talkChoice + step + shown) % shown
-			g.drawTalkOptions()
+		case ch == keyUp && len(g.talkOptions) > 0:
+			g.chooseOption(g.talkChoice - optionsColumns)
+		case ch == keyDown && len(g.talkOptions) > 0:
+			g.chooseOption(g.talkChoice + optionsColumns)
+		case ch == keyLeft && len(g.talkOptions) > 0:
+			g.chooseOption(g.talkChoice - 1)
+		case ch == keyRight && len(g.talkOptions) > 0:
+			g.chooseOption(g.talkChoice + 1)
 		case ch == '\r':
 			if len(typed) == 0 && len(g.talkOptions) > 0 {
 				typed = []byte(g.talkOptions[g.talkChoice])

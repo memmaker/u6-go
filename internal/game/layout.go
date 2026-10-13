@@ -2,7 +2,6 @@ package game
 
 import (
 	"image"
-	"slices"
 	"strings"
 
 	"github.com/memmaker/u6-go/internal/host"
@@ -39,13 +38,15 @@ const (
 	portraitRows    = portraitHeight / cellSize
 	// the clip of the conversation options, in character cells, and how they are laid out:
 	// the row after the options is where the player types
-	clipOptions     = 2
-	optionsX0       = speechX0
-	optionsY0       = speechY0 + speechRows + 1
-	optionsColumns  = 3
-	optionWidth     = 12 // characters per option column
-	optionsRows     = 6
-	optionsShownMax = optionsColumns * optionsRows
+	clipOptions    = 2
+	optionsX0      = speechX0
+	optionsY0      = speechY0 + speechRows + 1
+	optionsColumns = 3
+	optionWidth    = 12 // characters per option column
+	optionsRows    = 6
+	// the marks of more options above or below, in the column right of the options
+	moreAboveChar, moreBelowChar = 24, 25
+	moreColumn                   = optionsX0 + optionsColumns*optionWidth
 
 	// margin is the room left around panels and between them and the screen's edges
 	margin = 4
@@ -107,6 +108,7 @@ type layout struct {
 	// highlighted; optionPicked is set by a click on one
 	talkOptions  []string
 	talkChoice   int
+	talkTop      int // the first row of options shown; they scroll
 	optionPicked bool
 }
 
@@ -253,6 +255,7 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 		if pt := image.Pt(x, y); pt.In(p.onScreen()) {
 			at := pt.Sub(p.at).Add(p.from.Min)
 			if p.from == optionsPanel {
+				g.scrollOptions(-host.TakeWheel())
 				g.pointOption(at, host.MouseLeft && !g.mouse.left)
 			}
 			return at.X, at.Y, true
@@ -264,8 +267,8 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 // pointOption highlights the option at canvas point at, and picks it on a click.
 func (g *Game) pointOption(at image.Point, clicked bool) {
 	column, row := (at.X-optionsList.Min.X)/(optionWidth*cellSize), (at.Y-optionsList.Min.Y)/cellSize
-	i := column*optionsRows + row
-	if row >= optionsRows || i >= len(g.talkOptions) {
+	i := (g.talkTop+row)*optionsColumns + column
+	if row >= optionsRows || column >= optionsColumns || i >= len(g.talkOptions) {
 		return
 	}
 	if i != g.talkChoice {
@@ -434,12 +437,6 @@ func (g *Game) conversationKeywords() []string {
 // offerOptions shows the keywords the script answers now, "bye" highlighted.
 func (g *Game) offerOptions() {
 	g.talkOptions = g.conversationKeywords()
-	if len(g.talkOptions) > optionsShownMax {
-		g.talkOptions = g.talkOptions[:optionsShownMax]
-		if !slices.Contains(g.talkOptions, "bye") {
-			g.talkOptions[optionsShownMax-1] = "bye"
-		}
-	}
 	for i, w := range g.talkOptions {
 		g.talkOptions[i] = g.topicWord(w)
 	}
@@ -449,24 +446,57 @@ func (g *Game) offerOptions() {
 			g.talkChoice = i
 		}
 	}
+	g.talkTop = 0
+	g.chooseOption(g.talkChoice)
+}
+
+// optionRows is how many rows the options take.
+func (g *Game) optionRows() int {
+	return (len(g.talkOptions) + optionsColumns - 1) / optionsColumns
+}
+
+// chooseOption highlights option i (kept within the options), scrolling it into view.
+func (g *Game) chooseOption(i int) {
+	g.talkChoice = min(max(i, 0), len(g.talkOptions)-1)
+	row := g.talkChoice / optionsColumns
+	g.talkTop = min(g.talkTop, row)
+	g.talkTop = max(g.talkTop, row-optionsRows+1)
 	g.drawTalkOptions()
 }
 
-// drawTalkOptions writes the options on the canvas in columns, the chosen one highlighted.
+// scrollOptions scrolls the options by rows (negative: up).
+func (g *Game) scrollOptions(rows int) {
+	if rows == 0 {
+		return
+	}
+	g.talkTop = min(max(g.talkTop+rows, 0), max(g.optionRows()-optionsRows, 0))
+	g.drawTalkOptions()
+}
+
+// drawTalkOptions writes the shown rows of options on the canvas, the chosen one
+// highlighted, and marks more rows above or below.
 func (g *Game) drawTalkOptions() {
 	saved := g.current
 	g.current = &g.clips[clipOptions]
 	g.gr.SetColor(g.colours.background)
 	g.gr.FillRect(optionsList.Min.X, optionsList.Min.Y, optionsList.Max.X-1, optionsList.Max.Y-1)
-	for i, w := range g.talkOptions {
+	first := g.talkTop * optionsColumns
+	for i, w := range g.talkOptions[first:min(len(g.talkOptions), first+optionsRows*optionsColumns)] {
 		g.current.fg = g.colours.text
-		if i == g.talkChoice {
+		if first+i == g.talkChoice {
 			g.current.fg = g.colours.highlight
 		}
-		x, y := optionsX0+i/optionsRows*optionWidth, optionsY0+i%optionsRows
+		x, y := optionsX0+i%optionsColumns*optionWidth, optionsY0+i/optionsColumns
 		for j := range min(len(w), optionWidth-1) {
 			g.putCharAt(w[j], x+j, y)
 		}
+	}
+	g.current.fg = g.colours.text
+	if g.talkTop > 0 {
+		g.putCharAt(moreAboveChar, moreColumn, optionsY0)
+	}
+	if g.talkTop+optionsRows < g.optionRows() {
+		g.putCharAt(moreBelowChar, moreColumn, optionsY0+optionsRows-1)
 	}
 	g.current = saved
 }

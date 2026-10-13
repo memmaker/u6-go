@@ -39,4 +39,4 @@ The world view fills the screen; the panels are layered over it as scrolls
 - Ctrl+D shows or hides the date and wind scroll.
 - Ctrl+L shows or hides the message log. Prompts show it while they wait.
 - Touching the bottom edge with the mouse slides in the command icons.
-- In conversations, Up/Down pick a topic and Enter asks it; typing still works.
+- In conversations, the arrow keys pick a topic (the mouse wheel and Up/Down scroll a long list) and Enter asks it; typing still works.
