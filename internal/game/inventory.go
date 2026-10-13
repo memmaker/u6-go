@@ -164,6 +164,7 @@ func (g *Game) refreshCombatMode() {
 
 // portraitView shows party member i's portrait and statistics.
 // C: seg_155D:028A (C_155D_028A)
+// C: seg_2337:04E1 (GetLevel), inlined
 func (g *Game) portraitView(i int) {
 	g.clearStatus()
 	g.setClip(clipParty)
@@ -303,7 +304,8 @@ func (g *Game) encumbrance(n int) int {
 
 // weighInventory counts and weighs what n carries and, with fillSlots, fills the slots of
 // equipment[].
-// C: seg_155D:0748 (C_155D_0748), seg_155D:07E0 (C_155D_07E0)
+// C: seg_155D:0748 (C_155D_0748)
+// C: seg_155D:07E0 (C_155D_07E0)
 func (g *Game) weighInventory(n int, fillSlots bool) {
 	g.invenSize, g.weightInven = 0, 0
 	if n < npcCount {
@@ -511,7 +513,8 @@ func (g *Game) equipmentView() {
 }
 
 // scrollInventory scrolls the grid down (rows > 0) or up a row.
-// C: seg_155D:120A (C_155D_120A), seg_155D:123E (C_155D_123E)
+// C: seg_155D:120A (C_155D_120A)
+// C: seg_155D:123E (C_155D_123E)
 func (g *Game) scrollInventory(down bool) {
 	g.setClip(clipParty)
 	switch {
@@ -678,12 +681,12 @@ const (
 	unreadyBurntOut = 2
 )
 
-// unreadyCheck refuses to take off the amulet of submission and lets a lit torch burn
-// out.
-// C: seg_155D:1666 (C_155D_1666)
 // amuletMsg is D_0DDC[12].
 const amuletMsg = "Magical energy prevents you from removing the amulet."
 
+// unreadyCheck refuses to take off the amulet of submission and lets a lit torch burn
+// out.
+// C: seg_155D:1666 (C_155D_1666)
 func (g *Game) unreadyCheck(n int) int {
 	o := g.object(n)
 	if o.CoordUse() != Equipped {

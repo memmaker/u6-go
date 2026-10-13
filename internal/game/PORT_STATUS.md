@@ -2,7 +2,7 @@
 
 Every function defined in `u6-re/src/*.c`, with its Go name in `internal/game`.
 "ported" means a Go function carries its `// C:` comment and no `TODO(port)` names it; "TODO" means it is missing or a `TODO(port)` still names it.
-Ported: 339. TODO: 137.
+Ported: 439. TODO: 37.
 
 ## seg_0903.c
 
@@ -24,7 +24,7 @@ Ported: 339. TODO: 137.
 
 | C function | status | Go |
 |---|---|---|
-| SubKarma (C_0A33_0008) | TODO |  |
+| SubKarma (C_0A33_0008) | ported | subKarma |
 | AddKarma (C_0A33_0027) | TODO |  |
 | SetTileAnimation (C_0A33_0049) | ported | setTileAnimation |
 | C_0A33_0073 | ported | animateTiles |
@@ -41,7 +41,7 @@ Ported: 339. TODO: 137.
 | RefreshStatus (C_0A33_1AB7) | ported | RefreshStatus |
 | SetActive (C_0A33_1B36) | ported | SetActive |
 | SetPartyMode (C_0A33_1BB2) | ported | SetPartyMode |
-| __GetHex (C_0A33_1C4C) | TODO |  |
+| __GetHex (C_0A33_1C4C) | ported | getHex |
 | C_0A33_1CB4 | ported | Play, switchMember, command |
 
 ## seg_0C9C.c
@@ -54,14 +54,14 @@ Ported: 339. TODO: 137.
 | C_0C9C_01FB | ported | updatePointerShape |
 | C_0C9C_0286 | ported | putCharAt |
 | C_0C9C_02F1 | ported | scrollUp |
-| C_0C9C_0397 | TODO |  |
+| C_0C9C_0397 | ported | restoreGame |
 | C_0C9C_042A | ported | loadGame |
 | C_0C9C_089F | ported | saveGame |
 | C_0C9C_0BCE | ported | drawTileOver |
 | C_0C9C_0C10 | ported | drawSmallChar |
 | C_0C9C_0C7D | ported | drawCount |
 | C_0C9C_0D31 | ported | drawObjectCount |
-| C_0C9C_0E57 | TODO |  |
+| C_0C9C_0E57 | ported | drawTileOver |
 | CON_prompt (C_0C9C_0E6E) | ported | prompt |
 | C_0C9C_0F52 | ported | echo |
 | __0C9C_102A | TODO |  |
@@ -69,17 +69,17 @@ Ported: 339. TODO: 137.
 | mkMouseSelection (C_0C9C_1107) | ported | mouseSelection |
 | do_CMD_91 (C_0C9C_121F) | ported | clickPartyView |
 | do_CMD_90 (C_0C9C_12B7) | ported | clickPortraitView |
-| do_CMD_92 (C_0C9C_131D) | TODO | clickEquipmentView |
-| do_CMD_A1 (C_0C9C_15EB) | TODO |  |
+| do_CMD_92 (C_0C9C_131D) | ported | clickEquipmentView |
+| do_CMD_A1 (C_0C9C_15EB) | ported | clickSpellbook |
 | setDefaultCommand (C_0C9C_166D) | ported | setDefaultCommand |
 | mkMouseCommand (C_0C9C_1714) | ported | mouseCommand |
-| __Incant2Spell (C_0C9C_18D8) | TODO |  |
-| C_0C9C_1991 | TODO |  |
-| C_0C9C_19D6 | TODO |  |
+| __Incant2Spell (C_0C9C_18D8) | ported | incantationSpell |
+| C_0C9C_1991 | ported | selectSpell |
+| C_0C9C_19D6 | ported | spellbookArrowKey |
 | C_0C9C_1AE5 | ported | drawStatusCursor |
-| C_0C9C_1D59 | TODO | readCommand, selectTarget, statusKey |
-| C_0C9C_2A16 | TODO |  |
-| CON_getch (C_0C9C_2A59) | TODO | getch |
+| C_0C9C_1D59 | ported | readCommand, selectTarget, moveEquipmentCursor, statusKey, spellbookKey, incantationKey |
+| C_0C9C_2A16 | ported | turnedPage |
+| CON_getch (C_0C9C_2A59) | ported | getch, spellbookCommand |
 | CON_gets (C_0C9C_2D3A) | ported | gets |
 | CON_createClip (C_0C9C_2E09) | ported | createClip |
 | CON_setClip (C_0C9C_2E54) | ported | setClip |
@@ -103,9 +103,9 @@ Ported: 339. TODO: 137.
 | C_101C_054C | ported | enterArea |
 | PartyEnter (C_101C_0572) | ported | partyEnter |
 | PartyExit (C_101C_077E) | ported | partyExit |
-| PartyTeleport (C_101C_0828) | TODO | partyTeleport |
+| PartyTeleport (C_101C_0828) | ported | partyTeleport |
 | C_101C_089E | ported | climb |
-| GateTravel (C_101C_0A3A) | TODO | gateTravel |
+| GateTravel (C_101C_0A3A) | ported | gateTravel |
 | C_101C_0ACC | ported | resurrectParty |
 | getChunkIdxAt (C_101C_0CF7) | ported | chunkAt |
 | GetTileAtXYZ (C_101C_0DC9) | ported | GetTileAtXYZ |
@@ -142,7 +142,7 @@ Ported: 339. TODO: 137.
 | C_1184_0CBE | ported | moveSerpent |
 | C_1184_10F1 | ported | dragonPart |
 | C_1184_116D | ported | moveBigCreature |
-| AddObj (C_1184_134C) | TODO |  |
+| AddObj (C_1184_134C) | ported | AddMapObj |
 | AddMapObj (C_1184_13A7) | ported | AddMapObj |
 | AddInvObj (C_1184_14A8) | ported | AddInvObj |
 | AddMonster (C_1184_1540) | ported | AddMonster |
@@ -193,20 +193,20 @@ Ported: 339. TODO: 137.
 | GetWeight (C_155D_0661) | ported | weightOf |
 | Encumbrance (C_155D_0707) | ported | encumbrance |
 | C_155D_0748 | ported | weighInventory |
-| C_155D_07E0 | TODO |  |
+| C_155D_07E0 | ported | weighInventory |
 | C_155D_08F4 | ported | drawEquipment |
 | C_155D_0CB6 | ported | roundWeight |
 | C_155D_0CF5 | ported | drawInventory |
 | C_155D_1022 | ported | refreshInventory |
 | C_155D_1065 | ported | equipmentView |
 | C_155D_120A | ported | scrollInventory |
-| C_155D_123E | TODO |  |
+| C_155D_123E | ported | scrollInventory |
 | C_155D_1267 | ported | pointInventory |
 | C_155D_130E | ported | pointEquipment |
 | C_155D_13F4 | ported | slotOf |
 | __155D_141B | TODO |  |
 | C_155D_144B | ported | ready |
-| C_155D_1666 | TODO |  |
+| C_155D_1666 | ported | unreadyCheck |
 | C_155D_16E7 | ported | stopWornEffect |
 | C_155D_1738 | ported | unready |
 
@@ -236,64 +236,64 @@ Ported: 339. TODO: 137.
 
 | C function | status | Go |
 |---|---|---|
-| C_1944_0054 | TODO |  |
-| C_1944_0085 | TODO |  |
-| C_1944_01EC | ported | pushedAway |
-| C_1944_0232 | TODO |  |
-| C_1944_0278 | TODO |  |
-| C_1944_02BE | TODO |  |
-| SPELL_RefreshList (C_1944_0321) | TODO |  |
-| SPELL_DrawBG (C_1944_05B1) | TODO |  |
-| C_1944_06CA | TODO |  |
-| TakeReagents (C_1944_06EF) | TODO |  |
-| SPELL_RefreshPage (C_1944_0773) | TODO |  |
+| C_1944_0054 | ported | canTurnInvisible |
+| C_1944_0085 | ported | spellFlash |
+| C_1944_01EC | ported | pushedAway, strengthResists |
+| C_1944_0232 | ported | resistsByStrength |
+| C_1944_0278 | ported | dodges |
+| C_1944_02BE | ported | reagentCount |
+| SPELL_RefreshList (C_1944_0321) | ported | refreshSpellList |
+| SPELL_DrawBG (C_1944_05B1) | ported | drawSpellbook |
+| C_1944_06CA | ported | pageRow |
+| TakeReagents (C_1944_06EF) | ported | takeReagents |
+| SPELL_RefreshPage (C_1944_0773) | ported | refreshPage |
 | C_1944_0A43 | ported | heldOfQuality |
-| C_1944_0AA9 | TODO |  |
+| C_1944_0AA9 | ported | isDoor |
 | C_1944_0AD0 | ported | sleepSpell |
-| C_1944_0B32 | TODO |  |
-| C_1944_0B85 | TODO |  |
-| C_1944_0BF4 | TODO |  |
-| C_1944_0CA3 | TODO |  |
-| C_1944_0D46 | TODO |  |
-| C_1944_0DCF | TODO |  |
-| C_1944_0F02 | TODO |  |
-| C_1944_1038 | TODO |  |
-| C_1944_114D | TODO |  |
-| C_1944_11BB | TODO |  |
-| C_1944_1232 | TODO |  |
-| C_1944_12FC | TODO |  |
+| C_1944_0B32 | ported | poison |
+| C_1944_0B85 | ported | magicArrow |
+| C_1944_0BF4 | ported | drainSpell |
+| C_1944_0CA3 | ported | charm |
+| C_1944_0D46 | ported | killSpell |
+| C_1944_0DCF | ported | douseOrIgnite |
+| C_1944_0F02 | ported | nearestFoe |
+| C_1944_1038 | ported | chainBolt |
+| C_1944_114D | ported | healSpell |
+| C_1944_11BB | ported | dispel |
+| C_1944_1232 | ported | burn |
+| C_1944_12FC | ported | aimSpell, replicate, clone, dispelField |
 | C_1944_1A42 | ported | resurrect |
-| C_1944_1C51 | TODO |  |
+| C_1944_1C51 | ported | resurrectSpell |
 | __1944_1DAB | TODO |  |
-| C_1944_1DF4 | TODO |  |
-| C_1944_22F4 | TODO |  |
-| C_1944_23F2 | TODO |  |
-| C_1944_256A | TODO |  |
-| C_1944_27AF | TODO |  |
-| C_1944_29AA | TODO |  |
-| C_1944_2A15 | TODO |  |
-| C_1944_2B9A | TODO |  |
-| C_1944_2BFD | TODO |  |
-| C_1944_2DA7 | TODO |  |
-| C_1944_305A | TODO |  |
-| C_1944_310C | TODO |  |
-| C_1944_3175 | TODO |  |
-| C_1944_34CF | TODO |  |
-| C_1944_35EC | TODO |  |
-| C_1944_3750 | TODO |  |
-| C_1944_39A1 | TODO |  |
-| C_1944_3B2D | TODO |  |
-| C_1944_3C30 | TODO |  |
-| C_1944_3D0F | TODO |  |
-| C_1944_3DB8 | TODO |  |
-| C_1944_3F6C | TODO |  |
-| C_1944_4260 | TODO |  |
-| C_1944_42AC | TODO |  |
-| C_1944_435B | TODO |  |
-| C_1944_43A3 | TODO |  |
-| C_1944_43D5 | TODO |  |
-| C_1944_4926 | TODO |  |
-| C_1944_4C2F | TODO |  |
+| C_1944_1DF4 | ported | touchSpell |
+| C_1944_22F4 | ported | slime |
+| C_1944_23F2 | ported | reappear |
+| C_1944_256A | ported | areaSpell |
+| C_1944_27AF | ported | fieldSpell |
+| C_1944_29AA | ported | frighten |
+| C_1944_2A15 | ported | surroundingSpell |
+| C_1944_2B9A | ported | createFood |
+| C_1944_2BFD | ported | summon |
+| C_1944_2DA7 | ported | telekinesis |
+| C_1944_305A | ported | gateTravelSpell |
+| C_1944_310C | ported | xrayVision |
+| C_1944_3175 | ported | pickpocket |
+| C_1944_34CF | ported | insectSwarm |
+| C_1944_35EC | ported | webSpell |
+| C_1944_3750 | ported | enchant |
+| C_1944_39A1 | ported | wizardEye |
+| C_1944_3B2D | ported | tremor |
+| C_1944_3C30 | ported | seanceSpell |
+| C_1944_3D0F | ported | hailStormSpell |
+| C_1944_3DB8 | ported | windSpell |
+| C_1944_3F6C | ported | wingStrike |
+| C_1944_4260 | ported | selfInvisibility |
+| C_1944_42AC | ported | locate |
+| C_1944_435B | ported | windChange |
+| C_1944_43A3 | ported | armageddonSpell |
+| C_1944_43D5 | ported | castSpell |
+| C_1944_4926 | ported | castFrom |
+| C_1944_4C2F | ported | cast |
 
 ## seg_1E0F.c
 
@@ -309,7 +309,7 @@ Ported: 339. TODO: 137.
 | MoveFollowers (C_1E0F_1193) | ported | MoveFollowers |
 | Board (C_1E0F_14BE) | ported | board |
 | Unboard (C_1E0F_1745) | ported | unboard |
-| C_1E0F_184D | TODO | enterGates, travelThrough |
+| C_1E0F_184D | ported | enterGates, travelThrough |
 | C_1E0F_1B0E | ported | advance |
 | C_1E0F_2001 | ported | openDoorUnder |
 | C_1E0F_2125 | ported | plateNear |
@@ -358,7 +358,7 @@ Ported: 339. TODO: 137.
 | GetInt (C_2337_0458) | ported | intelligenceOf |
 | COMBAT_TestIntel (C_2337_0482) | ported | testIntelligence |
 | ComputeLevel (__2337_04BE) | TODO |  |
-| GetLevel (C_2337_04E1) | TODO |  |
+| GetLevel (C_2337_04E1) | ported | portraitView |
 | AddXP (C_2337_04F4) | ported | addExperience |
 | MaxHP (C_2337_0529) | ported | maxHitPoints |
 | MaxMagic (C_2337_0559) | ported | maxMagic |
@@ -407,25 +407,25 @@ Ported: 339. TODO: 137.
 |---|---|---|
 | C_27A1_0008 | ported | memberUser |
 | C_27A1_0028 | ported | userX |
-| C_27A1_0051 | TODO |  |
+| C_27A1_0051 | ported | trap |
 | C_27A1_0082 | ported | isContainer |
 | C_27A1_00A9 | ported | canPutInto |
-| C_27A1_012C | TODO |  |
+| C_27A1_012C | ported | drop |
 | IsOkToGet (C_27A1_0153) | ported | okToGet |
-| SetOkToGet (C_27A1_019E) | TODO | setOkToGet |
-| C_27A1_01DE | TODO |  |
+| SetOkToGet (C_27A1_019E) | ported | setOkToGet |
+| C_27A1_01DE | ported | use |
 | C_27A1_0205 | ported | parseNumber |
 | C_27A1_02D9 | ported | showCharacter |
 | C_27A1_061E | ported | printArticle |
-| C_27A1_066D | TODO |  |
-| C_27A1_06A2 | TODO |  |
+| C_27A1_066D | ported | canRead |
+| C_27A1_06A2 | ported | canRead |
 | C_27A1_06D7 | ported | canRead |
 | C_27A1_078F | ported | readBook |
 | C_27A1_0841 | ported | printCount |
 | C_27A1_08D3 | ported | isClosed |
 | C_27A1_0919 | ported | objectBelow |
 | C_27A1_09A1 | ported | search |
-| C_27A1_0C67 | TODO | look |
+| C_27A1_0C67 | ported | look, lookSpellbook |
 | C_27A1_1330 | ported | supports |
 | C_27A1_13BE | ported | howMany |
 | C_27A1_14DA | ported | drop |
@@ -437,7 +437,7 @@ Ported: 339. TODO: 137.
 | C_27A1_2A44 | ported | useDoor |
 | C_27A1_2BBC | ported | useChest |
 | C_27A1_2D34 | ported | skillFails |
-| C_27A1_2D61 | TODO |  |
+| C_27A1_2D61 | ported | gazeCrystalBall |
 | C_27A1_2D8E | ported | useKey |
 | C_27A1_2FD1 | ported | lightTorch |
 | C_27A1_319F | ported | useGem |
@@ -446,11 +446,11 @@ Ported: 339. TODO: 137.
 | C_27A1_335A | ported | playInstrument |
 | C_27A1_338D | ported | ringBell |
 | C_27A1_3425 | ported | buryMoonstone |
-| C_27A1_3537 | TODO |  |
+| C_27A1_3537 | ported | useStaff |
 | __27A1_3617 | TODO |  |
 | __27A1_363C | TODO |  |
 | C_27A1_3661 | ported | fillBucket |
-| C_27A1_36E7 | TODO |  |
+| C_27A1_36E7 | ported | useObject |
 | C_27A1_376D | ported | churn |
 | C_27A1_37D3 | ported | fill |
 | C_27A1_3832 | ported | drinkPotion |
@@ -461,13 +461,13 @@ Ported: 339. TODO: 137.
 | __SearchTypeAt (C_27A1_3E21) | ported | typeAt |
 | C_27A1_3E59 | ported | thingOnBridge |
 | C_27A1_3E9A | ported | characterAt |
-| C_27A1_3ED1 | TODO |  |
+| C_27A1_3ED1 | ported | isBank |
 | C_27A1_3EF6 | ported | addFixed |
 | C_27A1_3F47 | ported | moveBridge |
 | C_27A1_433D | ported | turnCrank |
 | C_27A1_4479 | ported | switchLever |
-| C_27A1_4672 | TODO |  |
-| C_27A1_47E0 | TODO |  |
+| C_27A1_4672 | ported | useObject |
+| C_27A1_47E0 | ported | useObject |
 | C_27A1_47F3 | ported | buildBalloon |
 | C_27A1_49C3 | ported | inflateBalloon |
 | C_27A1_4B0B | ported | destroyGargoyleEggs |
@@ -482,14 +482,14 @@ Ported: 339. TODO: 137.
 | C_27A1_5503 | ported | mountHorse |
 | C_27A1_55F0 | ported | dismount |
 | C_27A1_5789 | ported | useOrb |
-| C_27A1_5935 | TODO | gazeCrystalBall |
+| C_27A1_5935 | ported | gazeAt, gazeCrystalBall |
 | C_27A1_5A97 | ported | lookThrough |
 | C_27A1_5BCF | ported | blowHorn |
-| C_27A1_5DF2 | TODO | usePassthrough |
+| C_27A1_5DF2 | ported | usePassthrough |
 | C_27A1_5F43 | ported | eat |
-| C_27A1_5FAC | TODO |  |
-| C_27A1_60BD | TODO |  |
-| C_27A1_60D6 | TODO |  |
+| C_27A1_5FAC | ported | openVortex |
+| C_27A1_60BD | ported | useObject |
+| C_27A1_60D6 | ported | useObject |
 | C_27A1_60F5 | ported | vehicleBlocked |
 | C_27A1_6179 | ported | use |
 
@@ -529,24 +529,24 @@ Ported: 339. TODO: 137.
 | C_2FC1_017F | ported | grow |
 | C_2FC1_0212 | ported | redrawFrame |
 | C_2FC1_032B | ported | redrawForeground |
-| C_2FC1_131E | TODO |  |
-| C_2FC1_13B0 | TODO |  |
+| C_2FC1_131E | ported | webMissiles |
+| C_2FC1_13B0 | ported | hailStorm |
 | ShakeScreen (C_2FC1_18BD) | ported | shakeScreen |
-| C_2FC1_193C | TODO |  |
+| C_2FC1_193C | ported | redrawWorld |
 | C_2FC1_19A1 | ported | redrawWorld |
 | C_2FC1_19C5 | ported | drawSky |
-| C_2FC1_1BCE | TODO |  |
+| C_2FC1_1BCE | ported | vortex |
 | C_2FC1_1C19 | ported | drawPortrait |
 | LoadConversation (C_2FC1_1D40) | ported | loadConversation |
 | C_2FC1_1EAF | ported | drawDoll |
-| peer_tile (C_2FC1_1F14) | TODO |  |
-| C_2FC1_1FD6 | TODO |  |
+| peer_tile (C_2FC1_1F14) | ported | peerTile |
+| C_2FC1_1FD6 | ported | peer |
 
 ## seg_3200.c
 
 | C function | status | Go |
 |---|---|---|
-| IsEdible (C_3200_000E) | TODO |  |
+| IsEdible (C_3200_000E) | ported | eatFrom |
 | TryEatExclusive (C_3200_0035) | ported | eatFrom |
 | TryEat (C_3200_0094) | ported | feed |
 | C_3200_00D3 | ported | notWilderness |
@@ -554,8 +554,8 @@ Ported: 339. TODO: 137.
 | C_3200_0226 | ported | othersNear |
 | C_3200_02C4 | ported | noRoom |
 | HasNightEncounter (C_3200_0309) | ported | nightAmbush |
-| C_3200_0467 | TODO | heal |
-| C_3200_0514 | TODO |  |
+| C_3200_0467 | ported | heal |
+| C_3200_0514 | ported | repairHull |
 | C_3200_055D | ported | rest |
 
 ## seg_32C3.c

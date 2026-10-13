@@ -84,6 +84,7 @@ func (g *Game) partyView(first int) {
 
 // drawTileOver draws tile over background at (x, y).
 // C: seg_0C9C:0BCE (C_0C9C_0BCE)
+// C: seg_0C9C:0E57 (C_0C9C_0E57), its wrapper
 func (g *Game) drawTileOver(tile, background, x, y int) {
 	g.gr.DrawTileOffscreen(background, 0, 0)
 	g.gr.DrawTileOffscreen(tile, 0, 0)

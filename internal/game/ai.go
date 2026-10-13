@@ -1216,6 +1216,7 @@ func (g *Game) resurrectParty() {
 
 // redrawWorld blanks the view and draws it again from scratch.
 // C: seg_2FC1:19A1 (C_2FC1_19A1)
+// C: seg_2FC1:193C (C_2FC1_193C), inlined
 func (g *Game) redrawWorld() {
 	const blank = 255 // TIL_0FF
 	for y := range g.tileView {

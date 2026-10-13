@@ -545,6 +545,7 @@ func coordMaskFor(z int) int {
 // AddMapObj puts a new object on the map; it returns its number or noObject when there
 // is no free slot.
 // C: seg_1184:13A7 (AddMapObj)
+// C: seg_1184:134C (AddObj), which only picks AddMapObj or AddInvObj
 func (g *Game) AddMapObj(shape uint16, status ObjStatus, amount uint16, x, y, z int) int {
 	x &= coordMaskFor(z)
 	y &= coordMaskFor(z)

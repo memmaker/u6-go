@@ -137,6 +137,8 @@ var (
 
 // canRead says whether the party can read object n.
 // C: seg_27A1:06D7 (C_27A1_06D7)
+// C: seg_27A1:066D (C_27A1_066D), inlined
+// C: seg_27A1:06A2 (C_27A1_06A2), inlined
 func (g *Game) canRead(n int) bool {
 	t := g.object(n).Type()
 	if hasType(bookTypes, t) {
@@ -373,6 +375,7 @@ func (g *Game) displaySeverity(n int) {
 }
 
 // subKarma lowers the karma, not below 0 (SubKarma).
+// C: seg_0A33:0008 (SubKarma)
 func (g *Game) subKarma(n int) { g.Karma = uint8(max(int(g.Karma)-n, 0)) }
 
 // reportCrime costs karma and sends the guards and the frightened citizens after the
@@ -638,6 +641,7 @@ func (g *Game) takeOff(n, member int) {
 
 // drop throws the selected object of the status member somewhere.
 // C: seg_27A1:14DA (C_27A1_14DA)
+// C: seg_27A1:012C (C_27A1_012C), inlined
 func (g *Game) drop() {
 	sel := g.Selection.obj
 	if sel == noObject || g.object(sel).CoordUse() == OnMap || sel == g.container {

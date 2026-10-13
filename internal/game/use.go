@@ -26,7 +26,8 @@ var usableTypes = []ObjectType{
 var vehicleTypes = []ObjectType{ObjBalloon2, ObjBalloonPlans, ObjCannon, ObjBalloon, ObjHorse, ObjLadder,
 	ObjRaft, ObjShip, ObjSkiff, ObjStaff}
 
-// isDoor (D_0EDA, C_1944_0AA9).
+// isDoor says whether t is a door (D_0EDA).
+// C: seg_1944:0AA9 (C_1944_0AA9)
 func isDoor(t ObjectType) bool {
 	return t == ObjOakenDoor || t == ObjWindowedDoor || t == ObjCedarDoor || t == ObjSteelDoor
 }
@@ -57,6 +58,7 @@ func (g *Game) vehicleBlocked(n int) bool {
 
 // use uses the selected object.
 // C: seg_27A1:6179 (C_27A1_6179)
+// C: seg_27A1:01DE (C_27A1_01DE), inlined
 func (g *Game) use() {
 	sel := &g.Selection
 	sel.obj = g.combatHead(sel.obj)
@@ -121,6 +123,11 @@ func (g *Game) use() {
 func (g *Game) notUsable() { g.printf("\n%s\n", notUsableMsg) }
 
 // useObject runs the handler of type t.
+// C: seg_27A1:36E7 (C_27A1_36E7), the cow, inlined
+// C: seg_27A1:4672 (C_27A1_4672), the switch, inlined
+// C: seg_27A1:47E0 (C_27A1_47E0), the vocabulary, inlined
+// C: seg_27A1:60BD (C_27A1_60BD), the rubber ducky, inlined
+// C: seg_27A1:60D6 (C_27A1_60D6), the fan, inlined
 func (g *Game) useObject(n int, t ObjectType) {
 	o := g.object(n)
 	frame := o.Frame()
@@ -291,6 +298,7 @@ func toggleLit(frame int) int {
 
 // trap springs the trap of n.
 // C: seg_27A1:28A3 (C_27A1_28A3)
+// C: seg_27A1:0051 (C_27A1_0051), inlined
 func (g *Game) trap(n int) {
 	var victim, x, y int
 	if g.object(n).CoordUse() == OnMap {
@@ -910,6 +918,8 @@ func (g *Game) characterAt(x, y, z int) int {
 	return max(i, 0)
 }
 
+// isBank says whether tile ends an opened drawbridge.
+// C: seg_27A1:3ED1 (C_27A1_3ED1)
 func isBank(tile int) bool {
 	for _, b := range banks {
 		if b == tile {
@@ -1527,6 +1537,7 @@ func (g *Game) useOrb() {
 
 // gazeCrystalBall shows a far place.
 // C: seg_27A1:5935 (C_27A1_5935)
+// C: seg_27A1:2D61 (C_27A1_2D61), inlined
 func (g *Game) gazeCrystalBall() {
 	n := g.user()
 	if g.skillFails(int(g.NPCs[n].Intelligence)) {
@@ -2025,6 +2036,7 @@ var edibleTypes = []ObjectType{ObjLoafOfBread, ObjPortionOfMeat, ObjRolls, ObjCa
 
 // eatFrom has n eat one of its edible objects.
 // C: seg_3200:0035 (TryEatExclusive)
+// C: seg_3200:000E (IsEdible), inlined
 func (g *Game) eatFrom(n int) bool {
 	for _, i := range g.heldBy(n) {
 		if t := g.object(i).Type(); hasType(edibleTypes, t) {

@@ -11,12 +11,12 @@
 - [x] Data layer: file loading, LZW decompression [x], tiles/palette/fonts [x]
 - [x] Graphics: VGA driver semantics (U6MCGA.DRV) in Go
 - [x] Game state with readable names (globals, objects, NPCs)
-- [ ] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
+- [x] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
   - [x] phase 1: init, map, view, scroll, movement, main loop (121/476 fns)
   - [x] phase 2: commands, objects, inventory/portrait views, travel, eggs, music hookup (280/476 fns)
-  - [ ] phase 3: combat, AI, magic
+  - [x] phase 3: combat, AI, magic (NPC spell casting in combat included)
   - [x] conversation engine (talkdr)
-  - [ ] phase 4: remaining TODOs
+  - [x] phase 4: remaining TODOs: no `TODO(port)` left; 439/476 fns (the other 37 are DOS disk/mouse/driver/cfg glue, the chunk cache and dead code; see internal/game/PORT_STATUS.md)
 - [x] Mouse + keyboard input
 - [x] Sound/music (AdLib driver port, internal/sound)
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
