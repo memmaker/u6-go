@@ -32,23 +32,23 @@ var missileKinds = [...]struct {
 	tile, angle, spin, pivotX, pivotY, refresh int
 }{
 	{0, 0x40, 0, 0x7F, 0x7F, 6},
-	{547, 0x10, 0, 0x75, 0x7F, 3},     // TIL_223 dagger
-	{548, 0x00, 10, 0x7F, 0x7F, 2},    // TIL_224
-	{549, 0x10, 10, 0x86, 0x8B, 2},    // TIL_225
-	{560, 0x00, 10, 0x7A, 0x7F, 4},    // TIL_230
-	{566, 0x00, 0, 0x71, 0x46, 4},     // TIL_236
-	{567, 0x00, 0, 0x7F, 0x3D, 4},     // TIL_237
-	{392, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_188
-	{393, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_189
-	{565, 0x00, 0, 0x7F, 0x7F, 3},     // TIL_235
-	{394, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_18A
-	{395, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_18B
-	{396, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_18C
-	{397, 0x20, 0, 0x7F, 0x7F, 2},     // TIL_18D
-	{380, 0x00, 10, 0x7F, 0x7F, 2},    // TIL_17C
-	{381, 0x00, 10, 0x7F, 0x7F, 2},    // TIL_17D
-	{382, 0x00, 10, 0x7F, 0x7F, 2},    // TIL_17E
-	{383, 0x00, 10, 0x7F, 0x7F, 2},    // TIL_17F
+	{547, 0x10, 0, 0x75, 0x7F, 3},  // TIL_223 dagger
+	{548, 0x00, 10, 0x7F, 0x7F, 2}, // TIL_224
+	{549, 0x10, 10, 0x86, 0x8B, 2}, // TIL_225
+	{560, 0x00, 10, 0x7A, 0x7F, 4}, // TIL_230
+	{566, 0x00, 0, 0x71, 0x46, 4},  // TIL_236
+	{567, 0x00, 0, 0x7F, 0x3D, 4},  // TIL_237
+	{392, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_188
+	{393, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_189
+	{565, 0x00, 0, 0x7F, 0x7F, 3},  // TIL_235
+	{394, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_18A
+	{395, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_18B
+	{396, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_18C
+	{397, 0x20, 0, 0x7F, 0x7F, 2},  // TIL_18D
+	{380, 0x00, 10, 0x7F, 0x7F, 2}, // TIL_17C
+	{381, 0x00, 10, 0x7F, 0x7F, 2}, // TIL_17D
+	{382, 0x00, 10, 0x7F, 0x7F, 2}, // TIL_17E
+	{383, 0x00, 10, 0x7F, 0x7F, 2}, // TIL_17F
 }
 
 // Missile options (the attr of Missiles).
@@ -175,7 +175,7 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 	ok := true
 	var (
 		curX, curY, deltaX, deltaY, tileX, tileY, rot, sprX, sprY, berr [maxMissiles]int
-		incX, incY, berrInc                                           [maxMissiles][2]int
+		incX, incY, berrInc                                             [maxMissiles][2]int
 	)
 	g.missileX, g.missileY = srcX, srcY
 	tileX[0], tileY[0] = srcX, srcY

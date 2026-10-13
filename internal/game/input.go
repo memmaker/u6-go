@@ -833,4 +833,3 @@ func (g *Game) getch() int {
 		}
 	}
 }
-

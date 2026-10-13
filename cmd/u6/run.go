@@ -23,4 +23,3 @@ func run(dir string) error {
 	g.Play()
 	return nil
 }
-

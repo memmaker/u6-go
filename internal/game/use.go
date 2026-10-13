@@ -1370,10 +1370,10 @@ func (g *Game) dig() {
 	z := int(g.MapZ)
 	tile := g.GetTileAtXYZ(x, y, z)
 	const (
-		pirateX, pirateY        = 707, 835 // the buried entrance of the pirate cave
-		pirateCave              = 19
-		caveFloorFirst          = 108
-		caveFloorLast           = 111 // TIL_06C..06F
+		pirateX, pirateY         = 707, 835 // the buried entrance of the pirate cave
+		pirateCave               = 19
+		caveFloorFirst           = 108
+		caveFloorLast            = 111 // TIL_06C..06F
 		fountainOdds, nuggetOdds = 31, 9
 	)
 	switch {
@@ -1722,10 +1722,10 @@ func (g *Game) climb(n int) {
 	g.MapZ += int16(step)
 	mx, my := int(g.MapX), int(g.MapY)
 	const (
-		chunkMask   = 7
-		dungeonAreas = 248   // 0xf8
-		surfaceAreas = 992   // 0x3e0
-		scale        = 2     // a dungeon tile is 4 surface tiles
+		chunkMask    = 7
+		dungeonAreas = 248 // 0xf8
+		surfaceAreas = 992 // 0x3e0
+		scale        = 2   // a dungeon tile is 4 surface tiles
 	)
 	switch {
 	case g.MapZ == 1 && step == 1:
@@ -1960,17 +1960,17 @@ func (g *Game) travelThrough(n int) bool {
 
 // The places that rest needs.
 const (
-	restRoom      = 1
-	restCampfire  = 1
-	restTries     = 20
+	restRoom       = 1
+	restCampfire   = 1
+	restTries      = 20
 	minutesPerRest = 10
-	healAfter     = 4 // hours of sleep that heal
-	sleepBetween  = 12
-	ambushOdds    = 64
-	ambushMax     = 8
-	nearOthers    = 5
-	repairStep    = 5
-	hullMax       = 100
+	healAfter      = 4 // hours of sleep that heal
+	sleepBetween   = 12
+	ambushOdds     = 64
+	ambushMax      = 8
+	nearOthers     = 5
+	repairStep     = 5
+	hullMax        = 100
 )
 
 // edibleTypes are what the party eats at rest (D_2CCE).
