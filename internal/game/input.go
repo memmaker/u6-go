@@ -228,23 +228,13 @@ func (g *Game) pointerDirection(x, y int) int {
 const (
 	pointerArrow     = 0
 	pointerCrosshair = 1
-	// pointerNorth is the first of the eight direction arrows
-	pointerNorth = 2
 )
 
-// updatePointerShape shows a direction arrow over the map view, the arrow elsewhere and
-// the crosshair while a command waits for a target.
+// updatePointerShape shows the crosshair while a command waits for a target, else the arrow.
+// The port shows no direction arrows over the map.
 // C: seg_0C9C:01FB (C_0C9C_01FB)
 func (g *Game) updatePointerShape() {
-	x, y := g.mouse.x, g.mouse.y
-	if !g.mouse.overUI {
-		if g.MouseMode == 0 {
-			if d := g.pointerDirection(x, y); d >= 0 {
-				g.gr.SetPointer(pointerNorth + d)
-				return
-			}
-		}
-	} else if g.MouseMode == 0 {
+	if g.MouseMode == 0 {
 		g.gr.SetPointer(pointerArrow)
 		return
 	}

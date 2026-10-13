@@ -220,7 +220,7 @@ func (d *Driver) LoadPointers() error {
 	return err
 }
 
-// SetPointer selects the pointer shape (MOUSE_POINTER: 0 is the arrow, 1 the hourglass,
+// SetPointer selects the pointer shape (MOUSE_POINTER: 0 is the arrow, 1 the crosshair,
 // from 2 the direction arrows).
 func (d *Driver) SetPointer(index int) { d.pointer.index = index }
 
