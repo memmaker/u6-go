@@ -99,7 +99,7 @@ func (g *Game) playAreaSong() {
 	default:
 		n = sound.SongDungeon
 	}
-	if t := g.object(int(g.Party[g.Active])).Type(); (t == ObjShip || t == ObjSkiff) {
+	if t := g.object(int(g.Party[g.Active])).Type(); t == ObjShip || t == ObjSkiff {
 		n = sound.SongHornpipe
 	}
 	if g.InCombat != 0 {
