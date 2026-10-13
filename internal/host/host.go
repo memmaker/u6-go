@@ -26,13 +26,28 @@ const (
 	vgaLevels = 64
 	// crtStretch is how much taller than wide a 320x200 pixel showed on a 4:3 monitor.
 	crtStretch = 1.2
+	// MaxScreenWidth and MaxScreenHeight bound the screen the game may widen or heighten
+	// to the window's shape (FitWidth, FitHeight); a wider window shows black bars.
+	MaxScreenWidth  = 736
+	MaxScreenHeight = 736
 )
 
-// Frame is what the host shows: a 320x200 paletted picture (top row first), its palette of
-// 6-bit VGA values, and the mouse pointer.
+// FitWidth and FitHeight are the size of a screen that fills the window at the CRT's pixel
+// shape: 320x200 widened or heightened to the window's aspect ratio. Frames of that size
+// fill the window; others, like the intro's 320x200, are shown whole at the CRT's shape.
+var FitWidth, FitHeight = ScreenWidth, ScreenHeight
+
+// fitCovers says that a frame of the fitted size covers the window: it is not cut short
+// by the bounds.
+var fitCovers bool
+
+// Frame is what the host shows: a paletted picture (top row first), its palette of 6-bit
+// VGA values, and the mouse pointer.
 type Frame struct {
-	Pixels  []byte
-	Palette *[768]byte
+	Pixels []byte
+	// Width and Height are the picture's size; zero means 320x200.
+	Width, Height int
+	Palette       *[768]byte
 	// Pointer is drawn over the frame at (PointerX, PointerY) when PointerShown; colour 0 is
 	// transparent.
 	Pointer                     []byte
@@ -100,17 +115,14 @@ func Run(title string, scale int, gameMain func()) error {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetTPS(TicksPerSecond)
 	startGame(gameMain)
-	g := &game{
-		image: ebiten.NewImage(ScreenWidth, ScreenHeight),
-		rgba:  image.NewRGBA(image.Rect(0, 0, ScreenWidth, ScreenHeight)),
-	}
-	return ebiten.RunGame(g)
+	return ebiten.RunGame(&game{})
 }
 
 type game struct {
 	image *ebiten.Image
 	rgba  *image.RGBA
-	// the 320x200 picture's placement on the window, for mapping the pointer
+	// the picture's size and placement on the window, for mapping the pointer
+	width, height                    int
 	offsetX, offsetY, scaleX, scaleY float64
 }
 
@@ -143,6 +155,15 @@ func (g *game) Draw(screen *ebiten.Image) {
 	if frame == nil {
 		return
 	}
+	width, height := frame.Width, frame.Height
+	if width == 0 {
+		width, height = ScreenWidth, ScreenHeight
+	}
+	if g.image == nil || width != g.width || height != g.height {
+		g.width, g.height = width, height
+		g.image = ebiten.NewImage(width, height)
+		g.rgba = image.NewRGBA(image.Rect(0, 0, width, height))
+	}
 	var colours [256][4]byte
 	for i := range colours {
 		for c := 0; c < 3; c++ {
@@ -152,7 +173,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 		colours[i][3] = math.MaxUint8 // opaque
 	}
 	out := g.rgba.Pix
-	for i, c := range frame.Pixels[:ScreenWidth*ScreenHeight] {
+	for i, c := range frame.Pixels[:width*height] {
 		copy(out[i*4:i*4+4], colours[c][:])
 	}
 	if hardwareCursor {
@@ -163,20 +184,24 @@ func (g *game) Draw(screen *ebiten.Image) {
 			for x := 0; x < frame.PointerWidth; x++ {
 				sx := frame.PointerX - frame.PointerHotX + x
 				c := frame.Pointer[y*frame.PointerWidth+x]
-				if c != 0 && sx >= 0 && sx < ScreenWidth && sy >= 0 && sy < ScreenHeight {
-					copy(out[(sy*ScreenWidth+sx)*4:], colours[c][:])
+				if c != 0 && sx >= 0 && sx < width && sy >= 0 && sy < height {
+					copy(out[(sy*width+sx)*4:], colours[c][:])
 				}
 			}
 		}
 	}
 	g.image.WritePixels(out)
 
-	// Fit the picture, shown at the CRT's 4:3 shape, in the window.
-	width, height := float64(screen.Bounds().Dx()), float64(screen.Bounds().Dy())
-	shownW, shownH := float64(ScreenWidth), float64(ScreenHeight)*crtStretch
-	k := min(width/shownW, height/shownH)
+	// Fit the picture, its pixels at the CRT's shape, in the window: a picture of the fitted
+	// size covers it (rounding up leaves less than a pixel out), others are shown whole.
+	windowW, windowH := float64(screen.Bounds().Dx()), float64(screen.Bounds().Dy())
+	shownW, shownH := float64(width), float64(height)*crtStretch
+	k := min(windowW/shownW, windowH/shownH)
+	if fitCovers && width == FitWidth && height == FitHeight {
+		k = max(windowW/shownW, windowH/shownH)
+	}
 	g.scaleX, g.scaleY = k, k*crtStretch
-	g.offsetX, g.offsetY = (width-shownW*k)/2, (height-shownH*k)/2
+	g.offsetX, g.offsetY = (windowW-shownW*k)/2, (windowH-shownH*k)/2
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(g.scaleX, g.scaleY)
 	op.GeoM.Translate(g.offsetX, g.offsetY)
@@ -185,7 +210,31 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	s := ebiten.Monitor().DeviceScaleFactor()
-	return int(float64(outsideWidth) * s), int(float64(outsideHeight) * s)
+	w, h := int(float64(outsideWidth)*s), int(float64(outsideHeight)*s)
+	Fit(w, h)
+	return w, h
+}
+
+// Fit sizes the screen (FitWidth, FitHeight) for a window of windowW x windowH pixels.
+func Fit(windowW, windowH int) {
+	FitWidth, FitHeight, fitCovers = fitScreen(windowW, windowH)
+}
+
+// fitScreen returns the screen size, in even pixels, whose CRT-shaped pixels have the
+// window's aspect ratio: 200 high and wider for a window wider than 4:3, else 320 wide and
+// taller, within the bounds; covers is false when the bounds cut it short.
+func fitScreen(windowW, windowH int) (width, height int, covers bool) {
+	if windowW <= 0 || windowH <= 0 {
+		return ScreenWidth, ScreenHeight, false
+	}
+	even := func(v float64) int { return int(math.Ceil(v/2)) * 2 }
+	aspect := float64(windowW) / float64(windowH)
+	if aspect*ScreenHeight*crtStretch >= ScreenWidth {
+		width = even(ScreenHeight * crtStretch * aspect)
+		return min(width, MaxScreenWidth), ScreenHeight, width <= MaxScreenWidth
+	}
+	height = even(ScreenWidth / crtStretch / aspect)
+	return ScreenWidth, min(height, MaxScreenHeight), height <= MaxScreenHeight
 }
 
 // StartHeadless starts the game goroutine without a window, for tests; Step then runs it one

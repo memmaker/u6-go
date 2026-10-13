@@ -179,8 +179,8 @@ func pollInput(g *game) {
 		} else {
 			mouseFX, mouseFY = (float64(x)-g.offsetX)/g.scaleX, (float64(y)-g.offsetY)/g.scaleY
 		}
-		mouseFX = min(max(mouseFX, 0), ScreenWidth-1)
-		mouseFY = min(max(mouseFY, 0), ScreenHeight-1)
+		mouseFX = min(max(mouseFX, 0), float64(g.width-1))
+		mouseFY = min(max(mouseFY, 0), float64(g.height-1))
 		MouseX, MouseY = int(mouseFX), int(mouseFY)
 	}
 	lastX, lastY = x, y
