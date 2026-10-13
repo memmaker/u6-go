@@ -896,7 +896,7 @@ func (g *Game) move() {
 
 // push is move on the map.
 func (g *Game) push() {
-	sel := &g.Selection
+	sel := g.Selection // fix: the mouse may change the Selection while the direction is asked
 	if !closeEnough(1, sel.x, sel.y, int(g.MapX), int(g.MapY)) {
 		g.printf("\n%s!\n", outOfRangeMsg)
 		return
