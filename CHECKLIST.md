@@ -10,9 +10,13 @@
 - [x] Repo skeleton: go.mod, cmd/u6, host (Ebiten lockstep), gameimport (-import)
 - [x] Data layer: file loading, LZW decompression [x], tiles/palette/fonts [x]
 - [x] Graphics: VGA driver semantics (U6MCGA.DRV) in Go
-- [ ] Game state with readable names (globals, objects, NPCs)
+- [x] Game state with readable names (globals, objects, NPCs)
 - [ ] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
-- [ ] Mouse + keyboard input
+  - [x] phase 1: init, map, view, scroll, movement, main loop (121/476 fns)
+  - [ ] phase 2: commands, objects, inventory/portrait views, music hookup
+  - [ ] phase 3: combat, AI, magic
+  - [ ] phase 4: conversation, remaining TODOs
+- [x] Mouse + keyboard input
 - [x] Sound/music (AdLib driver port, internal/sound)
 - [ ] Port U.EXE: title/intro/character creation
 - [ ] Port END.EXE: ending

@@ -56,6 +56,10 @@ func (s *Surface) contains(x, y int) bool {
 // C: U6MCGA.DRV:30A4
 func (d *Driver) DrawShape(s Surface, x, y int, shape *Shape) { drawShape(s, x, y, shape) }
 
+// DrawShape draws a shape on the surface with its hot spot at (x, y), clipped to the surface.
+// Every pixel of the shape's runs is drawn: shapes have no transparent colour.
+func (s Surface) DrawShape(x, y int, shape *Shape) { drawShape(s, x, y, shape) }
+
 func drawShape(s Surface, x, y int, shape *Shape) {
 	for _, run := range shape.Runs {
 		for i, c := range run.Pixels {
