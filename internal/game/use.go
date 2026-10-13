@@ -1736,7 +1736,7 @@ func (g *Game) setUnconscious(n int) {
 			}
 			if classHas(cls, disappears) || classHas(cls, vanishes) {
 				g.DeleteObj(n)
-				if classHas(cls, vanishes) && closeEnough(classicViewCenter, o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY)) {
+				if classHas(cls, vanishes) && g.onScreen(o.Pos.X, o.Pos.Y) { // original: 11x11 view
 					g.drawMap(true)
 					g.ShowObjects()
 					g.screenFade = true

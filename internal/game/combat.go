@@ -1482,10 +1482,14 @@ func (g *Game) rear(n int) {
 // fleeing says whether mode i keeps away from the fight.
 func fleeing(m AIMode) bool { return m == AIRetreat || m == AIShy || m == AIFlee }
 
-// onScreen says whether (x, y) is in the map view.
-func (g *Game) onScreen(x, y int) bool {
-	return closeEnough(classicViewCenter, x, y, int(g.MapX), int(g.MapY))
+// inView says whether (x, y) is within margin tiles of the visible map view.
+func (g *Game) inView(margin, x, y int) bool {
+	return abs(x-int(g.MapX)) <= viewCenterX+margin && abs(y-int(g.MapY)) <= viewCenterY+margin
 }
+
+// onScreen says whether (x, y) is in the map view.
+// The original used its 11x11 view; this uses the visible view.
+func (g *Game) onScreen(x, y int) bool { return g.inView(0, x, y) }
 
 // flank attacks the enemy furthest on n's side.
 // C: seg_2337:37F2 (COMBAT_AI_Flank)
