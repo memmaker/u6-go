@@ -2152,6 +2152,15 @@ func (g *Game) heal(i int, say bool) {
 	npc.Magic = byte(g.maxMagic(n))
 }
 
+// repairHull mends the ship's hull a little.
+// C: seg_3200:0514 (C_3200_0514)
+func (g *Game) repairHull() {
+	n := int(g.Party[g.Active])
+	g.NPCs[n].HitPoints = byte(min(int(g.NPCs[n].HitPoints)+repairStep, hullMax))
+	g.passTime(repairStep)
+	g.printf("\nHull Strength: %d%%\n", int(g.NPCs[n].HitPoints))
+}
+
 // camp places of the party around the fire, and the way each faces (D_2CEA..D_2CFA).
 var (
 	campX   = [8]int{0, 0, 1, -1, 1, -1, 1, -1}
@@ -2187,10 +2196,7 @@ func (g *Game) rest() {
 		g.printf("-Not enough room!\n")
 		return
 	case g.inVehicle():
-		n := int(g.Party[g.Active])
-		g.NPCs[n].HitPoints = byte(min(int(g.NPCs[n].HitPoints)+repairStep, hullMax))
-		g.passTime(repairStep)
-		g.printf("\nHull Strength: %d%%\n", int(g.NPCs[n].HitPoints))
+		g.repairHull()
 		return
 	}
 	for i := range int(g.PartySize) {

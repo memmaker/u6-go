@@ -414,3 +414,32 @@ func (g *Game) saveGame() error {
 	g.StatusDirty = true
 	return err
 }
+
+// restoreGame throws the game in play away and loads the saved one.
+// C: seg_0C9C:0397 (C_0C9C_0397)
+func (g *Game) restoreGame() {
+	g.armageddon = false
+	g.worldShown = true
+	g.SelectMode = 0
+	g.StatusDisplay = cmdStatusParty
+	g.statusMember = 0
+	g.StatusDirty = true
+	g.diskMode = ' '
+	g.deleteTmpFiles()
+	g.hasTmpFile = [objectBlocks]bool{}
+	g.resetObjectLists()
+	g.setDefaultCommand(noDefaultCommand)
+	g.StatusDirty = true
+	if err := g.loadGame(); err != nil {
+		g.printf("%s\n", err.Error())
+	}
+	g.startTurns()
+	g.playAreaSong()
+	if g.InCombat != 0 {
+		g.beginCombat()
+	} else {
+		g.breakOff()
+	}
+	g.passTime(0)
+	g.promptFlag = true
+}

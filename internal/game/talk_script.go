@@ -670,7 +670,7 @@ func (g *Game) executeOp(op byte, n int) int {
 	case opRest:
 		for i := range int(g.PartySize) {
 			if g.isOnScreen(int(g.Party[i])) {
-				// TODO(port): C_3200_0467 (rest member i)
+				g.heal(i, false)
 			}
 		}
 		g.redrawWorld()

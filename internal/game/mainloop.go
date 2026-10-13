@@ -184,7 +184,7 @@ func (g *Game) Play() {
 		// C_262D
 		switch g.diskMode {
 		case 'R':
-			// TODO(port): C_0C9C_0397 (restore)
+			g.restoreGame()
 		case 'G':
 			g.saveGame()
 		}
@@ -355,7 +355,7 @@ func (g *Game) command(ch int) bool {
 	case keyCtrlR:
 		g.printf("Restore game? ")
 		if g.yesNo() {
-			// TODO(port): C_0C9C_0397 (restore)
+			g.restoreGame()
 		}
 	case keyEscape, ' ', cmdPass:
 		g.printf(passMsg)
