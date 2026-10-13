@@ -39,8 +39,8 @@ The world view fills the screen; the panels are layered over it as scrolls
 - Ctrl+D shows or hides the date and wind scroll.
 - Ctrl+L shows or hides the message log. Prompts show it while they wait.
 - The screen takes the window's shape: in fullscreen and in a browser window of any shape
-  the view widens (or heightens) to fill it, up to 736 pixels, at the same square-cornered
-  CRT pixels; the panels keep to their edges (`internal/game/screen.go`,
+  the view widens (or heightens) to fill it, up to 736 pixels, at the same uniform scale and
+  CRT pixel shape; the panels keep to their edges (`internal/game/screen.go`,
   `docs/ui/widescreen_*.png`).
 - Ctrl+F picks the party formation: Default (the original's), Follow (a single line) or
   Triangle (the Avatar in front, widening rows behind). It lasts for the session.
