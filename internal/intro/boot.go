@@ -3,6 +3,7 @@ package intro
 import (
 	"time"
 
+	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/sound"
 )
 
@@ -386,7 +387,21 @@ func (u *intro) drawClock(s surface, lib shapes, x int) {
 
 // restoreScreen shows the back page.
 // C: seg_06E9:2AF6 (INTRO_restoreScreen)
-func (u *intro) restoreScreen() { u.copyRect(u.back, u.screen) }
+//
+// On a 386 with an ISA VGA card the scene redraw plus this 64000-byte copy took about four
+// retraces, so animations (the TV, the scrolls) step at that rate; the wait yields every
+// tick, so input still lands promptly. The port's machine would otherwise run them at 60 Hz.
+func (u *intro) restoreScreen() {
+	for host.Ticks-u.restoreTick < ticksPerSceneRedraw {
+		u.yield()
+	}
+	u.restoreTick = host.Ticks
+	u.copyRect(u.back, u.screen)
+}
+
+// ticksPerSceneRedraw is the 386's full scene redraw time in 60 Hz ticks (about 15 fps);
+// raise it for a slower machine.
+const ticksPerSceneRedraw = 4
 
 // playIntro plays the boot intro, up to the main menu.
 // C: seg_06E9:0BA6 (INTRO_play)

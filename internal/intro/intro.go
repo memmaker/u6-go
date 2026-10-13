@@ -64,6 +64,7 @@ type intro struct {
 	// pacing
 	synced      bool
 	presentTick uint64
+	restoreTick uint64 // host tick of the last restoreScreen
 	fade        fader
 
 	timerInstalled bool
