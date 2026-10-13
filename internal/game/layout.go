@@ -2,6 +2,7 @@ package game
 
 import (
 	"image"
+	"slices"
 	"strings"
 
 	"github.com/memmaker/u6-go/internal/host"
@@ -28,18 +29,23 @@ const (
 	lightFirst = 4
 	lightLast  = areaSize - lightFirst
 
-	// the clip of the conversation options, in character cells, and how they are laid out
+	// the clip the conversation is printed in while talking, in character cells, right of
+	// the party column; its last row only holds the cursor
+	speechX0, speechY0 = 3, 26
+	speechColumns      = 37
+	speechRows         = 12
+	// the text flows beside the portrait (and a column of room) for its rows
+	portraitColumns = portraitWidth/cellSize + 1
+	portraitRows    = portraitHeight / cellSize
+	// the clip of the conversation options, in character cells, and how they are laid out:
+	// the row after the options is where the player types
 	clipOptions     = 2
-	optionsX0       = 4
-	optionsY0       = 39
+	optionsX0       = speechX0
+	optionsY0       = speechY0 + speechRows + 1
 	optionsColumns  = 3
 	optionWidth     = 12 // characters per option column
-	optionsRows     = 8
+	optionsRows     = 6
 	optionsShownMax = optionsColumns * optionsRows
-	// the clip the conversation is printed in while talking
-	speechX0, speechY0 = 4, 26
-	speechColumns      = 28
-	speechRows         = 12
 
 	// margin is the room left around panels and between them and the screen's edges
 	margin = 4
@@ -63,14 +69,15 @@ var (
 	iconsPanel   = image.Rect(4, 174, 172, 197)
 	partyPanel   = image.Rect(partyColumnX, partyColumnY, partyColumnX+tileSize, partyColumnY+partyListRows*partyRowHeight)
 	speechPanel  = cellRect(speechX0, speechY0, speechColumns, speechRows)
-	optionsPanel = cellRect(optionsX0, optionsY0, optionsColumns*optionWidth, optionsRows)
+	optionsPanel = cellRect(optionsX0, optionsY0, speechColumns, optionsRows+1)
+	optionsList  = cellRect(optionsX0, optionsY0, speechColumns, optionsRows)
 )
 
-// The scroll in PAPER.BMP (the message scroll's top left part) that the panels' scrolls are
-// cut from: its top border is drawn mirrored for the bottom one.
+// The message scroll in PAPER.BMP that the panels' scrolls are cut from: its borders and
+// the inside, which is repeated to fill.
 var (
-	scrollSource = image.Rect(171, 106, 320, 200)
-	scrollInner  = image.Rect(176, 112, 312, 200)
+	scrollSource = image.Rect(171, 106, 315, 196)
+	scrollInner  = image.Rect(176, 112, 312, 192)
 )
 
 func cellRect(x, y, columns, rows int) image.Rectangle {
@@ -93,6 +100,9 @@ type layout struct {
 	prompting, atMainPrompt bool
 	// talkPortrait is the canvas rectangle of the portrait last drawn
 	talkPortrait image.Rectangle
+	// pageFull is set when the conversation's page is full: the next text waits for a key
+	// and starts a new page
+	pageFull bool
 	// talkOptions are the keywords offered at the conversation's prompt, talkChoice the one
 	// highlighted; optionPicked is set by a click on one
 	talkOptions  []string
@@ -133,17 +143,13 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	}
 	right := host.ScreenWidth - margin
 	if g.InConversation {
-		const top = margin + scrollPadding
-		talk := image.Rect(margin, margin, right, top+speechPanel.Dy()+scrollPadding)
-		scrolls = append(scrolls, talk)
-		textX := talk.Min.X + scrollPadding
+		at := image.Pt(margin+scrollPadding, margin+scrollPadding)
+		add(true, speechPanel, at)
 		if !g.talkPortrait.Empty() {
-			panels = append(panels, panel{g.talkPortrait, image.Pt(textX, top)})
-			textX += g.talkPortrait.Dx() + scrollPadding
+			add(false, g.talkPortrait, at)
 		}
-		panels = append(panels, panel{speechPanel, image.Pt(textX, top)})
 		if len(g.talkOptions) > 0 {
-			add(true, optionsPanel, image.Pt(talk.Min.X+scrollPadding, talk.Max.Y+margin+scrollPadding))
+			add(true, optionsPanel, image.Pt(at.X, host.ScreenHeight-margin-scrollPadding-optionsPanel.Dy()))
 		}
 		return scrolls, panels
 	}
@@ -205,15 +211,15 @@ func (g *Game) drawScroll(r image.Rectangle) {
 		return
 	}
 	left, top := scrollInner.Min.X-scrollSource.Min.X, scrollInner.Min.Y-scrollSource.Min.Y
-	right := scrollSource.Max.X - scrollInner.Max.X
+	right, bottom := scrollSource.Max.X-scrollInner.Max.X, scrollSource.Max.Y-scrollInner.Max.Y
 	r = r.Intersect(image.Rect(0, 0, host.ScreenWidth, host.ScreenHeight))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		var from int
 		switch {
 		case y-r.Min.Y < top:
 			from = scrollSource.Min.Y + y - r.Min.Y
-		case r.Max.Y-1-y < top:
-			from = scrollSource.Min.Y + r.Max.Y - 1 - y
+		case r.Max.Y-1-y < bottom:
+			from = scrollSource.Max.Y - (r.Max.Y - y)
 		default:
 			from = scrollInner.Min.Y + (y-r.Min.Y-top)%scrollInner.Dy()
 		}
@@ -257,9 +263,9 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 
 // pointOption highlights the option at canvas point at, and picks it on a click.
 func (g *Game) pointOption(at image.Point, clicked bool) {
-	column := (at.X - optionsPanel.Min.X) / (optionWidth * cellSize)
-	i := column*optionsRows + (at.Y-optionsPanel.Min.Y)/cellSize
-	if i >= len(g.talkOptions) || i >= optionsShownMax {
+	column, row := (at.X-optionsList.Min.X)/(optionWidth*cellSize), (at.Y-optionsList.Min.Y)/cellSize
+	i := column*optionsRows + row
+	if row >= optionsRows || i >= len(g.talkOptions) {
 		return
 	}
 	if i != g.talkChoice {
@@ -282,15 +288,15 @@ func (g *Game) hotKey(ch int) int {
 	return 0
 }
 
-// startTalkLayout prints the conversation in its own clip next to the portrait.
+// startTalkLayout prints the conversation in pages on its own scroll, around the portrait.
 func (g *Game) startTalkLayout() clip {
 	g.putch0(endOfLine)
 	saved := g.clips[clipMessage]
-	g.gr.SetColor(g.colours.background)
-	g.gr.FillRect(speechPanel.Min.X, speechPanel.Min.Y, speechPanel.Max.X-1, speechPanel.Max.Y-1)
 	c := &g.clips[clipMessage]
-	c.x0, c.y0, c.width, c.height, c.curX, c.curY = speechX0, speechY0, speechColumns, speechRows, 0, 0
+	c.y0, c.height = speechY0, speechRows
+	c.attr &^= clipPaging // the pages wait for a key instead
 	g.talkPortrait = image.Rectangle{}
+	g.newSpeechPage()
 	return saved
 }
 
@@ -299,6 +305,84 @@ func (g *Game) endTalkLayout(saved clip) {
 	g.putch0(endOfLine)
 	g.clips[clipMessage] = saved
 	g.talkOptions = nil
+	g.pageFull = false
+}
+
+// newSpeechPage clears the conversation's scroll and prints from its top.
+func (g *Game) newSpeechPage() {
+	g.gr.SetColor(g.colours.background)
+	g.gr.FillRect(speechPanel.Min.X, speechPanel.Min.Y, speechPanel.Max.X-1, speechPanel.Max.Y-1)
+	c := &g.clips[clipMessage]
+	c.curX, c.curY = 0, 0
+	g.lineLen, g.lineShown = 0, 0
+	g.flowSpeech()
+}
+
+// flowSpeech fits the conversation's clip to its row: beside the portrait or below it. A
+// full page leaves the cursor on its last row.
+func (g *Game) flowSpeech() {
+	c := &g.clips[clipMessage]
+	if !g.InConversation || g.current != c {
+		return
+	}
+	c.x0, c.width = speechX0, speechColumns
+	if c.curY < portraitRows && !g.talkPortrait.Empty() {
+		c.x0 += portraitColumns
+		c.width -= portraitColumns
+	}
+	g.pageFull = c.curY >= c.height-1
+}
+
+// speechSkips is putch0's part in the conversation's pages: it drops the blank lines at the
+// top of a page and starts a new page (after a key) for text that does not fit.
+func (g *Game) speechSkips(ch int) bool {
+	c := g.current
+	if !g.InConversation || c != &g.clips[clipMessage] || ch < 0 {
+		return false
+	}
+	newLine := ch == '\n' || ch == 0
+	if g.pageFull {
+		if newLine || ch == ' ' {
+			return true
+		}
+		g.waitForMore()
+		g.newSpeechPage()
+		return false
+	}
+	if g.lineLen == 0 {
+		g.flowSpeech()
+	}
+	return newLine && c.curY == 0 && g.lineLen == 0
+}
+
+// askTopic offers the topics and reads what the player says, typed on the topic scroll;
+// the answer starts a new page.
+func (g *Game) askTopic() string {
+	g.offerOptions()
+	speech := g.current
+	g.current = &g.clips[clipOptions]
+	g.current.curX, g.current.curY = 0, optionsRows
+	g.gr.SetColor(g.colours.background)
+	g.gr.FillRect(optionsList.Min.X, optionsList.Max.Y, optionsPanel.Max.X-1, optionsPanel.Max.Y-1)
+	g.printf("you say:")
+	typed := g.gets(typedLength)
+	g.current = speech
+	g.talkOptions = nil
+	g.newSpeechPage()
+	return typed
+}
+
+// topicWord is keyword spelled out as the first longer word of the conversation that starts
+// with it (the script matches only the keyword's letters), or keyword itself.
+func (g *Game) topicWord(keyword string) string {
+	isLetter := func(r rune) bool { return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' }
+	for _, w := range strings.FieldsFunc(string(g.script), func(r rune) bool { return !isLetter(r) }) {
+		w = strings.ToLower(w)
+		if len(w) > len(keyword) && len(w) < optionWidth && strings.HasPrefix(w, keyword) {
+			return w
+		}
+	}
+	return keyword
 }
 
 // conversationKeywords returns the keywords the script answers at the prompt at pc, as
@@ -350,6 +434,15 @@ func (g *Game) conversationKeywords() []string {
 // offerOptions shows the keywords the script answers now, "bye" highlighted.
 func (g *Game) offerOptions() {
 	g.talkOptions = g.conversationKeywords()
+	if len(g.talkOptions) > optionsShownMax {
+		g.talkOptions = g.talkOptions[:optionsShownMax]
+		if !slices.Contains(g.talkOptions, "bye") {
+			g.talkOptions[optionsShownMax-1] = "bye"
+		}
+	}
+	for i, w := range g.talkOptions {
+		g.talkOptions[i] = g.topicWord(w)
+	}
 	g.talkChoice = 0
 	for i, w := range g.talkOptions {
 		if w == "bye" {
@@ -364,8 +457,8 @@ func (g *Game) drawTalkOptions() {
 	saved := g.current
 	g.current = &g.clips[clipOptions]
 	g.gr.SetColor(g.colours.background)
-	g.gr.FillRect(optionsPanel.Min.X, optionsPanel.Min.Y, optionsPanel.Max.X-1, optionsPanel.Max.Y-1)
-	for i, w := range g.talkOptions[:min(len(g.talkOptions), optionsShownMax)] {
+	g.gr.FillRect(optionsList.Min.X, optionsList.Min.Y, optionsList.Max.X-1, optionsList.Max.Y-1)
+	for i, w := range g.talkOptions {
 		g.current.fg = g.colours.text
 		if i == g.talkChoice {
 			g.current.fg = g.colours.highlight

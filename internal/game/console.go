@@ -164,6 +164,9 @@ func (g *Game) putch0(ch int) {
 		return
 	}
 	c := g.current
+	if g.speechSkips(ch) {
+		return
+	}
 	if g.skipNewline && c.attr&clipScroll != 0 {
 		if ch == '\n' {
 			return
@@ -198,16 +201,7 @@ func (g *Game) putch0(ch int) {
 	}
 	if c.attr&clipPaging != 0 && g.linesLeft == 0 && ch >= 0 {
 		bottom := c.height + c.y0 - 1
-		g.flushOnGetch = false
-		g.promptChar = morePrompt
-		for {
-			k := g.getch()
-			if k == ' ' || k == '\r' || k == keyEscape || k == cmdPass {
-				break
-			}
-		}
-		g.promptChar = promptChar
-		g.flushOnGetch = true
+		g.waitForMore()
 		for column := range c.width {
 			g.putCharAt(' ', c.x0+column, bottom)
 		}
@@ -274,6 +268,7 @@ func (g *Game) putch0(ch int) {
 		} else if c.attr&clipScroll != 0 {
 			g.scrollUp(c.x0, c.y0, c.width, c.height)
 		}
+		g.flowSpeech()
 	} else {
 		g.lineShown, g.lineLen = c.curX, c.curX
 		g.hideText = false
@@ -281,6 +276,20 @@ func (g *Game) putch0(ch int) {
 	if ch != ' ' {
 		g.lineWord = true
 	}
+}
+
+// waitForMore shows the paging cursor until a key turns the page.
+func (g *Game) waitForMore() {
+	g.flushOnGetch = false
+	g.promptChar = morePrompt
+	for {
+		k := g.getch()
+		if k == ' ' || k == '\r' || k == keyEscape || k == cmdPass {
+			break
+		}
+	}
+	g.promptChar = promptChar
+	g.flushOnGetch = true
 }
 
 func toUpper(ch int) int {

@@ -653,14 +653,11 @@ func (g *Game) converse() bool {
 	resume := g.pc
 	switch op := g.next(); op {
 	case opAskTop:
-		g.printf("\nyou say:")
 		if answer := g.copyProtectionAnswer(); answer != "" {
 			g.typed = answer
-			g.printf("%s", answer)
+			g.printf("\nyou say:%s", answer)
 		} else {
-			g.offerOptions()
-			g.typed = g.gets(typedLength)
-			g.talkOptions = nil
+			g.typed = g.askTopic()
 		}
 		g.printf("\n")
 		g.answered = false

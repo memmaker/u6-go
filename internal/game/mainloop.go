@@ -92,7 +92,7 @@ func New(dir string) (*Game, error) {
 		g.paper = paper
 	}
 	g.createClip(clipParty, partyClipX0, partyClipY0, partyClipX1, partyClipY1)
-	g.createClip(clipOptions, optionsX0, optionsY0, optionsX0+optionsColumns*optionWidth-1, optionsY0+optionsRows-1)
+	g.createClip(clipOptions, optionsX0, optionsY0, optionsX0+speechColumns-1, optionsY0+optionsRows)
 	g.createClip(clipMessage, messageClipX0, messageClipY0, messageX1, messageY1)
 	g.setClip(clipMessage)
 	g.current.attr |= clipWordWrap | clipScroll | clipUppercase

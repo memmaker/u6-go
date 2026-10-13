@@ -93,7 +93,7 @@ func TestTalkToTholden(t *testing.T) {
 			started <- err
 			return
 		}
-		g.random.randomize(1) // the same view each run
+		g.SpellFx[spellTimeStop] = 1 // the same first view each run: nothing fidgets
 		started <- nil
 		g.Play()
 	})
@@ -103,10 +103,11 @@ func TestTalkToTholden(t *testing.T) {
 		t.Fatal(err)
 	}
 	const settle = 30
-	// the first view drawn, before the characters fidget at random
+	// the first view drawn
 	for g.gr.BackBuffer == [len(g.gr.BackBuffer)]byte{} && host.Step() {
 	}
 	compareClassicView(t, g)
+	g.SpellFx[spellTimeStop] = 0
 	steps := func(n int) {
 		for range n {
 			host.Step()
@@ -138,7 +139,7 @@ func TestTalkToTholden(t *testing.T) {
 				host.PushChar(' ')
 				continue
 			}
-			if !g.InConversation || strings.HasSuffix(strings.TrimSpace(scrollText(g)), "you say:") {
+			if !g.InConversation || len(g.talkOptions) > 0 {
 				break
 			}
 		}
@@ -175,7 +176,7 @@ func TestTalkToTholden(t *testing.T) {
 	if g.InConversation {
 		t.Error("still talking after bye")
 	}
-	for _, want := range []string{"You see a", "you say:name", "I am Tholden von", "paperwork", "Tholden bows"} {
+	for _, want := range []string{"You see a", "I am Tholden von", "paperwork", "Tholden bows"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("transcript lacks %q", want)
 		}
