@@ -265,7 +265,7 @@ type Game struct {
 	missileState
 	eggState
 	combat
-	paths pathfinder
+	paths   pathfinder
 	colours colours
 
 	random randomState

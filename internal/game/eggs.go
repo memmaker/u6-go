@@ -279,10 +279,10 @@ func (g *Game) tryTeleport(n int, offScreen bool) bool {
 
 // Egg qualities: the tens say when it hatches, the units the alignment + 1.
 const (
-	eggDay               = 1
-	eggNight             = 2
-	statusHatched        = StatusCursed // the same bit (HATCHED, MUTANT)
-	eggSure              = 100          // a quantity of 100 hatches all the creatures
+	eggDay        = 1
+	eggNight      = 2
+	statusHatched = StatusCursed // the same bit (HATCHED, MUTANT)
+	eggSure       = 100          // a quantity of 100 hatches all the creatures
 )
 
 // silver serpent bodies (D_28A9..D_28B5)

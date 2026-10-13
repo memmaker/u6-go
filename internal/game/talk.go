@@ -47,8 +47,6 @@ const (
 	alignChaotic NPCStatus = 96
 )
 
-
-
 // talk is the state of a conversation.
 type talk struct {
 	// script is the loaded conversation (TalkBuf), pc where the interpreter reads

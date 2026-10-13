@@ -468,4 +468,3 @@ func (g *Game) checkStepOn(n int) {
 		}
 	}
 }
-
