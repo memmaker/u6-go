@@ -26,7 +26,7 @@ var markerFiles = []string{"MAPTILES.VGA", "LZMAP", "CONVERSE.A"}
 func gameFile(name string) bool {
 	base := strings.ToUpper(filepath.Base(name))
 	switch strings.ToUpper(filepath.Ext(base)) {
-	case ".EXE", ".BAT", ".BIN", ".COM", ".DLL", ".INI", ".TXT", ".PDF", ".DOC", ".CGA", ".EGA", ".TGA":
+	case ".EXE", ".BAT", ".BIN", ".IMG", ".IMA", ".ISO", ".ZIP", ".CUE", ".GOG", ".7Z", ".COM", ".DLL", ".INI", ".TXT", ".PDF", ".DOC", ".CGA", ".EGA", ".TGA":
 		return false
 	}
 	return !strings.ContainsAny(base, " ")

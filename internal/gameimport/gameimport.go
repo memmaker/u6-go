@@ -72,7 +72,7 @@ func scan(files []file, prefix string, inInno bool, want func(string) bool, out 
 		switch strings.ToLower(path.Ext(f.name)) {
 		case ".zip":
 			list = listZip
-		case ".iso", ".bin", ".img", ".gog":
+		case ".iso", ".bin", ".img", ".ima", ".gog":
 			list = listCD
 		case ".exe":
 			if inInno {

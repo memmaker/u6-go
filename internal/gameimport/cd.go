@@ -10,12 +10,13 @@ import (
 const isoSector = 2048
 
 // listCD lists an ISO 9660 image, or a raw BIN track (2352-byte sectors, mode 1 or mode 2
-// form 1) by its 2048 user bytes per sector. Not an image: no files, no error.
+// form 1) by its 2048 user bytes per sector, or a FAT disk image. Not an image: no files,
+// no error.
 func listCD(r io.ReaderAt, size int64) ([]file, error) {
 	if !isISO(r) {
 		var s [16]byte
 		if _, err := r.ReadAt(s[:], 16*2352); err != nil || string(s[:12]) != "\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00" {
-			return nil, nil
+			return listFAT(r, size) // a floppy (or hard disk partition) image
 		}
 		raw := rawCD{r, 16}
 		if s[15] == 2 {
