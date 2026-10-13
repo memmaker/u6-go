@@ -18,7 +18,7 @@
   - [ ] phase 4: conversation, remaining TODOs
 - [x] Mouse + keyboard input
 - [x] Sound/music (AdLib driver port, internal/sound)
-- [ ] Port U.EXE: title/intro/character creation
+- [x] Port U.EXE: title/intro/character creation (internal/intro)
 - [ ] Port END.EXE: ending
 - [ ] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
 - [ ] Runs from original data files natively
