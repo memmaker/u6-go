@@ -14,14 +14,14 @@ import (
 
 const (
 	midiVoices      = 16
-	midiNoteOff     = 0x80
-	midiNoteOn      = 0x90
-	midiProgram     = 0xC0
-	midiControl     = 0xB0
-	midiAllNotesOff = 0x7B
+	midiNoteOff     = 128
+	midiNoteOn      = 144
+	midiProgram     = 192
+	midiControl     = 176
+	midiAllNotesOff = 123
 	midiMaxVelocity = 127
 	defaultChannel  = 1    // MIDI channel 2, the MT-32's first melodic part
-	noProgram       = -1   // the driver's 0xFF: leave the channel's program alone
+	noProgram       = -1   // the driver's 255: leave the channel's program alone
 	midiDataSize    = 1024 // MUS_0851 reads this much of MIDI.DAT
 	semitones       = 12
 )

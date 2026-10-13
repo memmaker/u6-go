@@ -27,29 +27,71 @@ import (
 	"github.com/ulikunitz/xz/lzma"
 )
 
-func iv(a, b, c, d uint32) uint32 { return a<<24 | b<<16 | c<<8 | d }
+// Inno Setup layout sizes and markers.
+const (
+	maxLoaderSearch    = 16 << 20 // the loader table lies in the first 16 MiB of the .exe
+	loaderMagicSize    = 12
+	loaderTableSize    = 28
+	loaderHeaderOffset = 20
+	loaderDataOffset   = 24
+	versionStringSize  = 64
+	setupHeaderStrings = 27 // app name ... close applications filter
+	leadBytesSize      = 32
+	windowsVersionSize = 20
+	passwordHashSize   = 4 + 44 // 6.4+: hash and salt
+	legacyPasswordSize = 20 + 8 // SHA-1 and salt
+	sha1Size           = 20
+	sha256Size         = 32
+	md5HexSize         = 32
+	fileEntryFixed     = 20 // min/max versions before the location
+	blockHeaderSize    = 9  // CRC32, stored size, compressed flag
+	blockPieceSize     = 4096
+	lzmaHeaderSize     = 13
+	lzma2MaxProperty   = 40
+	lzma2DictShift     = 11
+	maxUint32          = 1<<32 - 1
+	sliceHeaderSize    = 12
+	sliceEndOfFile     = 26 // the DOS end-of-file byte after "idsk"
+	sliceHeaderEOFAt   = 7
+	sliceHeaderSizeAt  = 8
+	flagX86Filter      = 1 << 4
+	flagEncrypted      = 1 << 6
+	flagSolidChunk     = 1 << 7
+	byteBits           = 8
+	everyVersionFlags  = 5 + 4 + 1 + 3 + 19 + 4 + 3 // the header flags every version from 5.5 has
+	methodStored       = 0
+	methodZlib         = 1
+	methodBzip2        = 2
+	methodLZMA1        = 3
+	methodLZMA2        = 4
+)
+
+// iv packs an Inno Setup version a.b.c.d into one comparable number.
+func iv(a, b, c, d uint32) uint32 {
+	return a<<(3*byteBits) | b<<(2*byteBits) | c<<byteBits | d
+}
 
 // listInno lists the files of the Inno Setup installer r (named name, among siblings for its
 // slices). Not an installer: no files, no error.
 func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, error) {
-	head := make([]byte, min(size, 16<<20))
+	head := make([]byte, min(size, maxLoaderSearch))
 	n, _ := r.ReadAt(head, 0)
 	head = head[:n]
 	at := bytes.Index(head, []byte("rDlPtS\xcd\xe6\xd7{\x0b*"))
 	if at < 0 {
 		at = bytes.Index(head, []byte("nS5W7dT\x83\xaa\x1b\x0fj"))
 	}
-	if at < 0 || at+12+28 > len(head) {
+	if at < 0 || at+loaderMagicSize+loaderTableSize > len(head) {
 		return nil, nil
 	}
-	t := head[at+12:]
+	t := head[at+loaderMagicSize:]
 	le := binary.LittleEndian
 	if rev := le.Uint32(t); rev != 1 {
 		return nil, fmt.Errorf("%s: Inno Setup loader table revision %d, not supported", name, rev)
 	}
-	hdrOff, dataOff := int64(le.Uint32(t[20:])), int64(le.Uint32(t[24:]))
+	hdrOff, dataOff := int64(le.Uint32(t[loaderHeaderOffset:])), int64(le.Uint32(t[loaderDataOffset:]))
 
-	vs := make([]byte, 64)
+	vs := make([]byte, versionStringSize)
 	if _, err := r.ReadAt(vs, hdrOff); err != nil {
 		return nil, err
 	}
@@ -67,7 +109,7 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 	}
 	fail := func(err error) ([]file, error) { return nil, fmt.Errorf("%s (%s): %w", name, vstr, err) }
 
-	b1, next, err := innoBlock(r, hdrOff+64)
+	b1, next, err := innoBlock(r, hdrOff+versionStringSize)
 	if err != nil {
 		return fail(err)
 	}
@@ -78,7 +120,7 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 
 	// The setup header, skipped field by field up to what we need.
 	h := &rd{b: b1, uni: uni}
-	nstr := 27 // app name ... close applications filter
+	nstr := setupHeaderStrings
 	if v >= iv(5, 5, 6, 0) {
 		nstr++
 	}
@@ -90,13 +132,13 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 	}
 	h.strs(nstr + 4) // + license, info before, info after, compiled code
 	if !uni {
-		h.skip(32) // lead bytes
+		h.skip(leadBytesSize)
 	}
 	var cnt [16]int // languages, messages, permissions, types, components, tasks, directories, files, data entries, ...
 	for i := range cnt {
 		cnt[i] = int(h.u32())
 	}
-	h.skip(20) // windows version range
+	h.skip(windowsVersionSize)
 	if v < iv(6, 4, 0, 1) {
 		h.skip(8) // back colors
 	}
@@ -110,9 +152,9 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 		h.skip(1) // image alpha format
 	}
 	if v >= iv(6, 4, 0, 0) {
-		h.skip(4 + 44) // password hash, salt
+		h.skip(passwordHashSize)
 	} else {
-		h.skip(20 + 8)
+		h.skip(legacyPasswordSize)
 	}
 	h.skip(8) // extra disk space
 	slicesPerDisk := int(h.u32())
@@ -133,13 +175,13 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 		langFixed += 4
 	}
 	for _, e := range []struct{ strs, fixed int }{
-		{10, langFixed},             // languages
-		{2, 4},                      // messages
-		{1, 0},                      // permissions
-		{4, 20 + 1 + 1 + 8},         // types
-		{5, 8 + 4 + 1 + 20 + 1 + 8}, // components
-		{6, 4 + 1 + 20 + 1},         // tasks
-		{7, 4 + 20 + 2 + 1},         // directories
+		{10, langFixed},                     // languages
+		{2, 4},                              // messages
+		{1, 0},                              // permissions
+		{4, windowsVersionSize + 1 + 1 + 8}, // types
+		{5, 8 + 4 + 1 + windowsVersionSize + 1 + 8}, // components
+		{6, 4 + 1 + windowsVersionSize + 1},         // tasks
+		{7, 4 + windowsVersionSize + 2 + 1},         // directories
 	} {
 		for range cnt[0] {
 			h.strs(e.strs)
@@ -165,7 +207,7 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 		dest := h.str()
 		h.strs(6) // font, assembly, components, tasks, languages, check
 		after, before := h.str(), h.str()
-		h.skip(20)
+		h.skip(fileEntryFixed)
 		loc := h.u32()
 		h.skip(4 + 8 + 2 + 4 + 1) // attributes, external size, permission, flags, type
 		if a := call(before, "before_install", "before_install_dependency"); a != nil {
@@ -208,12 +250,12 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 		e.chunkOff = g.u32()
 		e.off, e.size, e.csize = g.u64(), g.u64(), g.u64()
 		if v >= iv(6, 4, 0, 0) {
-			e.sum = g.bytes(32)
+			e.sum = g.bytes(sha256Size)
 		} else {
-			e.sum = g.bytes(20)
+			e.sum = g.bytes(sha1Size)
 		}
 		g.skip(16) // file time, file version
-		e.flags = uint16(g.u8()) | uint16(g.u8())<<8
+		e.flags = uint16(g.u8()) | uint16(g.u8())<<byteBits
 		if v >= iv(6, 3, 0, 0) {
 			g.skip(1) // sign mode
 		}
@@ -255,17 +297,17 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 
 	// extract returns the bytes of data entry e.
 	extract := func(e data) ([]byte, error) {
-		if e.flags&(1<<6) != 0 {
+		if e.flags&flagEncrypted != 0 {
 			return nil, errors.New("encrypted (password-protected) installer, not supported")
 		}
-		if e.flags&(1<<4) != 0 {
+		if e.flags&flagX86Filter != 0 {
 			return nil, errors.New("x86 call filter not supported")
 		}
 		src, err := chunk(e)
 		if err != nil {
 			return nil, err
 		}
-		if e.flags&(1<<7) != 0 {
+		if e.flags&flagSolidChunk != 0 {
 			// ponytail: a solid chunk is decompressed from its start for every file read
 			// out of it; cache the decoder per chunk if a port wants many files from one.
 			if src, err = decompress(src, compression, e.off+e.size); err != nil {
@@ -280,7 +322,7 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 			return nil, err
 		}
 		var sum []byte
-		if len(e.sum) == 32 {
+		if len(e.sum) == sha256Size {
 			s := sha256.Sum256(buf)
 			sum = s[:]
 		} else {
@@ -320,7 +362,7 @@ func listInno(r io.ReaderAt, size int64, name string, siblings []file) ([]file, 
 				}
 				all = append(all, b...)
 			}
-			if en.galaxy && len(en.md5) == 32 && fmt.Sprintf("%x", md5.Sum(all)) != strings.ToLower(en.md5) {
+			if en.galaxy && len(en.md5) == md5HexSize && fmt.Sprintf("%x", md5.Sum(all)) != strings.ToLower(en.md5) {
 				return nil, fmt.Errorf("%s/%s: checksum mismatch", name, fname)
 			}
 			return bytes.NewReader(all), nil
@@ -363,7 +405,7 @@ func call(code string, names ...string) []string {
 
 // headerFlagCount is the number of option flags the setup header stores (load_flags).
 func headerFlagCount(v uint32, uni bool) int {
-	n := 5 + 4 + 1 + 3 + 19 + 4 + 3 // the flags every version from 5.5 has
+	n := everyVersionFlags
 	if v < iv(6, 4, 0, 1) {
 		n += 5 // window flags, back color horizontal
 	}
@@ -387,7 +429,7 @@ func headerFlagCount(v uint32, uni bool) int {
 
 // innoBlock reads the CRC'd (and LZMA1-compressed) block at at; next is the offset after it.
 func innoBlock(r io.ReaderAt, at int64) (data []byte, next int64, err error) {
-	var h [9]byte
+	var h [blockHeaderSize]byte
 	if _, err := r.ReadAt(h[:], at); err != nil {
 		return nil, 0, err
 	}
@@ -396,15 +438,15 @@ func innoBlock(r io.ReaderAt, at int64) (data []byte, next int64, err error) {
 		return nil, 0, errors.New("header block CRC mismatch")
 	}
 	raw := make([]byte, le.Uint32(h[4:]))
-	if _, err := r.ReadAt(raw, at+9); err != nil {
+	if _, err := r.ReadAt(raw, at+blockHeaderSize); err != nil {
 		return nil, 0, err
 	}
-	next = at + 9 + int64(len(raw))
-	for len(raw) > 0 { // 4096-byte pieces, each after its CRC32
+	next = at + blockHeaderSize + int64(len(raw))
+	for len(raw) > 0 { // blockPieceSize pieces, each after its CRC32
 		if len(raw) < 5 {
 			return nil, 0, errors.New("truncated header block")
 		}
-		p := raw[4 : 4+min(4096, len(raw)-4)]
+		p := raw[4 : 4+min(blockPieceSize, len(raw)-4)]
 		if crc32.ChecksumIEEE(p) != le.Uint32(raw) {
 			return nil, 0, errors.New("header block CRC mismatch")
 		}
@@ -414,7 +456,7 @@ func innoBlock(r io.ReaderAt, at int64) (data []byte, next int64, err error) {
 	if h[8] == 0 {
 		return data, next, nil
 	}
-	src, err := decompress(bytes.NewReader(data), 3, 0)
+	src, err := decompress(bytes.NewReader(data), methodLZMA1, 0)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -435,18 +477,18 @@ func decompress(src io.Reader, method byte, need uint64) (io.Reader, error) {
 		return int(d)
 	}
 	switch method {
-	case 0:
+	case methodStored:
 		return src, nil
-	case 1:
+	case methodZlib:
 		return zlib.NewReader(src)
-	case 2:
+	case methodBzip2:
 		return bzip2.NewReader(src), nil
-	case 3: // 5 property bytes, then a raw LZMA1 stream: give it a .lzma header
+	case methodLZMA1: // 5 property bytes, then a raw LZMA1 stream: give it a .lzma header
 		var p [5]byte
 		if _, err := io.ReadFull(src, p[:]); err != nil {
 			return nil, err
 		}
-		var hdr [13]byte
+		var hdr [lzmaHeaderSize]byte
 		hdr[0] = p[0]
 		binary.LittleEndian.PutUint32(hdr[1:], uint32(dict(uint64(binary.LittleEndian.Uint32(p[1:])))))
 		size := uint64(1<<64 - 1)
@@ -455,17 +497,17 @@ func decompress(src io.Reader, method byte, need uint64) (io.Reader, error) {
 		}
 		binary.LittleEndian.PutUint64(hdr[5:], size)
 		return lzma.NewReader(io.MultiReader(bytes.NewReader(hdr[:]), src))
-	case 4: // 1 property byte, then raw LZMA2
+	case methodLZMA2: // 1 property byte, then raw LZMA2
 		var p [1]byte
 		if _, err := io.ReadFull(src, p[:]); err != nil {
 			return nil, err
 		}
-		if p[0] > 40 {
+		if p[0] > lzma2MaxProperty {
 			return nil, errors.New("bad LZMA2 property")
 		}
-		d := uint64(0xffffffff)
-		if p[0] < 40 {
-			d = uint64(2|p[0]&1) << (p[0]/2 + 11)
+		d := uint64(maxUint32)
+		if p[0] < lzma2MaxProperty {
+			d = uint64(2|p[0]&1) << (p[0]/2 + lzma2DictShift)
 		}
 		return lzma.Reader2Config{DictCap: dict(d)}.NewReader2(src)
 	}
@@ -483,17 +525,17 @@ type sliceReader struct {
 func (s *sliceReader) Read(p []byte) (int, error) {
 	for s.r == nil || s.pos >= s.size {
 		if s.r != nil {
-			s.n, s.pos, s.r = s.n+1, 12, nil
+			s.n, s.pos, s.r = s.n+1, sliceHeaderSize, nil
 		}
 		r, err := s.open(s.n)
 		if err != nil {
 			return 0, err
 		}
-		var h [12]byte
-		if _, err := r.ReadAt(h[:], 0); err != nil || string(h[:4]) != "idsk" || h[7] != 0x1a {
+		var h [sliceHeaderSize]byte
+		if _, err := r.ReadAt(h[:], 0); err != nil || string(h[:4]) != "idsk" || h[sliceHeaderEOFAt] != sliceEndOfFile {
 			return 0, errors.New("bad installer slice header")
 		}
-		s.r, s.size = r, int64(binary.LittleEndian.Uint32(h[8:]))
+		s.r, s.size = r, int64(binary.LittleEndian.Uint32(h[sliceHeaderSizeAt:]))
 	}
 	n, err := s.r.ReadAt(p[:min(int64(len(p)), s.size-s.pos)], s.pos)
 	s.pos += int64(n)
@@ -526,7 +568,7 @@ func (r *rd) u64() uint64 { return binary.LittleEndian.Uint64(r.bytes(8)) }
 
 // flags skips a set of n flag bits; 3-byte sets are padded to 4.
 func (r *rd) flags(n int) {
-	if n = (n + 7) / 8; n == 3 {
+	if n = (n + byteBits - 1) / byteBits; n == 3 {
 		n = 4
 	}
 	r.skip(n)
