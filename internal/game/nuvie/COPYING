@@ -1,0 +1,4 @@
+border1.png .. border8.png are BorderU6_1.bmp .. BorderU6_8.bmp of ScummVM's ultima.dat
+(devtools/create_ultima/files/ultima6 in https://github.com/scummvm/scummvm), the art of
+Nuvie's new style UI, converted to PNG unchanged. They are part of ScummVM, distributed
+under the GNU General Public License, version 3 or later: https://www.gnu.org/licenses/gpl-3.0.html

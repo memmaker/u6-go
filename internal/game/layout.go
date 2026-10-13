@@ -85,6 +85,8 @@ type layout struct {
 	// shown is the composed screen Frame returns
 	shown []byte
 	paper *vga.Pixmap
+	// border is Nuvie's new style border, loaded when first drawn
+	border [borderPieces]*vga.Pixmap
 	// showDate and showLog are toggled by the hot keys
 	showDate, showLog bool
 	// dockOffset is how far the command icons have slid up into the screen
@@ -244,13 +246,17 @@ func (g *Game) Frame() *host.Frame {
 	return frame
 }
 
-// drawScroll draws a scroll filling r, cut from PAPER.BMP's message scroll.
+// drawScroll draws a scroll filling r, cut from PAPER.BMP's message scroll, framed by
+// Nuvie's border in the new style UI.
 func (g *Game) drawScroll(r image.Rectangle) {
 	if g.paper == nil {
 		return
 	}
 	left, top := scrollInner.Min.X-scrollSource.Min.X, scrollInner.Min.Y-scrollSource.Min.Y
 	right, bottom := scrollSource.Max.X-scrollInner.Max.X, scrollSource.Max.Y-scrollInner.Max.Y
+	if sound.Settings.NewStyleUI {
+		defer g.drawBorder(r)
+	}
 	r = r.Intersect(image.Rect(0, 0, g.screenWidth, g.screenHeight))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		var from int
