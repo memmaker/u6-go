@@ -48,27 +48,25 @@ func (g *Game) RefreshStatus() {
 // C: seg_155D:000C (C_155D_000C)
 func (g *Game) partyView(first int) {
 	g.gr.SetColor(g.colours.background)
-	g.gr.FillRect(168, 6, 312, 103)
+	g.gr.FillRect(statusX0, statusY0, statusX1, statusY1)
 	g.drawSky()
 	g.setClip(clipScreen)
-	const upArrow, downArrow = 24, 25
 	if first != 0 {
-		g.gotoxy(21, 3)
-		g.putch(upArrow)
+		g.gotoxy(partyArrowColumn, partyUpRow)
+		g.putch(upArrowChar)
 	}
 	if first < partyMax && int(g.PartySize) > first+partyListRows {
-		g.gotoxy(21, 12)
-		g.putch(downArrow)
+		g.gotoxy(partyArrowColumn, partyDnRow)
+		g.putch(downArrowChar)
 	}
 	g.setClip(clipParty)
-	const lowHitPoints = 10
 	for i := first; i < int(g.PartySize) && i < first+partyListRows; i++ {
 		n := int(g.Party[i])
 		t := ObjectType(g.NPCs[n].OrigShape & typeMask)
 		const south = 4
 		tile := directionFrame(t, south) + int(g.BaseTile[t])
-		g.drawTileOver(tile, tileStatusSlot, 176, (i-first)*tileSize+24)
-		g.gotoxy(14, (i-first)<<1+2)
+		g.drawTileOver(tile, tileStatusSlot, partyIconX, (i-first)*tileSize+partyRowY)
+		g.gotoxy(partyHitPointsColumn, (i-first)<<1+2)
 		if g.NPCs[n].Has(Poisoned) {
 			g.current.fg = g.colours.poisoned
 		} else if g.NPCs[n].HitPoints < lowHitPoints {
@@ -76,7 +74,7 @@ func (g *Game) partyView(first int) {
 		}
 		g.printf("%3d\n", int(g.NPCs[n].HitPoints))
 		g.current.fg = g.colours.text
-		g.gotoxy(3, (i-first)<<1+3)
+		g.gotoxy(partyNameColumn, (i-first)<<1+3)
 		g.printf("%s\n", cString(g.Names[i][:]))
 	}
 	g.setClip(clipMessage)

@@ -542,16 +542,17 @@ func (g *Game) spellFlash(circle int) {
 		return
 	}
 	const noiseStep, noiseLength, noiseHz = 800, 8000, 700
-	speaker(sound.PlayNoise(noiseStep, circle*1600+noiseLength, noiseHz))
+	const noisePerCircle = 1600
+	speaker(sound.PlayNoise(noiseStep, circle*noisePerCircle+noiseLength, noiseHz))
 	const white = 15
 	g.gr.SetColor(white)
 	g.gr.Offscreen, g.gr.XorMode = true, true
 	g.drawMap(false)
 	g.invertView()
 	n := flashNotes[circle]
-	const baseSteps = 10000
-	speaker(sound.PlayWavedNote(n.step, 1, circle*4000+baseSteps, n.width, n.delta))
-	speaker(sound.PlayWavedNote(n.step, 1, circle*4000+baseSteps, n.widthBack, -n.delta))
+	const baseSteps, stepsPerCircle = 10000, 4000
+	speaker(sound.PlayWavedNote(n.step, 1, circle*stepsPerCircle+baseSteps, n.width, n.delta))
+	speaker(sound.PlayWavedNote(n.step, 1, circle*stepsPerCircle+baseSteps, n.widthBack, -n.delta))
 	g.invertView()
 	g.gr.XorMode, g.gr.Offscreen = false, false
 }
@@ -567,19 +568,19 @@ func (g *Game) invertView() {
 // strengthResists says whether b resists a's strength.
 // C: seg_1944:01EC (C_1944_01EC)
 func (g *Game) strengthResists(a, b int) bool {
-	return (g.strengthOf(b)/2+30-g.strengthOf(a))/2 > g.rand(1, 30)
+	return (g.strengthOf(b)/2+maxStat-g.strengthOf(a))/2 > g.rand(1, maxStat)
 }
 
 // resistsByStrength says whether b's strength resists a's intelligence.
 // C: seg_1944:0232 (C_1944_0232)
 func (g *Game) resistsByStrength(a, b int) bool {
-	return (g.strengthOf(b)/2+30-g.intelligenceOf(a))/2 > g.rand(1, 30)
+	return (g.strengthOf(b)/2+maxStat-g.intelligenceOf(a))/2 > g.rand(1, maxStat)
 }
 
 // dodges says whether b's dexterity dodges a's spell.
 // C: seg_1944:0278 (C_1944_0278)
 func (g *Game) dodges(a, b int) bool {
-	return (g.dexterityOf(b)/2+30-g.intelligenceOf(a))/2 > g.rand(1, 30)
+	return (g.dexterityOf(b)/2+maxStat-g.intelligenceOf(a))/2 > g.rand(1, maxStat)
 }
 
 // magicTiles are the tiles of the magical objects (D_0DF6).
@@ -2139,7 +2140,8 @@ func (g *Game) enchant(targeted bool) {
 // it is the spell (with its flash), not the crystal ball.
 // C: seg_1944:39A1 (C_1944_39A1)
 func (g *Game) wizardEye(x, y int, spell bool) {
-	moves := 40
+	const eyeMoves = 40
+	moves := eyeMoves
 	tile := 0
 	ch := 0
 	if spell {

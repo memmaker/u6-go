@@ -178,15 +178,21 @@ func (g *Game) peer() {
 	if underground {
 		g.computeLight(g.ViewX+viewCenter, g.ViewY+viewCenter, peerSize, lightPeer)
 	} else if g.MapZ == 0 {
-		const edge = 1024 // the width of the surface
+		const (
+			edge        = 1024      // the width of the surface
+			lastArea    = edge - 16 // the area that wraps round the edge
+			beforeLast  = edge - 24
+			edgeInView  = edge - 32 // the first area that reaches the edge
+			wrappedLeft = 8
+		)
 		switch {
-		case g.AreaX == edge-16:
-			left = 8
-		case g.AreaX == edge-32:
-			right = 32
-		case g.AreaY >= edge-16:
+		case g.AreaX == lastArea:
+			left = wrappedLeft
+		case g.AreaX == edgeInView:
+			right = edge - edgeInView
+		case g.AreaY >= lastArea:
 			top = edge - g.AreaY
-		case g.AreaY == edge-32 || g.AreaY == edge-24:
+		case g.AreaY == edgeInView || g.AreaY == beforeLast:
 			bottom = edge - g.AreaY
 		}
 	}
@@ -302,7 +308,8 @@ func (g *Game) hailStorm(x, y int) int {
 	for i := range hailSlots {
 		fromX[i], fromY[i], toX[i], toY[i] = -1, -1, -1, -1
 	}
-	stones := g.rand(10, 30)
+	const fewestStones, mostStones = 10, 30
+	stones := g.rand(fewestStones, mostStones)
 	g.gr.MakeRotatedSprite(hailSprite, tileHail, 0, hailPivot, hailPivot)
 	empty := clipRect{viewPixelEnd, viewPixelStart - 1, viewPixelEnd, viewPixelStart - 1}
 	r := empty
@@ -362,7 +369,8 @@ func (g *Game) hailStorm(x, y int) int {
 				continue
 			}
 			fromX[i] = -1
-			noise = g.rand(400, 500)
+			const lowNoise, highNoise = 400, 500
+			noise = g.rand(lowNoise, highNoise)
 			tx, ty := toX[i]/tileSize, toY[i]/tileSize
 			for n := g.FindLoc(tx, ty, int(g.MapZ)); n >= 0; n = g.NextLoc() {
 				if n >= npcCount {

@@ -194,20 +194,21 @@ func (g *Game) passTime(minutes int) {
 				}
 			}
 		}
+		const wearOffDie = 63 // one chance in 64 a minute
 		for range minutes {
-			if o.Has(StatusInvisible) && !ringWorn && g.rand(0, 63) == 0 && int(npc.Intelligence) <= g.rand(1, 30) {
+			if o.Has(StatusInvisible) && !ringWorn && g.rand(0, wearOffDie) == 0 && int(npc.Intelligence) <= g.rand(1, maxStat) {
 				o.Status &^= StatusInvisible
 			}
-			if npc.Has(Protected) && g.rand(0, 63) == 0 && int(npc.Intelligence) <= g.rand(1, 30) {
+			if npc.Has(Protected) && g.rand(0, wearOffDie) == 0 && int(npc.Intelligence) <= g.rand(1, maxStat) {
 				npc.Status &^= Protected
 			}
-			if o.Has(StatusCursed) && g.rand(0, 15) == 0 && int(npc.Intelligence) >= g.rand(1, 30) {
+			if o.Has(StatusCursed) && g.rand(0, 15) == 0 && int(npc.Intelligence) >= g.rand(1, maxStat) {
 				o.Status &^= StatusCursed
 			}
-			if o.Has(StatusCharmed) && g.rand(0, 7) == 0 && int(npc.Intelligence) >= g.rand(1, 30) {
+			if o.Has(StatusCharmed) && g.rand(0, 7) == 0 && int(npc.Intelligence) >= g.rand(1, maxStat) {
 				g.stopCharm(i)
 			}
-			if npc.Has(Paralyzed) && g.rand(0, 3) == 0 && int(npc.Strength) >= g.rand(1, 30) {
+			if npc.Has(Paralyzed) && g.rand(0, 3) == 0 && int(npc.Strength) >= g.rand(1, maxStat) {
 				npc.Status &^= Paralyzed
 			}
 			if npc.Has(Asleep) && npc.Mode != AISleep && g.rand(0, 15) == 0 {
@@ -351,7 +352,8 @@ func (g *Game) changeWind(noChange bool) {
 		g.WindDir = noWind
 		noChange = true
 	}
-	if noChange || g.rand(0, 63) != 0 {
+	const windChangeDie = 63
+	if noChange || g.rand(0, windChangeDie) != 0 {
 		return
 	}
 	if g.MapZ == 0 || g.MapZ == dungeonLevels {
