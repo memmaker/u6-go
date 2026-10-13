@@ -5,6 +5,7 @@ package game
 // talking. The script interpreter is in talk_script.go.
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io/fs"
 	"strings"
@@ -651,7 +652,12 @@ func (g *Game) converse() bool {
 	switch op := g.next(); op {
 	case opAskTop:
 		g.printf("\nyou say:")
-		g.typed = g.gets(typedLength)
+		if answer := g.copyProtectionAnswer(); answer != "" {
+			g.typed = answer
+			g.printf("%s", answer)
+		} else {
+			g.typed = g.gets(typedLength)
+		}
 		g.printf("\n")
 		g.answered = false
 	case opGetStr:
@@ -740,4 +746,39 @@ func (g *Game) converse() bool {
 		g.parseStatement(g.npc)
 	}
 	return true
+}
+
+// manualName is the manual the copy protection questions are about; the scripts' reply to a
+// wrong answer points to it.
+const manualName = "Compendium"
+
+// copyProtectionAnswer is the right answer when the prompt at pc is one of the copy
+// protection questions of Lord British, Mariah and Selganor, which take their answer from the
+// manual: three answers, the right keywords, "bye" and anything else, which sends the
+// player to the manual. The port answers them itself; "" for any other prompt.
+func (g *Game) copyProtectionAnswer() string {
+	rest := g.script[min(g.pc, len(g.script)):]
+	if len(rest) == 0 || rest[0] != opKey {
+		return ""
+	}
+	end := bytes.IndexByte(rest, opRes)
+	if end < 0 {
+		return ""
+	}
+	keywords := string(rest[1:end])
+	rest = rest[end:]
+	bye := bytes.Index(rest, []byte{opKey, 'b', 'y', 'e', opRes})
+	other := bytes.Index(rest, []byte{opKey, '*', opRes})
+	if bye < 0 || other < bye || bytes.Count(rest[:other], []byte{opKey}) != 1 {
+		return ""
+	}
+	reply := rest[other:]
+	if next := bytes.IndexByte(reply[1:], opKey); next >= 0 {
+		reply = reply[:next+1]
+	}
+	if !bytes.Contains(reply, []byte(manualName)) {
+		return ""
+	}
+	answer, _, _ := strings.Cut(keywords, ",")
+	return answer
 }
