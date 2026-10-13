@@ -161,6 +161,7 @@ func pollInput(g *game) {
 	clicked := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
 	switch {
+	case hardwareCursor: // the page's cursor is the pointer: nothing to capture
 	case CtrlDown && inpututil.IsKeyJustPressed(ebiten.KeyF10):
 		ebiten.SetCursorMode(ebiten.CursorModeVisible)
 	case clicked && ebiten.CursorMode() != ebiten.CursorModeCaptured:

@@ -155,7 +155,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	for i, c := range frame.Pixels[:ScreenWidth*ScreenHeight] {
 		copy(out[i*4:i*4+4], colours[c][:])
 	}
-	if frame.PointerShown {
+	if hardwareCursor {
+		g.showCursor(frame, &colours)
+	} else if frame.PointerShown {
 		for y := 0; y < frame.PointerHeight; y++ {
 			sy := frame.PointerY - frame.PointerHotY + y
 			for x := 0; x < frame.PointerWidth; x++ {
@@ -208,4 +210,25 @@ func runTimers() {
 	for _, f := range timers {
 		f()
 	}
+}
+
+// showCursor makes the frame's pointer the hardware cursor, scaled as the picture is.
+func (g *game) showCursor(frame *Frame, colours *[256][4]byte) {
+	if !frame.PointerShown || g.scaleX == 0 {
+		setCursor(nil, 0, 0)
+		return
+	}
+	// the cursor image is in CSS pixels, the picture's scale in device pixels
+	dpr := ebiten.Monitor().DeviceScaleFactor()
+	sx, sy := g.scaleX/dpr, g.scaleY/dpr
+	w, h := int(float64(frame.PointerWidth)*sx), int(float64(frame.PointerHeight)*sy)
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for y := range h {
+		for x := range w {
+			if c := frame.Pointer[int(float64(y)/sy)*frame.PointerWidth+int(float64(x)/sx)]; c != 0 {
+				copy(img.Pix[img.PixOffset(x, y):], colours[c][:])
+			}
+		}
+	}
+	setCursor(img, int(float64(frame.PointerHotX)*sx), int(float64(frame.PointerHotY)*sy))
 }
