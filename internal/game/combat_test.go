@@ -79,3 +79,49 @@ func TestNPCCastsInCombat(t *testing.T) {
 		}
 	})
 }
+
+// TestEquipmentViewPicks picks objects of the inventory grid with the mouse and with the
+// status cursor: a dagger is readied, a bag opened.
+func TestEquipmentViewPicks(t *testing.T) {
+	inGame(t, func(g *Game) {
+		avatar := int(g.Party[0])
+		dagger := g.AddInvObj(shapeOf(ObjDagger, 0), StatusLocal|InInventory, 0, avatar)
+		bag := g.AddInvObj(shapeOf(ObjBag, 0), StatusLocal|InInventory, 0, avatar)
+		g.StatusDisplay, g.statusMember = cmdStatusEquipment, 0
+		g.StatusDirty = true
+		g.RefreshStatus()
+		slotOf := func(n int) int {
+			for i, o := range g.inventoryShown {
+				if o == n {
+					return i
+				}
+			}
+			t.Errorf("object %d not in the grid", n)
+			return 0
+		}
+		point := func(n int) {
+			i := slotOf(n)
+			g.PointerX = inventoryX + i%inventoryColumns*tileSize
+			g.PointerY = inventoryY + i/inventoryColumns*tileSize
+		}
+		point(dagger)
+		if ch := g.clickEquipmentView(); ch != cmdReady || g.Selection.obj != dagger {
+			t.Errorf("click on the dagger: command %d, object %d", ch, g.Selection.obj)
+		}
+		point(bag)
+		if ch := g.clickEquipmentView(); ch != cmdOpenContainer || g.Selection.obj != bag {
+			t.Errorf("click on the bag: command %d, object %d", ch, g.Selection.obj)
+		}
+		// the status cursor on the dagger's slot, then Enter
+		i := slotOf(dagger)
+		g.SelectMode = 2
+		g.statusCursorX, g.statusCursorY = cursorDollColumns+i%inventoryColumns, i/inventoryColumns
+		if ch := g.selectTarget(keyEnter); ch != cmdReady || g.Selection.obj != dagger {
+			t.Errorf("Enter on the dagger: command %d, object %d", ch, g.Selection.obj)
+		}
+		g.ready()
+		if g.object(dagger).CoordUse() != Equipped {
+			t.Errorf("the dagger is not readied:\n%s", scrollText(g))
+		}
+	})
+}

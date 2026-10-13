@@ -506,7 +506,49 @@ func (g *Game) clickEquipmentView() int {
 	if g.PointerY >= 88 {
 		return g.statusButton(cmdStatusPortrait)
 	}
-	// TODO(port): do_CMD_92 inventory scrolling, containers, ready
+	x, y := g.PointerX, g.PointerY
+	switch {
+	case x >= scrollArrowX && x < scrollArrowRight:
+		switch {
+		case y >= scrollUpY0 && y < scrollUpY1:
+			if g.inventoryScroll != 0 {
+				return cmdInventoryUp
+			}
+		case y >= scrollDnY0 && y < scrollDnY1:
+			if g.invenSize-g.inventoryScroll > inventorySlots {
+				return cmdInventoryDown
+			}
+		}
+	case x >= containerX && x < containerX+tileSize && y >= containerY && y < containerY+tileSize && g.MouseMode == 0:
+		return cmdCloseContainer
+	case g.MouseMode == 0 && g.pendingCommand != cmdMove:
+		picked := g.mouseSelection()
+		sel := g.Selection.obj
+		if sel == noObject {
+			return 0
+		}
+		switch picked {
+		case cmdSelectInventory:
+			t := g.object(sel).Type()
+			const lockedFrame = 2
+			switch {
+			case !isContainer(t) || t == ObjSpellbook:
+				return cmdReady
+			case t == ObjOpenChest && g.object(sel).Frame()&lockedFrame != 0:
+				g.printf("It's locked.\n")
+				g.printf("\n%s:\n%>", cString(g.Names[g.Active][:]))
+				g.putch0(endOfLine)
+			case t == ObjOpenChest && g.object(sel).Frame() == 1 && g.FindInvType(sel, ObjEffect, castTrap) != noObject:
+				g.trap(sel)
+				g.printf("\n%s:\n%>", cString(g.Names[g.Active][:]))
+				return cmdOpenContainer
+			default:
+				return cmdOpenContainer
+			}
+		case cmdSelectEquipment:
+			return cmdUnready
+		}
+	}
 	return 0
 }
 
@@ -677,8 +719,16 @@ func (g *Game) selectTarget(ch int) int {
 			g.SelectMode = 0
 			g.PointerX, g.PointerY = g.AimX*tileSize, g.AimY*tileSize
 			g.mouseSelection()
-		} else if g.SelectMode == 2 {
-			// TODO(port): C_0C9C_1D59 selecting in the equipment and portrait views
+		} else if g.SelectMode == 2 && (g.StatusDisplay == cmdStatusEquipment || g.StatusDisplay == cmdStatusPortrait) {
+			g.drawStatusCursor(2)
+			if g.StatusDisplay == cmdStatusEquipment {
+				ch = g.clickEquipmentView()
+			} else {
+				ch = g.clickPortraitView()
+			}
+			if ch == 0 && g.MouseMode == 1 && g.mouseSelection() != 0 {
+				ch = cmdSelected
+			}
 		}
 		return ch
 	case ch == cmdAdvance:
@@ -694,7 +744,15 @@ func (g *Game) selectTarget(ch int) int {
 			}
 			return 0
 		}
-		// TODO(port): C_0C9C_1D59 moving the cursor in the equipment and portrait views
+		if g.SelectMode == 2 && g.StatusDisplay == cmdStatusEquipment {
+			return g.moveEquipmentCursor()
+		}
+		if g.SelectMode == 2 && g.StatusDisplay == cmdStatusPortrait {
+			g.drawStatusCursor(0)
+			g.statusCursorX = min(max(g.statusCursorX+dirStepX[g.AdvanceDir], 0), cursorButtonsRow)
+			g.statusCursorY = cursorButtonsRow
+			g.drawStatusCursor(1)
+		}
 		return 0
 	case ch >= '1' && ch-'1' < int(g.PartySize) && g.SelectMode == 1:
 		g.selectedDark = false
@@ -709,6 +767,45 @@ func (g *Game) selectTarget(ch int) int {
 		return cmdSelected
 	}
 	return ch
+}
+
+// moveEquipmentCursor moves the status cursor of the equipment view in AdvanceDir: over
+// the paper doll and the grid, scrolling the grid at its edges, up to the container and
+// down to the buttons.
+// C: seg_0C9C:1D59 (C_0C9C_1D59, the cursor keys in the equipment view)
+func (g *Game) moveEquipmentCursor() int {
+	x, y := g.statusCursorX+dirStepX[g.AdvanceDir], g.statusCursorY+dirStepY[g.AdvanceDir]
+	const dollCentre = 1
+	switch {
+	case x >= 0 && x < cursorColumnsCount && y >= 0 && y < cursorRowsCount:
+		g.drawStatusCursor(0)
+		if x == dollCentre && y == dollCentre { // the doll's body is no slot: skip it
+			x += dirStepX[g.AdvanceDir]
+			y += dirStepY[g.AdvanceDir]
+		}
+		g.statusCursorX, g.statusCursorY = x, y
+		g.drawStatusCursor(1)
+	case x >= cursorDollColumns && x < cursorColumnsCount || y >= cursorRowsCount:
+		const south = 4
+		switch {
+		case y >= cursorRowsCount && g.invenSize-g.inventoryScroll > inventorySlots && g.AdvanceDir == south:
+			g.statusCursorX = x
+			return cmdInventoryDown
+		case y < 0 && g.inventoryScroll != 0:
+			g.statusCursorX = x
+			return cmdInventoryUp
+		case y < 0 && !g.spellPeek:
+			g.drawStatusCursor(0)
+			g.statusCursorY = cursorOnContainer
+			g.drawStatusCursor(1)
+		case y >= cursorRowsCount && !g.spellPeek:
+			g.drawStatusCursor(0)
+			g.statusCursorY = cursorButtonsRow
+			g.statusCursorX = min(max(x, 0), cursorLastButton)
+			g.drawStatusCursor(1)
+		}
+	}
+	return 0
 }
 
 // rangeTable is the range of each distance on x and y (D_196C).
@@ -825,8 +922,31 @@ func (g *Game) getch() int {
 			g.StatusDirty = true
 		case cmdSpellPrevious, cmdSpellNext, cmdSpellPageLeft, cmdSpellPageRight:
 			g.spellbookCommand(ch)
-		case cmdInventoryUp, cmdInventoryDown, cmdCloseContainer, cmdOpenContainer, cmdReady, cmdUnready:
-			// TODO(port): CON_getch inventory, container and spellbook commands
+		case cmdInventoryUp, cmdInventoryDown:
+			g.scrollInventory(ch == cmdInventoryDown)
+			g.drawStatusCursor(1)
+		case cmdCloseContainer:
+			if g.container < npcCount {
+				g.StatusDisplay = cmdStatusParty
+				g.statusMember = 0
+				g.StatusDirty = true
+			} else {
+				g.container = g.object(g.container).Pos.Owner()
+				g.inventoryScroll = 0
+				g.refreshInventory(g.container)
+				g.drawStatusCursor(1)
+			}
+		case cmdOpenContainer:
+			g.container = g.Selection.obj
+			g.inventoryScroll = 0
+			g.refreshInventory(g.container)
+			g.drawStatusCursor(1)
+		case cmdReady:
+			g.ready()
+			g.drawStatusCursor(1)
+		case cmdUnready:
+			g.unready()
+			g.drawStatusCursor(1)
 		case cmdSpellNothing:
 		default:
 			return ch

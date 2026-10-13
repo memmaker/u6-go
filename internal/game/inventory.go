@@ -915,6 +915,7 @@ const (
 	cursorColumnsCount = 7
 	cursorRowsCount    = 3
 	cursorButtonsRow   = 3
+	cursorOnContainer  = -1 // the row of the container icon above the grid
 	cursorLastButton   = 4
 	cursorDollColumns  = 3
 	cursorDollStepX    = 24
