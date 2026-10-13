@@ -354,6 +354,9 @@ func (g *Game) computeView() {
 			*flags = *flags&^areaLightMask | byte(light)
 		}
 	}
+	if sound.Settings.MapTileLighting {
+		g.lightMapTiles()
+	}
 
 	g.computeLight(g.ViewX+g.viewCenterX, g.ViewY+g.viewCenterY, int(g.AmbientLight), lightView)
 
@@ -635,7 +638,7 @@ func (g *Game) ShowObjects() {
 					}
 				}
 				light := g.areaLight[(j+g.ViewY)*areaSize+i+g.ViewX]
-				if light < fullLight && light > 0 {
+				if light < fullLight && light > 0 && !sound.Settings.SmoothLighting {
 					g.showObject(tileDarkness+int(light), i, j, 3)
 				}
 			}

@@ -26,11 +26,25 @@ const (
 	vgaLevels = 64
 	// crtStretch is how much taller than wide a 320x200 pixel showed on a 4:3 monitor.
 	crtStretch = 1.2
+	// fullShade is a Frame.Shade value that leaves a pixel at its colour.
+	fullShade = math.MaxUint8
 	// MaxScreenWidth and MaxScreenHeight bound the screen the game may widen or heighten
 	// to the window's shape (FitWidth, FitHeight); a wider window shows black bars.
 	MaxScreenWidth  = 736
 	MaxScreenHeight = 736
 )
+
+// SquarePixels shows the pixels square instead of at the CRT's shape (taller than wide, the
+// picture 4:3), Nuvie's non_square_pixels off.
+var SquarePixels bool
+
+// pixelAspect is how much taller than wide a pixel is shown.
+func pixelAspect() float64 {
+	if SquarePixels {
+		return 1
+	}
+	return crtStretch
+}
 
 // FitWidth and FitHeight are the size of a screen that fills the window at the CRT's pixel
 // shape: 320x200 widened or heightened to the window's aspect ratio. Frames of that size
@@ -55,6 +69,8 @@ type Frame struct {
 	PointerHotX, PointerHotY    int
 	PointerX, PointerY          int
 	PointerShown                bool
+	// Shade, when not nil, dims each pixel: 0 is black, 255 its colour (smooth lighting).
+	Shade []byte
 }
 
 // ShowFrame returns the frame to present. Set by the game.
@@ -176,6 +192,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 	for i, c := range frame.Pixels[:width*height] {
 		copy(out[i*4:i*4+4], colours[c][:])
 	}
+	if frame.Shade != nil {
+		for i, shade := range frame.Shade[:width*height] {
+			for c := i * 4; c < i*4+3; c++ {
+				out[c] = byte(int(out[c]) * int(shade) / fullShade)
+			}
+		}
+	}
 	if hardwareCursor {
 		g.showCursor(frame, &colours)
 	} else if frame.PointerShown {
@@ -195,12 +218,12 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Fit the picture, its pixels at the CRT's shape, in the window: a picture of the fitted
 	// size covers it (rounding up leaves less than a pixel out), others are shown whole.
 	windowW, windowH := float64(screen.Bounds().Dx()), float64(screen.Bounds().Dy())
-	shownW, shownH := float64(width), float64(height)*crtStretch
+	shownW, shownH := float64(width), float64(height)*pixelAspect()
 	k := min(windowW/shownW, windowH/shownH)
 	if fitCovers && width == FitWidth && height == FitHeight {
 		k = max(windowW/shownW, windowH/shownH)
 	}
-	g.scaleX, g.scaleY = k, k*crtStretch
+	g.scaleX, g.scaleY = k, k*pixelAspect()
 	g.offsetX, g.offsetY = (windowW-shownW*k)/2, (windowH-shownH*k)/2
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(g.scaleX, g.scaleY)
@@ -229,11 +252,11 @@ func fitScreen(windowW, windowH int) (width, height int, covers bool) {
 	}
 	even := func(v float64) int { return int(math.Ceil(v/2)) * 2 }
 	aspect := float64(windowW) / float64(windowH)
-	if aspect*ScreenHeight*crtStretch >= ScreenWidth {
-		width = even(ScreenHeight * crtStretch * aspect)
+	if aspect*ScreenHeight*pixelAspect() >= ScreenWidth {
+		width = even(ScreenHeight * pixelAspect() * aspect)
 		return min(width, MaxScreenWidth), ScreenHeight, width <= MaxScreenWidth
 	}
-	height = even(ScreenWidth / crtStretch / aspect)
+	height = even(ScreenWidth / pixelAspect() / aspect)
 	return ScreenWidth, min(height, MaxScreenHeight), height <= MaxScreenHeight
 }
 

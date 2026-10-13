@@ -220,6 +220,7 @@ func (g *Game) Frame() *host.Frame {
 	g.drawOverlays()
 	frame := g.gr.Frame()
 	frame.Pixels, frame.Width, frame.Height = g.shown, g.screenWidth, g.screenHeight
+	frame.Shade = g.smoothShade(panels, scrolls)
 	return frame
 }
 

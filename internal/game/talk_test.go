@@ -195,7 +195,12 @@ func writePNG(t *testing.T, g *Game, name string) {
 	level := func(v byte) uint8 { return uint8(int(v) * 255 / 63) }
 	for i, c := range frame.Pixels {
 		p := frame.Palette[int(c)*3:]
-		img.Set(i%g.screenWidth, i/g.screenWidth, color.RGBA{level(p[0]), level(p[1]), level(p[2]), 255})
+		shade := 255
+		if frame.Shade != nil {
+			shade = int(frame.Shade[i])
+		}
+		dim := func(v byte) uint8 { return uint8(int(level(v)) * shade / 255) }
+		img.Set(i%g.screenWidth, i/g.screenWidth, color.RGBA{dim(p[0]), dim(p[1]), dim(p[2]), 255})
 	}
 	out := t.TempDir()
 	if d := os.Getenv("U6_PNG_DIR"); d != "" {
