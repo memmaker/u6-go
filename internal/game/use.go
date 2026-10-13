@@ -1635,8 +1635,8 @@ func (g *Game) blowHorn() {
 // edgeSpot picks a random tile just outside the view.
 func (g *Game) edgeSpot() (int, int) {
 	mx, my := int(g.MapX), int(g.MapY)
-	side, along := g.rand(0, 3), g.rand(0, 10)-6
-	switch side {
+	edge, along := g.rand(0, 3), g.rand(0, 10)-6
+	switch edge {
 	case 0:
 		return mx - 6, my + along
 	case 1:
