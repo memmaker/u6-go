@@ -13,6 +13,9 @@ import (
 // run plays the game from the files in dir, as ULTIMA6.EXE did: the intro and character
 // creation (U.EXE), then the game (GAME.EXE), which hands over to the ending (END.EXE).
 func run(dir string) error {
+	if err := game.Install(dir); err != nil {
+		return err
+	}
 	files := os.DirFS(dir)
 	sound.Start(files)
 	result, err := intro.Run(files, dir)
