@@ -123,6 +123,11 @@ var (
 
 const settleTicks = 2
 
+// mouseSpeed scales the captured mouse's motion: at 1 the game's cursor crosses the screen
+// as far as the hand moves the host pointer, which on a big scaled screen feels sluggish
+// (DOSBox has the same knob, its sensitivity).
+const mouseSpeed = 2
+
 func pollInput(g *game) {
 	ShiftDown = ebiten.IsKeyPressed(ebiten.KeyShift)
 	CtrlDown = ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyMeta)
@@ -167,8 +172,8 @@ func pollInput(g *game) {
 			if mouseSettle > 0 { // the first positions after locking jump
 				mouseSettle--
 			} else {
-				mouseFX += float64(x-lastX) / g.scaleX
-				mouseFY += float64(y-lastY) / g.scaleY
+				mouseFX += float64(x-lastX) / g.scaleX * mouseSpeed
+				mouseFY += float64(y-lastY) / g.scaleY * mouseSpeed
 			}
 		} else {
 			mouseFX, mouseFY = (float64(x)-g.offsetX)/g.scaleX, (float64(y)-g.offsetY)/g.scaleY
