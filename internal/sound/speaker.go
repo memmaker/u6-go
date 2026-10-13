@@ -130,6 +130,7 @@ type beeper struct {
 	sub        int     // sub-samples since the last output sample
 	aa         [len(antiAlias)][2]float64
 	lowpass    float64
+	soft       [2]float64 // the state of the soft speaker filter
 	pcm        []float32
 	noiseState uint16 // OSI_playNoise's generator state
 }
@@ -175,7 +176,11 @@ func (b *beeper) emit(seconds float64, level float64, tone bool) {
 		if b.sub++; b.sub == oversample {
 			b.sub = 0
 			b.lowpass += (x - b.lowpass) / 2 // the cone is no ideal square
-			b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
+			out := b.lowpass
+			if Settings.SoftSpeaker {
+				out = soften(out, &b.soft)
+			}
+			b.pcm = append(b.pcm, float32(out/pcmFullScale))
 		}
 	}
 }

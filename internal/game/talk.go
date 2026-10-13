@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/memmaker/u6-go/internal/data"
+	"github.com/memmaker/u6-go/internal/sound"
 )
 
 // Conversations: CONVERSE.A holds the NPCs up to lastNPCInA, CONVERSE.B the others and
@@ -111,8 +112,9 @@ func (g *Game) initTalk(partyID, n int) {
 		g.VarInt[i] = 0
 	}
 	g.current.attr |= clipPaging
-	g.playSong(0)
+	g.quietForTalk()
 	g.talkDriver(member, n)
+	sound.LowerMusic(false)
 	g.playAreaSong()
 	g.pagingDisabled = true
 	g.SpeakGargish = int16(g.VarInt[variableIndex('L')])
@@ -187,7 +189,7 @@ func (g *Game) loadConversation(n int, forTalk bool) []byte {
 		return nil
 	}
 	if forTalk {
-		g.playSong(0)
+		g.quietForTalk()
 	}
 	if size := binary.LittleEndian.Uint32(raw[at:]); size != 0 && size < maxPackedScript {
 		script, err := data.Decompress(raw[at:])

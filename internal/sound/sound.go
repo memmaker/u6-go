@@ -283,6 +283,9 @@ func (stream) Read(b []byte) (int, error) {
 	if song != nil {
 		renderMusic(song, mix)
 		g := float32(fader("music"))
+		if musicLowered {
+			g *= loweredMusicGain
+		}
 		for i := range mix {
 			mix[i] *= g
 		}
@@ -294,6 +297,12 @@ func (stream) Read(b []byte) (int, error) {
 		mix[outChannels*i+1] += speaker.pcm[i] * g
 	}
 	speaker.pcm = speaker.pcm[n:]
+	n = min(frames, len(speech))
+	for i := range n {
+		mix[outChannels*i] += speech[i] * g
+		mix[outChannels*i+1] += speech[i] * g
+	}
+	speech = speech[n:]
 	for i, v := range mix {
 		binary.LittleEndian.PutUint32(b[i*bytesPerFrame/outChannels:], math.Float32bits(v))
 	}

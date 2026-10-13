@@ -99,10 +99,10 @@ func (g *Game) playAreaSong() {
 	default:
 		n = sound.SongDungeon
 	}
-	if t := g.object(int(g.Party[g.Active])).Type(); t == ObjShip || t == ObjSkiff {
+	if t := g.object(int(g.Party[g.Active])).Type(); (t == ObjShip || t == ObjSkiff) && !sound.Settings.NoShipMusic {
 		n = sound.SongHornpipe
 	}
-	if g.InCombat != 0 {
+	if g.InCombat != 0 && !sound.Settings.NoCombatMusic {
 		n = sound.SongEngage
 	}
 	g.playSong(n)
@@ -238,4 +238,39 @@ func (g *Game) setTileAnimation(tile int, state byte) {
 			return
 		}
 	}
+}
+
+// quietForTalk silences the music for a conversation, or lowers it or lets it play on as
+// the TalkMusic setting asks.
+func (g *Game) quietForTalk() {
+	switch sound.Settings.TalkMusic {
+	case sound.TalkMusicKeep:
+	case sound.TalkMusicLower:
+		sound.LowerMusic(true)
+	default:
+		g.playSong(0)
+	}
+}
+
+// The voice libraries of the characters without their own (Nuvie's numbering).
+const (
+	guardVoice = 228
+	wispVoice  = 229
+)
+
+// speechMark reads the digits of a "~P" voice mark (an FM Towns script's, pc after the P)
+// and has npc n say that sample.
+func (g *Game) speechMark(n int) {
+	sample := 0
+	for c := g.scriptByte(g.pc); c >= '0' && c <= '9'; c = g.scriptByte(g.pc) {
+		sample = sample*10 + int(c-'0')
+		g.pc++
+	}
+	switch g.object(n).Type() {
+	case ObjGuard:
+		n = guardVoice
+	case ObjWisp:
+		n = wispVoice
+	}
+	sound.Speak(n, sample)
 }

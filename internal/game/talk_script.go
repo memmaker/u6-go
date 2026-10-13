@@ -743,6 +743,9 @@ func (g *Game) parseStatement(n int) {
 			g.printf("\nTry to print out a control char\n")
 			g.pc--
 			return
+		case op == '~' && g.scriptByte(g.pc) == 'P':
+			g.pc++
+			g.speechMark(n)
 		case op < highBit:
 			g.putch(int(op))
 		case op == opKey && !g.answered:

@@ -26,6 +26,7 @@ func run(dir, romDir string) error {
 			fmt.Fprintln(os.Stderr, "MT-32:", err, "- playing AdLib music")
 		}
 	}
+	loadSettings(dir)
 	sound.Start(files)
 	// Journey Onward without a character: GAME.EXE says so and runs the intro again.
 	var g *game.Game
