@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/sound"
 	"github.com/memmaker/u6-go/internal/vga"
 )
 
@@ -85,6 +86,15 @@ func TestTalkToTholden(t *testing.T) {
 	dir := dataCopy(t)
 	if err := WriteCharacter(dir, DefaultCharacter()); err != nil {
 		t.Fatal(err)
+	}
+	// with the FM Towns CD's files (u6 -import-cd) in $U6_TOWNS_DATA, Tholden speaks
+	towns := os.Getenv("U6_TOWNS_DATA")
+	if towns != "" {
+		if err := os.CopyFS(filepath.Join(dir, "CD"), os.DirFS(filepath.Join(towns, "CD"))); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("U6GO_INPUT", "silent") // no audio device: the voices stay queued
+		sound.Start(os.DirFS(dir))
 	}
 	var g *Game
 	started := make(chan error, 1)
@@ -168,6 +178,9 @@ func TestTalkToTholden(t *testing.T) {
 		t.Fatalf("no conversation:\n%s", transcript.String())
 	}
 	say("name")
+	if towns != "" && !sound.Speaking() {
+		t.Error("Tholden's name has no voice")
+	}
 	say("job")
 	writePNG(t, g, "talk.png")
 	writePNG(t, g, "conversation.png")
@@ -178,6 +191,9 @@ func TestTalkToTholden(t *testing.T) {
 	t.Logf("transcript:\n%s", text)
 	if g.InConversation {
 		t.Error("still talking after bye")
+	}
+	if strings.Contains(text, "~") || strings.Contains(text, "+") {
+		t.Error("the transcript shows FM Towns marks")
 	}
 	for _, want := range []string{"You see a", "I am Tholden von", "paperwork", "Tholden bows"} {
 		if !strings.Contains(text, want) {

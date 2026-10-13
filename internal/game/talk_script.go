@@ -732,6 +732,24 @@ func (g *Game) skipTo(a, b byte) {
 	}
 }
 
+// skipTownsMark passes over an FM Towns script's mark that the English text does not
+// show, pc after its first byte: "~Ln" (the Japanese line n), "+nKeyword+" (a clickable
+// keyword) or "{", as Nuvie does.
+func (g *Game) skipTownsMark(op byte) {
+	switch op {
+	case '~':
+		for g.pc++; isDigit(g.scriptByte(g.pc)); g.pc++ {
+		}
+	case '+':
+		for g.scriptByte(g.pc) != '+' && g.scriptByte(g.pc) != 0 {
+			g.pc++
+		}
+		g.pc++
+	}
+}
+
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
 // parseStatement prints text and runs statements for the NPC n up to an input opcode, the
 // end of an answer or the end of the script.
 // C: seg_1703:1C45 (parse_statement)
@@ -746,6 +764,8 @@ func (g *Game) parseStatement(n int) {
 		case op == '~' && g.scriptByte(g.pc) == 'P':
 			g.pc++
 			g.speechMark(n)
+		case op == '~' && g.scriptByte(g.pc) == 'L', op == '+' && isDigit(g.scriptByte(g.pc)), op == '{':
+			g.skipTownsMark(op)
 		case op < highBit:
 			g.putch(int(op))
 		case op == opKey && !g.answered:

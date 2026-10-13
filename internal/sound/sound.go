@@ -186,10 +186,13 @@ func queue(f func(b *beeper)) time.Duration {
 	return samplesDuration(len(speaker.pcm) - before)
 }
 
-// Effect plays speaker effect kind (the Effect constants) with its parameter (a pitch or
+// Effect plays speaker effect kind (or its FM Towns sample, without waiting) (the Effect constants) with its parameter (a pitch or
 // a distance, 0 for most) and returns how long it lasts.
 // C: MUS_0065
 func Effect(kind, param int) time.Duration {
+	if n, ok := townsEffects[kind]; ok && PlaySample(n) {
+		return 0
+	}
 	return queue(func(b *beeper) { b.effect(kind, param); b.settle() })
 }
 
@@ -303,6 +306,12 @@ func (stream) Read(b []byte) (int, error) {
 		mix[outChannels*i+1] += speech[i] * g
 	}
 	speech = speech[n:]
+	n = min(frames, len(samples))
+	for i := range n {
+		mix[outChannels*i] += samples[i] * g
+		mix[outChannels*i+1] += samples[i] * g
+	}
+	samples = samples[n:]
 	for i, v := range mix {
 		binary.LittleEndian.PutUint32(b[i*bytesPerFrame/outChannels:], math.Float32bits(v))
 	}

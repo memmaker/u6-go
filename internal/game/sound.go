@@ -147,6 +147,13 @@ func crackle(steps, odds int, tone func() int, rand func(a, b int) int) {
 	sound.NoTone()
 }
 
+// townsAmbience are the FM Towns samples of the sounding objects that have one.
+var townsAmbience = map[ObjectType]int{
+	ObjFountain: sound.TownsFountain, ObjWaterWheel: sound.TownsWaterWheel,
+	ObjProtectionField: sound.TownsProtectionField,
+	ObjFireplace:       sound.TownsFire, ObjFire: sound.TownsFire, ObjCookFire: sound.TownsFire, ObjFireField: sound.TownsFire,
+}
+
 // The ambient sounds go to the speaker even with the sound off, as OSILIB has no switch.
 
 // playSoundSources sounds the nearest sounding objects, rings the clocks and the bells and
@@ -167,6 +174,13 @@ func (g *Game) playSoundSources() {
 	if g.SpellFx[silenceSpell] == 0 {
 		for i := range g.soundCount {
 			d := g.soundDistance[i]
+			if n, ok := townsAmbience[g.soundTypes[i]]; ok && sound.PlaySample(n) {
+				count++
+				if count >= maxSounds {
+					break
+				}
+				continue
+			}
 			switch g.soundTypes[i] {
 			case ObjClock:
 				switch {

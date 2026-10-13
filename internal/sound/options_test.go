@@ -17,7 +17,7 @@ func TestSoftFilterPassesBass(t *testing.T) {
 }
 
 func TestResampleSpeech(t *testing.T) {
-	out := resampleSpeech([]byte{64, 64 + sampleSign})
+	out := resample([]byte{64, 64 + sampleSign}, speechStep)
 	if out[0] != 0.5 || len(out) != 3 || out[2] >= 0 {
 		t.Fatalf("resampled %v", out)
 	}

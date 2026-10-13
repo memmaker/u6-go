@@ -38,20 +38,37 @@ func Speak(character, sample int) {
 	}
 }
 
-// loadSpeech reads item index of the library name (in the folder or its SPEECH folder) as
+// Speaking says whether a voice is queued.
+func Speaking() bool {
+	mu.Lock()
+	defer mu.Unlock()
+	return len(speech) > 0
+}
+
+// loadSpeech reads item index of the library name (in CD/SPEECH, SPEECH or the folder) as
 // output samples.
 func loadSpeech(fsys fs.FS, name string, index int) ([]float32, error) {
-	lib, err := fs.ReadFile(fsys, name)
-	if err != nil {
-		lib, err = fs.ReadFile(fsys, "SPEECH/"+name)
-	}
+	lib, err := readFirst(fsys, "CD/SPEECH/"+name, "SPEECH/"+name, name)
 	if err != nil {
 		return nil, err
 	}
-	entry := func(i int) int { return int(binary.LittleEndian.Uint32(lib[i*offsetBytes:])) & offsetMask }
+	item, err := libraryItem(lib, index)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := data.Decompress(item)
+	if err != nil {
+		return nil, err
+	}
+	return resample(raw, speechStep), nil
+}
+
+// libraryItem is item index of a library with 4-byte offsets (whose top byte is a flag).
+func libraryItem(lib []byte, index int) ([]byte, error) {
 	if len(lib) < offsetBytes {
 		return nil, fs.ErrNotExist
 	}
+	entry := func(i int) int { return int(binary.LittleEndian.Uint32(lib[i*offsetBytes:])) & offsetMask }
 	count := entry(0) / offsetBytes
 	if index < 0 || index >= count || count*offsetBytes > len(lib) {
 		return nil, fs.ErrNotExist
@@ -66,15 +83,12 @@ func loadSpeech(fsys fs.FS, name string, index int) ([]float32, error) {
 	if start == 0 || start >= end || end > len(lib) {
 		return nil, fs.ErrNotExist
 	}
-	raw, err := data.Decompress(lib[start:end])
-	if err != nil {
-		return nil, err
-	}
-	return resampleSpeech(raw), nil
+	return lib[start:end], nil
 }
 
-// resampleSpeech converts the sign and magnitude bytes to output samples, interpolating.
-func resampleSpeech(raw []byte) []float32 {
+// resample converts sign and magnitude bytes to output samples, step source samples per
+// output sample, interpolating.
+func resample(raw []byte, step float64) []float32 {
 	value := func(b byte) float64 {
 		if b >= sampleSign {
 			return -float64(b-sampleSign) * sampleScale
@@ -82,9 +96,19 @@ func resampleSpeech(raw []byte) []float32 {
 		return float64(b) * sampleScale
 	}
 	var out []float32
-	for at := 0.0; int(at)+1 < len(raw); at += speechStep {
+	for at := 0.0; int(at)+1 < len(raw); at += step {
 		i, f := int(at), at-float64(int(at))
 		out = append(out, float32(value(raw[i])*(1-f)+value(raw[i+1])*f))
 	}
 	return out
+}
+
+// readFirst reads the first of names that exists.
+func readFirst(fsys fs.FS, names ...string) (contents []byte, err error) {
+	for _, name := range names {
+		if contents, err = fs.ReadFile(fsys, name); err == nil {
+			return contents, nil
+		}
+	}
+	return nil, err
 }

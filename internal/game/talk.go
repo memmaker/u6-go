@@ -179,7 +179,10 @@ func (g *Game) loadConversation(n int, forTalk bool) []byte {
 	default:
 		file, index = "CONVERSE.A", n
 	}
-	raw, err := fs.ReadFile(g.files, file)
+	raw, err := fs.ReadFile(g.files, "CD/"+file) // the FM Towns scripts, with voice marks
+	if err != nil {
+		raw, err = fs.ReadFile(g.files, file)
+	}
 	const offsetBytes = 4
 	if err != nil || len(raw) < (index+1)*offsetBytes {
 		return nil
