@@ -184,9 +184,6 @@ func TestTalkToTholden(t *testing.T) {
 	say("job")
 	writePNG(t, g, "talk.png")
 	writePNG(t, g, "conversation.png")
-	sound.Settings.NewStyleUI = true
-	writePNG(t, g, "conversation_new_style.png")
-	sound.Settings.NewStyleUI = false
 	say("bye")
 	// the farewell stays on the speech scroll after the log clip comes back
 	transcript.WriteString(clipText(g, clip{x0: speechX0, y0: speechY0, width: speechColumns, height: speechRows, bg: g.clips[clipMessage].bg}))

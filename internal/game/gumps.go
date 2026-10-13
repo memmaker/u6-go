@@ -5,7 +5,7 @@ import (
 	"image"
 )
 
-// The new style UI's gumps (after Nuvie's DollViewGump, ContainerViewGump and
+// The UI's gumps (after Nuvie's DollViewGump, ContainerViewGump and
 // PortraitViewGump): Nuvie's background art with parts of the status area's picture placed on
 // it. A click on a part goes to the status area's place under it, so the game's own clicks,
 // commands and checks apply as in the original look.
@@ -35,7 +35,7 @@ type gumpText struct {
 	at   image.Point
 }
 
-// gump is a panel of the new style UI.
+// gump is a panel of the UI.
 type gump struct {
 	size  image.Point
 	parts []gumpPart
@@ -236,9 +236,9 @@ func (g *Game) portraitGump(i int) *gump {
 	return gp
 }
 
-// statusGump is the gump the status area shows as in the new style UI, or nil.
+// statusGump is the gump the status area shows, or nil.
 func (g *Game) statusGump() *gump {
-	if !g.newStyle() || g.spellPeek {
+	if g.spellPeek {
 		return nil
 	}
 	switch g.StatusDisplay {

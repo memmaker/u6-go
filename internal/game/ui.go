@@ -54,7 +54,7 @@ type popup struct {
 	lines  []string
 	at     image.Point
 	choice int
-	// sign, when set, shows Nuvie's sign with this text instead (the new style UI)
+	// sign, when set, shows Nuvie's sign with this text instead
 	sign string
 }
 

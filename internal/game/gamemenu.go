@@ -45,7 +45,6 @@ var settings = []setting{
 	option("Smooth lighting", &sound.Settings.SmoothLighting),
 	option("Map tile lighting", &sound.Settings.MapTileLighting),
 	option("Square pixels", &sound.Settings.SquarePixels),
-	option("New style UI", &sound.Settings.NewStyleUI),
 }
 
 // talkMusicChoices are the TalkMusic settings in the order the settings page steps through them.

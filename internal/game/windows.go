@@ -31,7 +31,7 @@ type inventoryWindow struct {
 	member int
 	at     image.Point
 	pixels []byte
-	// info is what the window's gump writes (the new style UI)
+	// info is what the window's gump writes
 	info inventoryInfo
 }
 
@@ -53,10 +53,7 @@ func (g *Game) toggleWindow(member int) {
 
 // placeWindow moves w's corner to at, kept on the screen.
 func (g *Game) placeWindow(w *inventoryWindow, at image.Point) {
-	edge, size := margin+scrollPadding, statusPanel.Size()
-	if g.newStyle() {
-		edge, size = margin, inventoryGump(w.info).size
-	}
+	edge, size := margin, inventoryGump(w.info).size
 	w.at.X = max(min(at.X, g.screenWidth-edge-size.X), edge)
 	w.at.Y = max(min(at.Y, g.screenHeight-edge-size.Y), edge)
 }

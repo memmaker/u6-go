@@ -5,35 +5,24 @@ import (
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/host"
-	"github.com/memmaker/u6-go/internal/sound"
 )
 
 // TestDragBetweenWindows opens the second member's window, drags a dagger of the avatar's
 // onto it (Move, run as the command runs) and back onto the avatar's doll (Ready), and
 // writes the screen to windows.png ($U6_PNG_DIR).
-// It runs in the scroll look and again in the new style UI (windows_new_style.png).
 func TestDragBetweenWindows(t *testing.T) {
 	inGame(t, func(g *Game) {
 		if g.PartySize < 2 {
 			t.Skip("a party of one")
 		}
-		defer func() { sound.Settings.NewStyleUI = false }()
-		for _, newStyle := range []bool{false, true} {
-			sound.Settings.NewStyleUI = newStyle
-			g.windows = nil
-			dragBetweenWindows(t, g)
-		}
+		dragBetweenWindows(t, g)
 	})
 }
 
 // windowScreenPoint is where the status area's point pt shows in window w.
 func (g *Game) windowScreenPoint(w *inventoryWindow, pt image.Point) image.Point {
-	if g.newStyle() {
-		if at, ok := inventoryGump(w.info).screenPoint(pt, w.at); ok {
-			return at
-		}
-	}
-	return w.at.Add(pt.Sub(statusPanel.Min))
+	at, _ := inventoryGump(w.info).screenPoint(pt, w.at)
+	return at
 }
 
 func dragBetweenWindows(t *testing.T, g *Game) {
@@ -52,11 +41,7 @@ func dragBetweenWindows(t *testing.T, g *Game) {
 		at := g.windowScreenPoint(w, image.Pt(inventoryX, inventoryY))
 		host.MouseX, host.MouseY = at.X+1, at.Y+1
 		g.dragging, g.draggedTile = true, g.tileOf(dagger)
-		if g.newStyle() {
-			writePNG(t, g, "windows_new_style.png")
-		} else {
-			writePNG(t, g, "windows.png")
-		}
+		writePNG(t, g, "windows.png")
 		g.dragging = false
 		if cmd := g.dropOn(selection{obj: dagger}, false); cmd != 'M' || g.queuedTargets[1].obj != second {
 			t.Fatalf("drop on the window: command %d, targets %v", cmd, g.queuedTargets)

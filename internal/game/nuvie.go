@@ -6,11 +6,9 @@ import (
 	"image/color"
 	"image/png"
 	"strings"
-
-	"github.com/memmaker/u6-go/internal/sound"
 )
 
-// The new style UI's art, from ScummVM's ultima.dat (devtools/create_ultima/files/ultima6,
+// The UI's art, from ScummVM's ultima.dat (devtools/create_ultima/files/ultima6,
 // GPL; see nuvie/COPYING): Nuvie's dialog border, gump backgrounds and buttons, its scroll
 // and sign, and its gump and sign fonts. The pictures are PNG copies of Nuvie's BMPs; the gump
 // font is Nuvie's compiled-in font_gump_data in its doll colours.
@@ -20,9 +18,6 @@ var nuvieArt embed.FS
 
 // nuvieColourKey is the colour Nuvie's pictures leave transparent.
 var nuvieColourKey = color.RGBA{R: 0, G: 0x70, B: 0xfc, A: 0xff}
-
-// newStyle says that the new style UI is on.
-func (g *Game) newStyle() bool { return sound.Settings.NewStyleUI && g.basePalette != nil }
 
 // art is a picture of Nuvie's in the game's colours.
 type art struct {
@@ -228,9 +223,9 @@ func signText(text string) string {
 	return strings.TrimSpace(strings.NewReplacer("<", "", ">", "", "\n", " ").Replace(text))
 }
 
-// showsOnSign says that object n's text is shown on Nuvie's sign (in the new style UI).
+// showsOnSign says that object n's text is shown on Nuvie's sign.
 func (g *Game) showsOnSign(n int, text string) bool {
-	return g.newStyle() && g.object(n).Type() == ObjSign && len(signText(text)) <= signTextLimit
+	return g.object(n).Type() == ObjSign && len(signText(text)) <= signTextLimit
 }
 
 // drawSign draws Nuvie's sign in the middle of the screen with text on it (SignViewGump).

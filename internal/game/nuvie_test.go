@@ -3,23 +3,14 @@ package game
 import (
 	"image"
 	"testing"
-
-	"github.com/memmaker/u6-go/internal/sound"
 )
 
-// TestNewStyleUI shows the log, the avatar's inventory in the status area and the second
-// member's window, then the portrait, a menu and a sign, and writes each with the scroll
-// look (ui_*_scroll.png) and the new style (ui_*_new_style.png) to $U6_PNG_DIR. The new
-// style's gumps must send clicks on their parts to the status area's places under them.
-func TestNewStyleUI(t *testing.T) {
+// TestUI shows the log, the avatar's inventory in the status area and the second member's
+// window, then the portrait, a menu and a sign, and writes each to $U6_PNG_DIR (ui_*.png).
+// The gumps must send clicks on their parts to the status area's places under them.
+func TestUI(t *testing.T) {
 	inGame(t, func(g *Game) {
-		defer func() { sound.Settings.NewStyleUI = false }()
-		both := func(name string) {
-			sound.Settings.NewStyleUI = false
-			writePNG(t, g, "ui_"+name+"_scroll.png")
-			sound.Settings.NewStyleUI = true
-			writePNG(t, g, "ui_"+name+"_new_style.png")
-		}
+		shot := func(name string) { writePNG(t, g, "ui_"+name+".png") }
 		g.showLog = true
 		g.StatusDisplay, g.statusMember = cmdStatusEquipment, 0
 		g.StatusDirty = true
@@ -27,7 +18,7 @@ func TestNewStyleUI(t *testing.T) {
 		if g.PartySize > 1 {
 			g.toggleWindow(1)
 		}
-		both("inventory")
+		shot("inventory")
 
 		gp := inventoryGump(g.inventoryInfo())
 		for _, pt := range []image.Point{
@@ -45,14 +36,14 @@ func TestNewStyleUI(t *testing.T) {
 		g.StatusDisplay = cmdStatusPortrait
 		g.StatusDirty = true
 		g.RefreshStatus()
-		both("portrait")
+		shot("portrait")
 
 		g.popup = g.centredPopup([]string{"Save", "Load", "Settings"})
 		g.popup.choice = 0
-		both("menu")
+		shot("menu")
 
 		g.popup = &popup{sign: signText("<BRITAIN>"), choice: noChoice}
-		both("sign")
+		shot("sign")
 		g.popup = nil
 	})
 }

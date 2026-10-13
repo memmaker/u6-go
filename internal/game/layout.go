@@ -86,7 +86,7 @@ type layout struct {
 	shown []byte
 	paper *vga.Pixmap
 	// arts are Nuvie's pictures in the game's colours and backdrops the status area's slot
-	// tiles, made when first drawn (the new style UI)
+	// tiles, made when first drawn
 	arts      map[string]*art
 	backdrops map[int][]byte
 	// showDate and showLog are toggled by the hot keys
@@ -130,7 +130,7 @@ type panel struct {
 	from   image.Rectangle
 	at     image.Point
 	window *inventoryWindow // shown instead of the canvas
-	// gump, in the new style UI, shows the panel as Nuvie's gump; keyed leaves the
+	// gump shows the panel as Nuvie's gump; keyed leaves the
 	// background colour out so that the scroll shows through
 	gump  *gump
 	keyed bool
@@ -169,7 +169,7 @@ func (g *Game) copyView(x0, y0, x1, y1, toX, toY int) {
 // panels returns the scrolls and then the panels shown over the world, the topmost last.
 func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	add := func(scroll bool, from image.Rectangle, at image.Point) {
-		p := panel{from: from, at: at, keyed: scroll && g.newStyle()}
+		p := panel{from: from, at: at, keyed: scroll}
 		if scroll {
 			scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
 		}
@@ -198,13 +198,7 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
 	for _, w := range g.windows {
-		p := panel{from: statusPanel, at: w.at, window: w}
-		if g.newStyle() {
-			p.gump = inventoryGump(w.info)
-		} else {
-			scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
-		}
-		panels = append(panels, p)
+		panels = append(panels, panel{from: statusPanel, at: w.at, window: w, gump: inventoryGump(w.info)})
 	}
 	if g.showDate || sound.Settings.DisplayedWindDir && g.windBorne() {
 		add(true, datePanel, image.Pt((g.screenWidth-datePanel.Dx())/2, skyPanel.Dy()+scrollPadding+margin))
@@ -246,11 +240,7 @@ func (g *Game) Frame() *host.Frame {
 	copy(g.shown, g.world)
 	scrolls, panels := g.panels()
 	for _, s := range scrolls {
-		if g.newStyle() {
-			g.drawNuvieScroll(s)
-		} else {
-			g.drawScroll(s)
-		}
+		g.drawNuvieScroll(s)
 	}
 	for _, p := range panels {
 		if p.window != nil && p.window.pixels == nil {
@@ -299,17 +289,15 @@ func (g *Game) drawKeyed(p panel) {
 	}
 }
 
-// drawScroll draws a scroll filling r, cut from PAPER.BMP's message scroll, framed by
-// Nuvie's border in the new style UI.
+// drawScroll draws a popup's scroll filling r, cut from PAPER.BMP's message scroll and
+// framed by Nuvie's border.
 func (g *Game) drawScroll(r image.Rectangle) {
 	if g.paper == nil {
 		return
 	}
 	left, top := scrollInner.Min.X-scrollSource.Min.X, scrollInner.Min.Y-scrollSource.Min.Y
 	right, bottom := scrollSource.Max.X-scrollInner.Max.X, scrollSource.Max.Y-scrollInner.Max.Y
-	if sound.Settings.NewStyleUI {
-		defer g.drawBorder(r)
-	}
+	defer g.drawBorder(r)
 	r = r.Intersect(image.Rect(0, 0, g.screenWidth, g.screenHeight))
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		var from int
