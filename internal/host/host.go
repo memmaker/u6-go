@@ -46,8 +46,9 @@ type Frame struct {
 var ShowFrame func() *Frame
 
 var (
-	tick     = make(chan struct{})
-	yielded  = make(chan struct{})
+	// run is the game goroutine's hand-over: a new game gets its own, so a game a test left
+	// behind stays parked instead of taking the new one's ticks
+	run      = newHandOver()
 	finished atomic.Bool
 
 	// Ticks counts host ticks since start.
@@ -68,16 +69,25 @@ func Wait(d time.Duration) {
 
 // Yield hands control back to Ebiten until its next tick. Only the game goroutine calls it.
 func Yield() {
-	yielded <- struct{}{}
-	<-tick
+	r := run
+	r.yielded <- struct{}{}
+	<-r.tick
+}
+
+type handOver struct{ tick, yielded chan struct{} }
+
+func newHandOver() *handOver {
+	return &handOver{make(chan struct{}), make(chan struct{})}
 }
 
 func startGame(gameMain func()) {
+	run = newHandOver()
+	r := run
 	go func() {
-		<-tick
+		<-r.tick
 		defer func() {
 			finished.Store(true)
-			yielded <- struct{}{}
+			r.yielded <- struct{}{}
 		}()
 		gameMain()
 	}()
@@ -111,8 +121,8 @@ func step() bool {
 	}
 	Ticks++
 	runTimers()
-	tick <- struct{}{}
-	<-yielded
+	run.tick <- struct{}{}
+	<-run.yielded
 	return !finished.Load()
 }
 

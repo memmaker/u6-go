@@ -54,6 +54,10 @@ const (
 	partyHereRange = 8
 )
 
+// ErrNoCharacter is New's error when the saved game has no character yet: the caller goes
+// back to the intro.
+var ErrNoCharacter = errors.New("no character: create or transfer one first")
+
 // New sets up the game in dir: the driver, the screen and the saved game. It must run on
 // the host's game goroutine.
 // C: seg_0903:0C5E (main), up to the game loop
@@ -118,8 +122,14 @@ func New(dir string) (*Game, error) {
 		g.gr.SetTileFrame(int(g.animTile[i]), int(g.animFrame[i]))
 	}
 	if g.PortraitPlusOne == 0 {
+		// GAME.EXE shows the screen, waits for a key and runs the intro again
+		host.ShowFrame = g.Frame
+		g.showLog = true
 		g.printf(noCharacterMsg)
-		return nil, errors.New("no character: run U.EXE (the intro) first")
+		for readKey(false) == 0 && !host.MouseLeft && !host.MouseRight {
+			g.osiDelay(1)
+		}
+		return nil, ErrNoCharacter
 	}
 	g.startTurns()
 	g.passTime(0)

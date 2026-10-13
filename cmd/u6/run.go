@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -26,13 +27,16 @@ func run(dir, romDir string) error {
 		}
 	}
 	sound.Start(files)
-	result, err := intro.Run(files, dir)
-	if err != nil || result == intro.Quit {
-		return err
-	}
-	g, err := game.New(dir)
-	if err != nil {
-		return err
+	// Journey Onward without a character: GAME.EXE says so and runs the intro again.
+	var g *game.Game
+	for g == nil {
+		result, err := intro.Run(files, dir)
+		if err != nil || result == intro.Quit {
+			return err
+		}
+		if g, err = game.New(dir); err != nil && !errors.Is(err, game.ErrNoCharacter) {
+			return err
+		}
 	}
 	host.ShowFrame = g.Frame
 	g.Run()
