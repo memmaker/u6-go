@@ -272,6 +272,10 @@ func ensureGameFiles(dir string) error {
 	split := func(raw []byte, first, count int) ([]byte, error) {
 		const recordBytes = 8
 		for b := first; b < first+count; b++ {
+			block := b
+			if b < surfaceRegions {
+				block = data.PackedRegion(b)
+			}
 			if len(raw) < 2 {
 				return nil, errors.New("short object block file")
 			}
@@ -279,7 +283,7 @@ func ensureGameFiles(dir string) error {
 			if len(raw) < size {
 				return nil, errors.New("short object block file")
 			}
-			if err := os.WriteFile(filepath.Join(saves, objblkName(b)), raw[:size], 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(saves, objblkName(block)), raw[:size], 0o644); err != nil {
 				return nil, err
 			}
 			raw = raw[size:]
