@@ -284,7 +284,7 @@ func compareClassicTiles(t *testing.T, g *Game) {
 }
 
 // writeUIPNGs drives the port's overlays and writes them for docs/ui: the help, the Enter
-// menu, a click's context menu on Tholden, the toasts of a Look and a dock tooltip.
+// menu, a right click's context menu on Tholden, the toasts of a Look and a dock tooltip.
 func writeUIPNGs(t *testing.T, g *Game, steps func(int), settle int) {
 	enter := host.Key{Scan: host.ScanEnter, Char: keyEnter}
 	host.PushChar('?')
@@ -300,12 +300,12 @@ func writeUIPNGs(t *testing.T, g *Game, steps func(int), settle int) {
 	if g.popup != nil {
 		t.Fatal("Esc left the menu open")
 	}
-	// click Tholden, right of the party
+	// right click Tholden, right of the party
 	centreX, centreY := g.mapCentre()
 	host.MouseX, host.MouseY = centreX+tileSize-g.viewPixels().Min.X, centreY-g.viewPixels().Min.Y
-	host.MouseLeft = true
+	host.MouseRight = true
 	steps(settle)
-	host.MouseLeft = false
+	host.MouseRight = false
 	steps(settle)
 	if g.popup == nil {
 		t.Fatal("no context menu on Tholden")

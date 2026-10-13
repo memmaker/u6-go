@@ -125,3 +125,37 @@ func TestMissileAngleFar(t *testing.T) {
 		t.Error("far flights do not keep their direction")
 	}
 }
+
+// TestDoubleClick checks what a double click does, as Nuvie's multiuse and
+// double_click_obj: read, talk, use, the inventory, and attack in combat.
+func TestDoubleClick(t *testing.T) {
+	inGame(t, func(g *Game) {
+		p := g.object(int(g.Party[0])).Pos
+		g.InCombat = 0
+		on := func(obj int) int {
+			g.Selection.obj, g.repeatTarget = obj, false
+			return g.doubleClick()
+		}
+		book := g.AddMapObj(shapeOf(ObjBook, 0), 0, 0, p.X+1, p.Y, p.Z)
+		candle := g.AddMapObj(shapeOf(ObjCandle, 0), 0, 1, p.X, p.Y+1, p.Z)
+		held := g.AddInvObj(shapeOf(ObjBook, 0), StatusLocal|InInventory, 0, int(g.Party[0]))
+		for _, c := range []struct {
+			name     string
+			obj, cmd int
+		}{
+			{"book", book, cmdLook}, {"candle", candle, cmdUse}, {"held book", held, cmdLook},
+			{"a member", int(g.Party[1]), cmdTalk}, {"the avatar", int(g.Party[0]), cmdStatusEquipment},
+		} {
+			if got := on(c.obj); got != c.cmd {
+				t.Errorf("%s: command %d, want %d", c.name, got, c.cmd)
+			}
+		}
+		g.InCombat = 1
+		if got := on(candle); got != cmdAttack {
+			t.Errorf("candle in combat: command %d, want Attack", got)
+		}
+		if got := on(int(g.Party[1])); got != cmdTalk {
+			t.Errorf("a member in combat: command %d, want Talk", got)
+		}
+	})
+}

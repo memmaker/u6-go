@@ -318,22 +318,17 @@ func (g *Game) mouseCommand() int {
 			}
 			break
 		}
-		if g.DefaultCommand != noDefaultCommand && g.mouseButtons&rightButton != 0 {
+		if g.mouseButtons&rightButton != 0 {
+			// the port: the right button opens the menu of the place clicked
 			if g.mouseTriggered {
-				cmd = cmdDefault
 				g.mouseSelection()
+				if cmd = g.contextMenu(image.Pt(host.MouseX, host.MouseY)); cmd == 0 {
+					cmd = cmdSpellNothing
+				}
 			}
 			break
 		}
 		dir := g.mouseDirection()
-		if g.mouseTriggered && dir != -1 && g.mouseButtons&leftButton != 0 && g.mouseSelection() == cmdSelectMap {
-			// the port: a click on a thing opens its menu
-			cmd = g.contextMenu(image.Pt(host.MouseX, host.MouseY))
-			if cmd == 0 {
-				cmd = cmdSpellNothing
-			}
-			break
-		}
 		if dir == -1 {
 			if g.mouseTriggered {
 				cmd = cmdPass
@@ -607,6 +602,10 @@ func (g *Game) readCommand() int {
 				ch, dragged = g.closePointedGump(), true
 			} else if atPrompt {
 				ch, dragged = g.drag()
+				// a click on a thing waits for a second one, as Nuvie's MouseDelayed
+				if !dragged && g.mouseSelection() != 0 && g.Selection.obj != noObject && g.Selection.obj != g.container && g.secondClick() {
+					ch, dragged = g.doubleClick(), true
+				}
 			}
 			if !dragged {
 				ch = g.mouseCommand()

@@ -230,6 +230,23 @@ func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(str
 		}
 		g.DeleteObj(candle)
 	}
+	// a double click uses a candle (out of combat: in it, it attacks)
+	g.InCombat = 0
+	candle := g.AddMapObj(shapeOf(ObjCandle, 0), 0, 1, p.X, p.Y+1, p.Z)
+	g.refreshArea()
+	host.MouseX = (p.X-int(g.MapX)+g.viewCenterX)*tileSize + 4 - g.viewPixels().Min.X
+	host.MouseY = (p.Y+1-int(g.MapY)+g.viewCenterY)*tileSize + 4 - g.viewPixels().Min.Y
+	for _, down := range []bool{true, false, true, false} {
+		host.MouseLeft = down
+		for range doubleClickTicks / 4 {
+			host.Step()
+		}
+	}
+	press()
+	if g.object(candle).Frame() == 0 {
+		t.Errorf("double click: the candle is not lit:\n%s", scrollText(g))
+	}
+	g.DeleteObj(candle)
 }
 
 // testFight puts a hostile rat near the party and attacks it until it dies.

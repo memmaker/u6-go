@@ -2,6 +2,7 @@ package game
 
 import (
 	"image"
+	"slices"
 	"strings"
 
 	"github.com/memmaker/u6-go/internal/host"
@@ -31,9 +32,9 @@ var helpText = []string{
 	"Tab aim with the keys",
 	"Esc cancel, close inventory",
 	"Enter    command menu",
-	"Click    a thing's actions",
-	"Hold     walk",
-	"Right    default command",
+	"Click    walk, hold: keep on",
+	"Right    the place's actions",
+	"Double   use, talk, look",
 	"Alt+key  set the default",
 	"Bottom   command dock",
 	"Ctrl+S   save, Ctrl+R restore",
@@ -377,4 +378,53 @@ func (g *Game) dockTooltip() string {
 		return "Break off combat"
 	}
 	return "Begin combat"
+}
+
+// doubleClickTicks is how soon a second click makes a double click (Nuvie's
+// GUI::mouseclick_delay, 300 ms).
+const doubleClickTicks = host.TicksPerSecond * 3 / 10
+
+// secondClick waits for the button to go down again soon after a click: a double click.
+func (g *Game) secondClick() bool {
+	for range doubleClickTicks {
+		if host.MouseLeft {
+			return true
+		}
+		host.Yield()
+	}
+	return false
+}
+
+// readable things are looked at by a double click (U6UseCode::is_readable).
+var readable = []ObjectType{ObjSign, ObjBook, ObjNote, ObjPicture, ObjGargoyleSign, ObjTombstone, ObjCross,
+	ObjCodex, ObjBookOfCircles, ObjClock, ObjSundial}
+
+// doubleClick returns the command of a double click on the Selection, its target queued, as
+// Nuvie's Events::multiuse (the map) and ViewManager::double_click_obj (an inventory): it
+// looks at what can be read, attacks in combat, uses animals that can be used, talks to
+// people and shrines, opens the inventory of the one walked with, else uses the thing.
+func (g *Game) doubleClick() int {
+	obj := g.Selection.obj
+	if obj == noObject {
+		return 0
+	}
+	t := g.object(obj).Type()
+	onMap := g.object(obj).CoordUse() == OnMap
+	npc := obj < npcCount
+	cmd := cmdUse
+	switch {
+	case slices.Contains(readable, t):
+		cmd = cmdLook
+	case !onMap:
+	case obj == int(g.Party[g.Active]): // the new style's inventory
+		g.Selection.obj = int(g.Active)
+		return cmdStatusEquipment
+	case g.InCombat != 0 && (!npc || g.alignment(obj) != alignGood):
+		cmd = cmdAttack
+	case npc && (t == ObjCow || t == ObjHorse || t == ObjMountedHorse):
+	case npc, t == ObjShrine || t == ObjStatueOfMondain || t == ObjStatueOfMinax || t == ObjStatueOfExodus:
+		cmd = cmdTalk
+	}
+	g.repeatTarget = true
+	return cmd
 }

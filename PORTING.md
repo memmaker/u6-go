@@ -53,6 +53,16 @@ The world view fills the screen; the panels are layered over it as scrolls
 - Shift+F1..F9 opens or closes a party member's inventory window; several can be open and
   each moves by dragging its name row (`internal/game/windows.go`, `docs/ui/windows.png`).
   A click in a window turns the status area to that member first.
+- Mouse buttons: the left button walks toward the pointer as the original's did; the right
+  button opens the menu of the place clicked (Look, Talk, Get, Use, Attack, Move, Walk here;
+  the original's right click ran the default command, which the dock and Alt+key still
+  set for keys). A double click (within 300 ms, Nuvie's delay; a click on a thing waits that
+  long before it walks) does what Nuvie's does (`Events::multiuse`,
+  `ViewManager::double_click_obj`): books, signs, pictures, clocks and the like are looked
+  at, things are attacked in combat (but not the party's friends), cows and horses used,
+  people, shrines and the three statues talked to, the one walked with opens the
+  inventory, anything else is used; in an inventory a double click looks at readables and
+  uses the rest (`doubleClick` in `internal/game/ui.go`).
 - Things are dragged with the mouse, each drag running the command that does the same:
   map → an inventory is Get (by the active member), inventory → map is Drop (the active
   member's things), onto another member's window is Move, onto a container in the grid is
