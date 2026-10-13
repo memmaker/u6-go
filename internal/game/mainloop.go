@@ -14,6 +14,9 @@ import (
 
 // The start of the game and its main loop (seg_0903 main, seg_0A33 C_0A33_1CB4).
 
+// now is the time of day the game seeds its random numbers from; tests fix it.
+var now = time.Now
+
 // Messages (seg_356A).
 const (
 	whatMsg        = "what?\n"
@@ -74,7 +77,7 @@ func New(dir string) (*Game, error) {
 	g.lastTarget = noObject
 	g.worldShown = true
 	g.StatusDisplay = cmdStatusParty
-	g.random.randomize(timeSeed(time.Now()))
+	g.random.randomize(timeSeed(now()))
 	g.gr.Present = host.Yield
 	if err := g.gr.LoadPointers(); err != nil {
 		return nil, err

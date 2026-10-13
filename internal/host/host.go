@@ -265,6 +265,7 @@ func fitScreen(windowW, windowH int) (width, height int, covers bool) {
 func StartHeadless(gameMain func()) {
 	finished.Store(false) // a test may run one game after another
 	KeyQueue = KeyQueue[:0]
+	Ticks, waitCarry = 0, 0 // a new game starts on a fresh host clock
 	startGame(gameMain)
 }
 

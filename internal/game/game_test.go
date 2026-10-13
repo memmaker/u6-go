@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/memmaker/u6-go/internal/host"
 )
@@ -102,6 +103,9 @@ func TestPlayHeadless(t *testing.T) {
 	if err := WriteCharacter(dir, DefaultCharacter()); err != nil {
 		t.Fatal(err)
 	}
+	// the same random rolls on every run (the game seeds from the time of day)
+	now = func() time.Time { return time.Time{} }
+	defer func() { now = time.Now }()
 	var g *Game
 	started := make(chan error, 1)
 	host.StartHeadless(func() {
