@@ -19,7 +19,7 @@
 - [x] Mouse + keyboard input
 - [x] Sound/music (AdLib driver port, internal/sound)
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
-- [ ] Port END.EXE: ending
+- [x] Port END.EXE: ending (internal/ending)
 - [ ] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
 - [ ] Runs from original data files natively
 - [ ] Parity checks against DOSBox-X screenshots
