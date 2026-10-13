@@ -22,3 +22,20 @@ func TestTopicWordTable(t *testing.T) {
 		}
 	}
 }
+
+// Every spelled-out topic fits its option column whole.
+func TestTopicWordsFit(t *testing.T) {
+	check := func(w string) {
+		if len(w) >= optionWidth {
+			t.Errorf("topic %q is wider than its column (%d)", w, optionWidth-1)
+		}
+	}
+	for _, w := range topicWords {
+		check(w)
+	}
+	for _, words := range npcTopicWords {
+		for _, w := range words {
+			check(w)
+		}
+	}
+}

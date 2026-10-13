@@ -41,8 +41,8 @@ const (
 	clipOptions    = 2
 	optionsX0      = speechX0
 	optionsY0      = speechY0 + speechRows + 1
-	optionsColumns = 3
-	optionWidth    = 12 // characters per option column
+	optionsColumns = 2
+	optionWidth    = 18 // characters per option column: the longest topic word and a gap
 	optionsRows    = 6
 	// the marks of more options above or below, in the column right of the options
 	moreAboveChar, moreBelowChar = 24, 25
