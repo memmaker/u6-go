@@ -20,8 +20,11 @@ func TestDragBetweenWindows(t *testing.T) {
 }
 
 // windowScreenPoint is where the status area's point pt shows in window w.
-func (g *Game) windowScreenPoint(w *inventoryWindow, pt image.Point) image.Point {
-	at, _ := inventoryGump(w.info).screenPoint(pt, w.at)
+func (g *Game) windowScreenPoint(t *testing.T, w *inventoryWindow, pt image.Point) image.Point {
+	at, ok := inventoryGump(w.info).screenPoint(pt, w.at)
+	if !ok {
+		t.Fatalf("status point %v is not on the window", pt)
+	}
 	return at
 }
 
@@ -38,7 +41,7 @@ func dragBetweenWindows(t *testing.T, g *Game) {
 		}
 		// the pointer over the window's grid
 		w := g.windows[0]
-		at := g.windowScreenPoint(w, image.Pt(inventoryX, inventoryY))
+		at := g.windowScreenPoint(t, w, image.Pt(inventoryX, inventoryY))
 		host.MouseX, host.MouseY = at.X+1, at.Y+1
 		g.dragging, g.draggedTile = true, g.tileOf(dagger)
 		writePNG(t, g, "windows.png")
@@ -58,7 +61,7 @@ func dragBetweenWindows(t *testing.T, g *Game) {
 		g.StatusDisplay, g.statusMember = cmdStatusEquipment, 1
 		g.StatusDirty = true
 		g.RefreshStatus()
-		at = g.windowScreenPoint(w, image.Pt(slotPlaces[slotRightHand][0], slotPlaces[slotRightHand][1]))
+		at = g.windowScreenPoint(t, w, image.Pt(slotPlaces[slotRightHand][0], slotPlaces[slotRightHand][1]))
 		host.MouseX, host.MouseY = at.X+1, at.Y+1
 		if cmd := g.dropOn(selection{obj: dagger}, false); cmd != cmdReady {
 			t.Errorf("drop on the doll: command %d", cmd)
