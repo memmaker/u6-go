@@ -52,16 +52,17 @@ const (
 )
 
 var (
-	mu       sync.Mutex
-	files    fs.FS
-	started  bool
-	song     *songPlayer // nil: no music
-	mt32     bool        // the music goes to the MT-32 (StartMT32)
-	mtFrames []int16
-	current  string
-	speaker  = newBeeper()
-	chipDue  float64 // chip samples owed to the output
-	tickDue  int     // output samples until the next driver tick
+	mu         sync.Mutex
+	files      fs.FS
+	started    bool
+	song       *songPlayer // nil: no music
+	mt32       bool        // the music goes to the MT-32 (StartMT32)
+	midiDriver *roland     // U6ROLAND.DRV, loaded by StartMT32
+	mtFrames   []int16
+	current    string
+	speaker    = newBeeper()
+	chipDue    float64 // chip samples owed to the output
+	tickDue    int     // output samples until the next driver tick
 )
 
 // playerBuffer is how much audio the host player queues ahead.
@@ -125,7 +126,8 @@ func PlaySong(name string) error {
 	}
 	var driver musicDriver = newAdlib(b)
 	if mt32 {
-		driver = newRoland(loadInstrumentMap(files, songNumber(name)))
+		midiDriver.instruments.load(files, songNumber(name))
+		driver = midiDriver
 	}
 	song, current, tickDue = newPlayer(b, driver), name, 0
 	return nil
@@ -147,7 +149,7 @@ func StartMT32(romDir string) error {
 		return err
 	}
 	mu.Lock()
-	mt32 = true
+	mt32, midiDriver = true, newRoland()
 	mu.Unlock()
 	return nil
 }

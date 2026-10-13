@@ -13,15 +13,20 @@ import (
 // playing it. A binding provides mtOpen(romDir), mtMsg, mtSysex and mtRender.
 
 const (
-	midiVoices      = 16
+	midiVoices      = 16 // the song's voices and instruments the driver keeps tables for
+	tickedVoices    = 9  // the voices whose notes the driver's tick starts (0-8)
+	midiChannels    = 16
 	midiNoteOff     = 128
 	midiNoteOn      = 144
 	midiProgram     = 192
 	midiControl     = 176
 	midiAllNotesOff = 123
+	midiDataMask    = 127 // a MIDI data byte's 7 bits
 	midiMaxVelocity = 127
 	defaultChannel  = 1    // MIDI channel 2, the MT-32's first melodic part
 	noProgram       = -1   // the driver's 255: leave the channel's program alone
+	noNote          = -1   // the driver's 255: no note sounding
+	noPending       = 0    // the driver's 0: no note to start (so it never starts MIDI note 0)
 	midiDataSize    = 1024 // MUS_0851 reads this much of MIDI.DAT
 	semitones       = 12
 )
@@ -41,21 +46,27 @@ type instrumentMap struct {
 
 type rolandVoice struct {
 	channel  int
-	note     int // the note sounding, -1: none
-	pending  int // the note to start on the next tick, -1: none
+	note     int // the note sounding, noNote: none
+	pending  int // the note to start on the next tick, noPending: none
 	velocity int
 }
 
+// roland is U6ROLAND.DRV's state. The game loads the driver once and its tables outlive
+// the songs: playing a song resets neither the voices nor the instruments MIDI.DAT does not
+// list for it.
 type roland struct {
 	instruments instrumentMap
 	voice       [midiVoices]rolandVoice
 }
 
-// C: U6ROLAND.DRV (play) — every voice on channel 2 at full velocity.
-func newRoland(m instrumentMap) *roland {
-	r := &roland{instruments: m}
-	for v := range r.voice {
-		r.voice[v] = rolandVoice{channel: defaultChannel, note: -1, pending: -1, velocity: midiMaxVelocity}
+// newRoland is the driver as loaded: every instrument on channel 2 with program 1, every
+// voice on channel 2 at full velocity.
+// C: U6ROLAND.DRV (data)
+func newRoland() *roland {
+	r := &roland{}
+	for i := range midiVoices {
+		r.instruments.channel[i], r.instruments.program[i] = defaultChannel, 0
+		r.voice[i] = rolandVoice{channel: defaultChannel, note: noNote, pending: noPending, velocity: midiMaxVelocity}
 	}
 	return r
 }
@@ -66,37 +77,42 @@ func midiNote(note int) int {
 	if pitch < len(midiNoteTable) { // fix: the driver reads past its table for indexes 24-31
 		n = midiNoteTable[pitch]
 	}
-	return n + semitones*(note>>noteOctaveShift)
+	return (n + semitones*(note>>noteOctaveShift)) & midiDataMask
 }
+
+// midiOut sends a MIDI message (tests listen in).
+var midiOut = func(msg uint32) { mtMsg(msg) }
 
 func midiMessage(status, d1, d2 int) {
-	mtMsg(uint32(status) | uint32(d1)<<8 | uint32(d2)<<16)
+	midiOut(uint32(status) | uint32(d1)<<8 | uint32(d2)<<16)
 }
 
+// release ends the note sounding on the voice, if any, and with it the note pending.
+// C: U6ROLAND.DRV:02B1 (note off)
 func (r *roland) release(v *rolandVoice) {
-	if v.note >= 0 {
-		midiMessage(midiNoteOff|v.channel, v.note, v.velocity)
-		v.note = -1
+	if v.note == noNote {
+		return
 	}
+	midiMessage(midiNoteOff|v.channel%midiChannels, v.note, v.velocity)
+	v.note, v.pending = noNote, noPending
 }
 
-func (r *roland) noteOff(voice, note int) {
-	v := &r.voice[voice]
-	midiMessage(midiNoteOff|v.channel, midiNote(note), v.velocity)
-	v.note, v.pending = -1, -1
-}
+// noteOff ends whatever note the voice sounds; the song's note byte is not looked at. A
+// note started in this tick is not sounding yet, so it still starts with the next one.
+func (r *roland) noteOff(voice, note int) { r.release(&r.voice[voice]) }
 
 // noteOn ends the voice's note and starts this one with the next tick.
+// C: U6ROLAND.DRV:043B, 02B1 (note on)
 func (r *roland) noteOn(voice, note int) {
 	v := &r.voice[voice]
 	r.release(v)
 	v.pending = midiNote(note)
-	v.note = v.pending
 }
 
 func (r *roland) tie(voice, note int) { r.noteOn(voice, note) }
 
 // carrierLevel: the OPL attenuation (0 loudest, 63 silent) as a velocity.
+// C: U6ROLAND.DRV:029E
 func (r *roland) carrierLevel(voice, level int) {
 	inverted := maxLevel - level%(maxLevel+1)
 	r.voice[voice].velocity = inverted * 3 / 2 % (midiMaxVelocity + 1)
@@ -107,8 +123,10 @@ func (r *roland) freqSlide(voice, slide int)         {}
 func (r *roland) vibrato(voice, depthAndMult int)    {}
 func (r *roland) volumeSlide(voice, dir, period int) {}
 
-// instrument moves the voice to the instrument's channel and selects its program there
-// (the driver's check against the channel's last program never matches, so it always does).
+// instrument moves the voice to the instrument's channel, ending its note there, and
+// selects the program (the driver's check against the channel's last program never
+// matches, so it always does).
+// C: U6ROLAND.DRV:030B
 func (r *roland) instrument(voice, number, at int) {
 	v := &r.voice[voice]
 	i := number % midiVoices
@@ -118,62 +136,63 @@ func (r *roland) instrument(voice, number, at int) {
 	}
 	v.channel = channel
 	if p := r.instruments.program[i]; p != noProgram {
-		midiMessage(midiProgram|channel, p, 0)
+		midiMessage(midiProgram|channel%midiChannels, p, 0)
 	}
 }
 
 // startTick sends the notes started on the last tick.
+// C: U6ROLAND.DRV:03B9
 func (r *roland) startTick() {
-	for i := range r.voice {
+	for i := range tickedVoices {
 		v := &r.voice[i]
-		if v.pending >= 0 {
-			midiMessage(midiNoteOn|v.channel, v.pending, v.velocity)
-			v.pending = -1
+		if v.pending != noPending {
+			midiMessage(midiNoteOn|v.channel%midiChannels, v.pending, v.velocity)
+			v.note, v.pending = v.pending, noPending
 		}
 	}
 }
 
 func (r *roland) endTick() {}
 
-// stop: C: U6ROLAND.DRV (silence) — end every note.
+// stop: the driver has the MPU-401 clear its play map (all notes off) and drops the
+// pending notes; it forgets nothing about the notes sounding.
+// C: U6ROLAND.DRV:037F (silence)
 func (r *roland) stop() {
-	for i := range r.voice {
-		r.release(&r.voice[i])
-		r.voice[i].pending = -1
-	}
-	for c := range midiVoices {
+	for c := range midiChannels {
 		midiMessage(midiControl|c, midiAllNotesOff, 0)
+	}
+	for i := range tickedVoices {
+		r.voice[i].pending = noPending
 	}
 }
 
-// loadInstrumentMap reads song number n's (1-based) instrument map from MIDI.DAT: the n-th
-// group "(channel/program,...)". Without the file every instrument plays on channel 2 with
-// its program unchanged.
+// loadInstruments sets the instruments MIDI.DAT lists for song number n (1-based), its n-th
+// group "(channel/program,...)"; the others keep what they had. Without the file every
+// instrument plays on channel 2 with its program unchanged.
 // C: MUS_0851, MUS_07F6
-func loadInstrumentMap(fsys fs.FS, n int) instrumentMap {
-	var m instrumentMap
-	for i := range midiVoices {
-		m.channel[i], m.program[i] = defaultChannel, noProgram
-	}
+func (m *instrumentMap) load(fsys fs.FS, n int) {
 	text, err := fs.ReadFile(fsys, "MIDI.DAT")
 	if err != nil {
 		text, err = fs.ReadFile(fsys, "midi.dat")
 	}
 	if err != nil {
-		return m
+		for i := range midiVoices {
+			m.channel[i], m.program[i] = defaultChannel, noProgram
+		}
+		return
 	}
 	text = text[:min(len(text), midiDataSize)]
 	groups := strings.Split(string(text), "(")
 	if n < 1 || n >= len(groups) {
-		return m
+		return
 	}
 	group, _, _ := strings.Cut(groups[n], ")")
 	numbers := strings.FieldsFunc(group, func(r rune) bool { return r < '0' || r > '9' })
-	for i := 0; i+1 < len(numbers) && i/2 < midiVoices; i += 2 {
+	for i := 0; i+1 < len(numbers); i += 2 {
 		channel, _ := strconv.Atoi(numbers[i])
 		program, _ := strconv.Atoi(numbers[i+1])
-		m.channel[i/2] = (channel + midiVoices - 1) % midiVoices // the driver keeps the low nibble
-		m.program[i/2] = program - 1                             // 0 becomes noProgram
+		instrument := i / 2 % midiVoices                                    // the driver keeps the low nibble
+		m.channel[instrument] = (channel + midiChannels - 1) % midiChannels // MIDI channels 1-16
+		m.program[instrument] = program - 1                                 // 0 becomes noProgram
 	}
-	return m
 }

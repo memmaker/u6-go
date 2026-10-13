@@ -23,11 +23,11 @@ func TestMT32Songs(t *testing.T) {
 	defer func() { mt32 = false }()
 	files = os.DirFS(dir)
 	out := os.Getenv("U6WAVDIR")
-	for n, name := range Songs[1:] {
+	for _, name := range Songs[1:] {
 		if err := PlaySong(name); err != nil {
 			t.Fatal(name, err)
 		}
-		if m := loadInstrumentMap(files, n+1); n == 0 && m.program[0] == noProgram {
+		if midiDriver.instruments.program[0] == noProgram {
 			t.Error("MIDI.DAT: no program for ULTIMA.M's first instrument")
 		}
 		pcm := make([]float32, 6*outputRate)
