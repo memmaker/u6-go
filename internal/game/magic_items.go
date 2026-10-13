@@ -71,7 +71,7 @@ func (g *Game) vortex() {
 	g.drawStatusCursor(0)
 	g.SelectMode = 0
 	g.drawMap(false)
-	g.gr.Vortex()
+	g.gr.Vortex(g.world[:], host.ScreenWidth, host.ScreenHeight, viewCropX, viewCropY)
 	g.redrawWorld()
 	g.screenFade = true
 	g.drawMap(true)

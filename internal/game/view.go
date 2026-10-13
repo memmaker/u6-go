@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/sound"
 	"github.com/memmaker/u6-go/internal/vga"
 )
@@ -708,9 +709,14 @@ func (g *Game) drawMap(onScreen bool) {
 		}
 		g.gr.DrawTileOffscreen(tile, g.AimX*tileSize, g.AimY*tileSize)
 	}
-	// the port fills the screen with the view: no frame, and no dissolve for screenFade
-	g.screenFade = false
-	g.copyView(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1, 0, 0)
+	// the port fills the screen with the view: no frame
+	if g.screenFade {
+		g.gr.FadeIn(g.world[:], host.ScreenWidth, viewCropX, viewCropY,
+			viewPixelStartX, viewPixelStartY, viewPixelEndX-1, viewPixelEndY-1)
+		g.screenFade = false
+	} else {
+		g.copyView(0, 0, vga.BackBufferWidth-1, vga.BackBufferHeight-1, 0, 0)
+	}
 }
 
 // OtherAnimations brings the view up to date and, while the world is shown, animates and
