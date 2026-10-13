@@ -162,9 +162,13 @@ func (g *Game) readBook(n int) {
 		for end < len(b) && b[end] != 0 {
 			end++
 		}
-		g.current.attr |= textAttrLook
-		g.printf("%s", string(b[start:end]))
-		g.pagingDisabled = true
+		if text := string(b[start:end]); g.showsOnSign(n, text) {
+			g.runPopup(&popup{sign: signText(text), choice: noChoice})
+		} else {
+			g.current.attr |= textAttrLook
+			g.printf("%s", text)
+			g.pagingDisabled = true
+		}
 	}
 	g.playAreaSong()
 }

@@ -85,8 +85,10 @@ type layout struct {
 	// shown is the composed screen Frame returns
 	shown []byte
 	paper *vga.Pixmap
-	// border is Nuvie's new style border, loaded when first drawn
-	border [borderPieces]*vga.Pixmap
+	// arts are Nuvie's pictures in the game's colours and backdrops the status area's slot
+	// tiles, made when first drawn (the new style UI)
+	arts      map[string]*art
+	backdrops map[int][]byte
 	// showDate and showLog are toggled by the hot keys
 	showDate, showLog bool
 	// dockOffset is how far the command icons have slid up into the screen
@@ -128,9 +130,26 @@ type panel struct {
 	from   image.Rectangle
 	at     image.Point
 	window *inventoryWindow // shown instead of the canvas
+	// gump, in the new style UI, shows the panel as Nuvie's gump; keyed leaves the
+	// background colour out so that the scroll shows through
+	gump  *gump
+	keyed bool
 }
 
-func (p panel) onScreen() image.Rectangle { return p.from.Sub(p.from.Min).Add(p.at) }
+func (p panel) onScreen() image.Rectangle {
+	if p.gump != nil {
+		return image.Rectangle{Max: p.gump.size}.Add(p.at)
+	}
+	return p.from.Sub(p.from.Min).Add(p.at)
+}
+
+// pixel is the panel's canvas pixel at (x, y).
+func (p panel) pixel(g *Game, x, y int) byte {
+	if p.window != nil {
+		return p.window.pixels[(y-p.from.Min.Y)*p.from.Dx()+x-p.from.Min.X]
+	}
+	return g.gr.Screen[y*vga.ScreenWidth+x]
+}
 
 // copyView copies the back buffer's rectangle from (x0, y0) to (x1, y1) (inclusive) to the
 // world picture, its corner at back buffer place (toX, toY).
@@ -150,7 +169,7 @@ func (g *Game) copyView(x0, y0, x1, y1, toX, toY int) {
 // panels returns the scrolls and then the panels shown over the world, the topmost last.
 func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	add := func(scroll bool, from image.Rectangle, at image.Point) {
-		p := panel{from: from, at: at}
+		p := panel{from: from, at: at, keyed: scroll && g.newStyle()}
 		if scroll {
 			scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
 		}
@@ -173,12 +192,18 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 		party := partyPanel
 		party.Max.Y = party.Min.Y + min(int(g.PartySize), partyListRows)*partyRowHeight
 		add(false, party, image.Pt(right-party.Dx(), margin))
+	} else if gp := g.statusGump(); gp != nil {
+		panels = append(panels, panel{from: statusPanel, at: image.Pt(right-gp.size.X, margin), gump: gp})
 	} else {
 		add(true, statusPanel, image.Pt(right-scrollPadding-statusPanel.Dx(), margin+scrollPadding))
 	}
 	for _, w := range g.windows {
-		p := panel{statusPanel, w.at, w}
-		scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
+		p := panel{from: statusPanel, at: w.at, window: w}
+		if g.newStyle() {
+			p.gump = inventoryGump(w.info)
+		} else {
+			scrolls = append(scrolls, p.onScreen().Inset(-scrollPadding))
+		}
 		panels = append(panels, p)
 	}
 	if g.showDate || sound.Settings.DisplayedWindDir && g.windBorne() {
@@ -221,9 +246,24 @@ func (g *Game) Frame() *host.Frame {
 	copy(g.shown, g.world)
 	scrolls, panels := g.panels()
 	for _, s := range scrolls {
-		g.drawScroll(s)
+		if g.newStyle() {
+			g.drawNuvieScroll(s)
+		} else {
+			g.drawScroll(s)
+		}
 	}
 	for _, p := range panels {
+		if p.window != nil && p.window.pixels == nil {
+			continue
+		}
+		if p.gump != nil {
+			g.drawGump(p.gump, p.at, func(x, y int) byte { return p.pixel(g, x, y) })
+			continue
+		}
+		if p.keyed {
+			g.drawKeyed(p)
+			continue
+		}
 		for y := p.from.Min.Y; y < p.from.Max.Y; y++ {
 			sy := y - p.from.Min.Y + p.at.Y
 			if sy < 0 || sy >= g.screenHeight {
@@ -244,6 +284,19 @@ func (g *Game) Frame() *host.Frame {
 	frame.Pixels, frame.Width, frame.Height = g.shown, g.screenWidth, g.screenHeight
 	frame.Shade = g.smoothShade(panels, scrolls)
 	return frame
+}
+
+// drawKeyed draws panel p but for its background colour.
+func (g *Game) drawKeyed(p panel) {
+	for y := p.from.Min.Y; y < p.from.Max.Y; y++ {
+		sy := y - p.from.Min.Y + p.at.Y
+		for x := p.from.Min.X; x < p.from.Max.X; x++ {
+			sx := x - p.from.Min.X + p.at.X
+			if c := p.pixel(g, x, y); c != g.colours.background && sx >= 0 && sy >= 0 && sx < g.screenWidth && sy < g.screenHeight {
+				g.shown[sy*g.screenWidth+sx] = c
+			}
+		}
+	}
 }
 
 // drawScroll draws a scroll filling r, cut from PAPER.BMP's message scroll, framed by
@@ -299,6 +352,9 @@ func (g *Game) pointAt(x, y int) (int, int, bool) {
 		if pt := image.Pt(x, y); pt.In(p.onScreen()) {
 			g.pointedWindow = p.window
 			at := pt.Sub(p.at).Add(p.from.Min)
+			if p.gump != nil {
+				at = g.gumpCanvasPoint(p.gump, pt.Sub(p.at))
+			}
 			if p.from == optionsPanel {
 				g.scrollOptions(-host.TakeWheel())
 				g.pointOption(at, host.MouseLeft && !g.mouse.left)

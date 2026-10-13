@@ -54,6 +54,8 @@ type popup struct {
 	lines  []string
 	at     image.Point
 	choice int
+	// sign, when set, shows Nuvie's sign with this text instead (the new style UI)
+	sign string
 }
 
 // textRect is the popup's text on the screen.
@@ -314,6 +316,10 @@ func (g *Game) drawText(s string, x, y int, fg byte) {
 
 // drawPopup draws p: a scroll with its lines, the chosen one highlighted.
 func (g *Game) drawPopup(p *popup) {
+	if p.sign != "" {
+		g.drawSign(p.sign)
+		return
+	}
 	r := p.textRect()
 	g.drawScroll(r.Inset(-scrollPadding))
 	for i, l := range p.lines {

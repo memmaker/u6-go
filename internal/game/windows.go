@@ -31,6 +31,8 @@ type inventoryWindow struct {
 	member int
 	at     image.Point
 	pixels []byte
+	// info is what the window's gump writes (the new style UI)
+	info inventoryInfo
 }
 
 // toggleWindow opens or closes member's window (Shift+F1..F9).
@@ -51,9 +53,12 @@ func (g *Game) toggleWindow(member int) {
 
 // placeWindow moves w's corner to at, kept on the screen.
 func (g *Game) placeWindow(w *inventoryWindow, at image.Point) {
-	edge := margin + scrollPadding
-	w.at.X = min(max(at.X, edge), g.screenWidth-edge-statusPanel.Dx())
-	w.at.Y = min(max(at.Y, edge), g.screenHeight-edge-statusPanel.Dy())
+	edge, size := margin+scrollPadding, statusPanel.Size()
+	if g.newStyle() {
+		edge, size = margin, inventoryGump(w.info).size
+	}
+	w.at.X = max(min(at.X, g.screenWidth-edge-size.X), edge)
+	w.at.Y = max(min(at.Y, g.screenHeight-edge-size.Y), edge)
 }
 
 // refreshWindows draws each window's member's equipment view on the canvas and keeps the
@@ -69,6 +74,7 @@ func (g *Game) refreshWindows() {
 		g.statusMember, g.StatusDisplay, g.showNPC = w.member, cmdStatusEquipment, 0
 		g.equipmentView()
 		w.pixels = g.canvasPixels(statusPanel)
+		w.info = g.inventoryInfo()
 	}
 	g.inventory, g.statusMember, g.StatusDisplay, g.current = inv, member, display, current
 	for y := range statusPanel.Dy() {

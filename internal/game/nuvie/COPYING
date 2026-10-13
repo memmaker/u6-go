@@ -1,4 +1,6 @@
-border1.png .. border8.png are BorderU6_1.bmp .. BorderU6_8.bmp of ScummVM's ultima.dat
+The pictures here are BorderU6_*.bmp, U6_WOU_Scroll_bg.bmp and images/gumps/** of ScummVM's ultima.dat
 (devtools/create_ultima/files/ultima6 in https://github.com/scummvm/scummvm), the art of
 Nuvie's new style UI, converted to PNG unchanged. They are part of ScummVM, distributed
 under the GNU General Public License, version 3 or later: https://www.gnu.org/licenses/gpl-3.0.html
+gump_font.png and gump_font_widths.bin are Nuvie's font_gump_data and font_gump_w_data
+(engines/ultima/nuvie/gui/the_font.h, GPL) as a picture in the doll gump's colours.
