@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/data"
+	"github.com/memmaker/u6-go/internal/host"
 )
 
 func dataDir(t *testing.T) string {
@@ -121,4 +122,20 @@ func TestRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("wrote", out)
+}
+
+// TestFadeInLargestScreen fades in the largest screen the port shows: every pixel arrives.
+func TestFadeInLargestScreen(t *testing.T) {
+	d := New(nil)
+	for i := range d.BackBuffer {
+		d.BackBuffer[i] = 1
+	}
+	const w, h = host.MaxScreenWidth, host.MaxScreenHeight
+	view := make([]byte, w*h)
+	d.FadeIn(view, w, 0, 0, 0, 0, w-1, h-1)
+	for i, c := range view {
+		if c != 1 {
+			t.Fatalf("pixel %d not faded in", i)
+		}
+	}
 }

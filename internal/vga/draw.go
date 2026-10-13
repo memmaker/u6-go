@@ -174,10 +174,12 @@ func (d *Driver) FadeIn(view []byte, viewWidth, offX, offY, x0, y0, x1, y1 int) 
 // of its 160x160 view.
 const fadePresents = 160 * 160 / 1024
 
-// feedbackTaps are the shift register taps for 2 to 17 bit states.
+// feedbackTaps are the shift register taps for 2 to 20 bit states: the original's up to 17
+// bits (fix: its 17-bit entry, unused by its 160x160 view, cut the cycle short), and more
+// for the port's screens of up to 736x736.
 const minFeedbackBits = 2
 
-var feedbackTaps = [...]int{3, 6, 12, 20, 48, 96, 184, 272, 576, 1280, 3232, 6912, 13568, 24576, 46080, 35669}
+var feedbackTaps = [...]int{3, 6, 12, 20, 48, 96, 184, 272, 576, 1280, 3232, 6912, 13568, 24576, 46080, 73728, 132096, 466944, 589824}
 
 // Vortex swirls the map view: eight spiral arms turn around the view's centre, each dragging
 // the pixels it passes along, in 22 rounds of shrinking reach. view is a picture viewWidth
