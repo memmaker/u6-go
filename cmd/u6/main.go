@@ -40,6 +40,7 @@ func main() {
 	dir := flag.String("data", defaultDir, "directory with the original game files")
 	source := flag.String("import", "", "import the game files from this folder/zip/ISO/installer into -data and exit")
 	scale := flag.Int("scale", 3, "window scale")
+	roms := flag.String("roms", os.Getenv("GOPLAY_MT32"), "the MT-32 ROM directory for music (default: roms/ in the working directory or next to the binary; none: AdLib)")
 	flag.Parse()
 
 	if *source != "" {
@@ -54,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 	var gameErr error
-	err := host.Run("Ultima VI", *scale, func() { gameErr = run(*dir) })
+	err := host.Run("Ultima VI", *scale, func() { gameErr = run(*dir, romDir(*roms)) })
 	if err == nil {
 		err = gameErr
 	}
@@ -88,4 +89,22 @@ func importGame(source, dir string) error {
 		}
 	}
 	return writeCover(dir)
+}
+
+// romDir is -roms, else the first roms/ directory found in the working directory or next
+// to the binary ("" if none).
+func romDir(flagDir string) string {
+	if flagDir != "" {
+		return flagDir
+	}
+	dirs := []string{"roms"}
+	if exe, err := os.Executable(); err == nil {
+		dirs = append(dirs, filepath.Join(filepath.Dir(exe), "roms"))
+	}
+	for _, d := range dirs {
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+			return d
+		}
+	}
+	return ""
 }

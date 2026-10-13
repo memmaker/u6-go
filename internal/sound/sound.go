@@ -22,6 +22,7 @@ import (
 
 const (
 	outputRate     = 44100
+	mt32Gain       = 1.0 / 65536 // the sum of the MT-32's two 16-bit channels into -1..1
 	musicGain      = 1.0 / 16384 // the summed OPL channels (each up to about ±4096) into -1..1
 	maxQueuedAudio = 4           // seconds of effects the queue keeps at most
 	bytesPerFrame  = 8           // two float32 channels
@@ -51,14 +52,16 @@ const (
 )
 
 var (
-	mu      sync.Mutex
-	files   fs.FS
-	started bool
-	song    *songPlayer // nil: no music
-	current string
-	speaker = newBeeper()
-	chipDue float64 // chip samples owed to the output
-	tickDue int     // output samples until the next driver tick
+	mu       sync.Mutex
+	files    fs.FS
+	started  bool
+	song     *songPlayer // nil: no music
+	mt32     bool        // the music goes to the MT-32 (StartMT32)
+	mtFrames []int16
+	current  string
+	speaker  = newBeeper()
+	chipDue  float64 // chip samples owed to the output
+	tickDue  int     // output samples until the next driver tick
 )
 
 // Start remembers where the game files are and opens the audio stream, once. Scripted runs
@@ -106,6 +109,9 @@ func PlaySong(name string) error {
 	if name == current {
 		return nil
 	}
+	if song != nil {
+		song.driver.stop()
+	}
 	song, current = nil, ""
 	if name == "" || files == nil {
 		return nil
@@ -114,7 +120,32 @@ func PlaySong(name string) error {
 	if err != nil {
 		return err
 	}
-	song, current, tickDue = newSongPlayer(b), name, 0
+	var driver musicDriver = newAdlib(b)
+	if mt32 {
+		driver = newRoland(loadInstrumentMap(files, songNumber(name)))
+	}
+	song, current, tickDue = newPlayer(b, driver), name, 0
+	return nil
+}
+
+func songNumber(name string) int {
+	for n, s := range Songs {
+		if s == name {
+			return n
+		}
+	}
+	return 0
+}
+
+// StartMT32 plays the music on the MT-32 emulator with the ROMs in romDir from now on, as
+// the game does with U6ROLAND.DRV. It fails, changing nothing, without the emulator or ROMs.
+func StartMT32(romDir string) error {
+	if err := mtOpen(romDir); err != nil {
+		return err
+	}
+	mu.Lock()
+	mt32 = true
+	mu.Unlock()
 	return nil
 }
 
@@ -187,6 +218,11 @@ func PlayWavedNote(step, stepUnits, steps, width, widthDelta int) time.Duration 
 
 // renderMusic adds the song's next samples into out.
 func renderMusic(p *songPlayer, out []float32) {
+	if mt32 {
+		renderMIDI(p, out)
+		return
+	}
+	chip := p.driver.(*adlib).chip
 	const samplesPerTick = outputRate / driverTickHz
 	for i := range out {
 		if tickDue == 0 {
@@ -197,9 +233,30 @@ func renderMusic(p *songPlayer, out []float32) {
 		chipDue += float64(oplRate) / outputRate
 		v := 0
 		for ; chipDue >= 1; chipDue-- {
-			v = p.chip.sample()
+			v = chip.sample()
 		}
 		out[i] += float32(v) * musicGain
+	}
+}
+
+// renderMIDI ticks the song between runs of the MT-32's output, mixed down to mono.
+func renderMIDI(p *songPlayer, out []float32) {
+	const samplesPerTick = outputRate / driverTickHz
+	for len(out) > 0 {
+		if tickDue == 0 {
+			p.tick()
+			tickDue = samplesPerTick
+		}
+		n := min(len(out), tickDue)
+		if cap(mtFrames) < 2*n {
+			mtFrames = make([]int16, 2*n)
+		}
+		frames := mtFrames[:2*n]
+		mtRender(frames)
+		for i := range n {
+			out[i] += (float32(frames[2*i]) + float32(frames[2*i+1])) * mt32Gain
+		}
+		out, tickDue = out[n:], tickDue-n
 	}
 }
 
