@@ -244,9 +244,10 @@ var armAngles = [...]int{0, 61, 129, 191, 260, 322, 382, 451}
 
 // triangleWave goes 128, 0, -128, 0 at a = 0, 128, 256, 384, repeating every 512 steps.
 func triangleWave(a int) int {
-	a &= 511
-	if a >= 256 {
-		return a - 384
+	const quarter = 128 // also the wave's peak
+	a &= 4*quarter - 1
+	if a >= 2*quarter {
+		return a - 3*quarter
 	}
-	return 128 - a
+	return quarter - a
 }

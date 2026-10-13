@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"math"
 	"path"
 	"slices"
 	"strings"
@@ -49,7 +50,6 @@ const (
 	lzmaHeaderSize     = 13
 	lzma2MaxProperty   = 40
 	lzma2DictShift     = 11
-	maxUint32          = 1<<32 - 1
 	sliceHeaderSize    = 12
 	sliceEndOfFile     = 26 // the DOS end-of-file byte after "idsk"
 	sliceHeaderEOFAt   = 7
@@ -491,7 +491,7 @@ func decompress(src io.Reader, method byte, need uint64) (io.Reader, error) {
 		var hdr [lzmaHeaderSize]byte
 		hdr[0] = p[0]
 		binary.LittleEndian.PutUint32(hdr[1:], uint32(dict(uint64(binary.LittleEndian.Uint32(p[1:])))))
-		size := uint64(1<<64 - 1)
+		size := uint64(math.MaxUint64)
 		if need > 0 {
 			size = need
 		}
@@ -505,7 +505,7 @@ func decompress(src io.Reader, method byte, need uint64) (io.Reader, error) {
 		if p[0] > lzma2MaxProperty {
 			return nil, errors.New("bad LZMA2 property")
 		}
-		d := uint64(maxUint32)
+		d := uint64(math.MaxUint32)
 		if p[0] < lzma2MaxProperty {
 			d = uint64(2|p[0]&1) << (p[0]/2 + lzma2DictShift)
 		}

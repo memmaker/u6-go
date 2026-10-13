@@ -21,6 +21,12 @@ import (
 // markerFiles prove a folder holds Ultima VI.
 var markerFiles = []string{"MAPTILES.VGA", "LZMAP", "CONVERSE.A"}
 
+// Permissions of the directories and files written.
+const (
+	dirMode  = 0o755
+	fileMode = 0o644
+)
+
 // gameFile says whether name is one of the game's data files: everything on the original
 // disks but the programs and drivers for hardware the port does not emulate.
 func gameFile(name string) bool {
@@ -80,11 +86,11 @@ func importGame(source, dir string) error {
 			return fmt.Errorf("no Ultima VI files (%s) found in %s", marker, source)
 		}
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		return err
 	}
 	for name, contents := range files {
-		if err := os.WriteFile(filepath.Join(dir, strings.ToUpper(filepath.Base(name))), contents, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, strings.ToUpper(filepath.Base(name))), contents, fileMode); err != nil {
 			return err
 		}
 	}

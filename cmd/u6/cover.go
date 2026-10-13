@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -47,8 +48,8 @@ func writeCover(dir string) error {
 	}
 	palette := make(color.Palette, paletteSize)
 	for i := range palette {
-		level := func(c int) uint8 { return uint8(components[i*3+c] * 255 / vgaMaxLevel) }
-		palette[i] = color.RGBA{level(0), level(1), level(2), 255}
+		level := func(c int) uint8 { return uint8(components[i*3+c] * math.MaxUint8 / vgaMaxLevel) }
+		palette[i] = color.RGBA{level(0), level(1), level(2), math.MaxUint8}
 	}
 
 	logo := shapes[titleShape]

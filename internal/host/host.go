@@ -10,6 +10,7 @@ package host
 import (
 	"image"
 	"image/color"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -136,9 +137,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	for i := range colours {
 		for c := 0; c < 3; c++ {
 			level := int(frame.Palette[i*3+c]) % vgaLevels
-			colours[i][c] = byte(level * 255 / (vgaLevels - 1))
+			colours[i][c] = byte(level * math.MaxUint8 / (vgaLevels - 1))
 		}
-		colours[i][3] = 255
+		colours[i][3] = math.MaxUint8 // opaque
 	}
 	out := g.rgba.Pix
 	for i, c := range frame.Pixels[:ScreenWidth*ScreenHeight] {
