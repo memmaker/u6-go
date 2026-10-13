@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"github.com/memmaker/u6-go/internal/data"
 )
 
 // The saved game U.EXE leaves for GAME.EXE: SAVEGAME/OBJLIST with the new avatar.
@@ -65,7 +67,11 @@ func (u *intro) ensureSaveGame() error {
 			if len(raw) < size {
 				return nil, errShortObjects
 			}
-			name := objblkPrefix + string(rune('A'+b%blocksPerRow)) + string(rune('A'+b/blocksPerRow))
+			block := b
+			if b < surfaceBlocks {
+				block = data.PackedRegion(b)
+			}
+			name := objblkPrefix + string(rune('A'+block%blocksPerRow)) + string(rune('A'+block/blocksPerRow))
 			if err := os.WriteFile(filepath.Join(dir, name), raw[:size], fileMode); err != nil {
 				return nil, err
 			}
