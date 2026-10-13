@@ -68,8 +68,8 @@ func noteFreq(note int) int {
 
 // C: U6ADLIB.DRV:0274
 func (a *adlib) writeFreq(c, freq int) {
-	a.chip.write(regFreqLow+c, byte(freq%256))
-	a.chip.write(regFreqHigh+c, byte(freq/256))
+	a.chip.write(regFreqLow+c, byte(freq%byteRange))
+	a.chip.write(regFreqHigh+c, byte(freq/byteRange))
 }
 
 // C: U6ADLIB.DRV:026C

@@ -64,6 +64,9 @@ var (
 	tickDue  int     // output samples until the next driver tick
 )
 
+// playerBuffer is how much audio the host player queues ahead.
+const playerBuffer = 50 * time.Millisecond
+
 // Start remembers where the game files are and opens the audio stream, once. Scripted runs
 // (U6GO_INPUT set) stay silent.
 func Start(fsys fs.FS) {
@@ -83,7 +86,7 @@ func Start(fsys fs.FS) {
 	if err != nil {
 		return
 	}
-	p.SetBufferSize(50 * time.Millisecond)
+	p.SetBufferSize(playerBuffer)
 	p.Play()
 }
 

@@ -168,7 +168,7 @@ func (p *songPlayer) flow(sub int) bool {
 			return false
 		}
 		repeats := p.next()
-		offset := p.next() + p.next()*256
+		offset := p.next() + p.next()*byteRange
 		p.stack = append(p.stack, subsong{repeats: repeats, returnPos: p.pos, start: offset})
 		p.pos = offset
 	case flowDelay:

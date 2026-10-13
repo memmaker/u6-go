@@ -38,6 +38,18 @@ const (
 	silentLevel    = 4096 // a log level that the exponent table maps to nothing
 	maxLogLevel    = 8191 // the loudest log level still audible
 	tremoloTop     = 105  // the tremolo counter's triangle peak
+
+	exponentScale       = 1024 // the exponent table's 1.0
+	byteRange           = 256  // one register's worth of a wider value
+	levelRange          = 64   // total level is the low 6 bits of the level register
+	fnumTopBit          = 512  // the frequency number's highest bit
+	fnumKeyScaleUnit    = 64   // frequency number per key-scale level table step
+	maxRate             = 63
+	instantAttackRate   = 60   // attack rates from here on jump straight to full volume
+	octaveKeyScaleLevel = 32   // key-scale level lost per block below the top
+	tremoloPeriod       = 64   // samples per tremolo step
+	vibratoPeriod       = 1024 // samples per vibrato step
+	vibratoFnumUnit     = 128  // frequency number per unit of vibrato depth
 )
 
 var (
@@ -62,7 +74,7 @@ var (
 func init() {
 	for i := range logSine {
 		logSine[i] = int(math.Round(-math.Log2(math.Sin((float64(i)+0.5)*math.Pi/(2*sineSteps))) * sineSteps))
-		exponent[i] = int(math.Round(math.Pow(2, float64(sineSteps-1-i)/sineSteps) * 1024))
+		exponent[i] = int(math.Round(math.Pow(2, float64(sineSteps-1-i)/sineSteps) * exponentScale))
 	}
 }
 
@@ -129,10 +141,10 @@ func (o *opl2) write(reg int, val byte) {
 		o.deepVibrato = v&bit6 != 0
 	case reg >= regFreqLow && reg < regFreqLow+channels:
 		c := &o.ch[reg-regFreqLow]
-		c.fnum = c.fnum/256*256 + v
+		c.fnum = c.fnum/byteRange*byteRange + v
 	case reg >= regFreqHigh && reg < regFreqHigh+channels:
 		c := &o.ch[reg-regFreqHigh]
-		c.fnum = c.fnum%256 + v%4*256
+		c.fnum = c.fnum%byteRange + v%4*byteRange
 		c.block = v / 4 % 8
 		if key := v&bit5 != 0; key != c.keyOn {
 			c.keyOn = key
@@ -166,7 +178,7 @@ func (o *opl2) write(reg int, val byte) {
 			op.sustained, op.keyScaleRate = v&bit5 != 0, v&bit4 != 0
 			op.multiple = v % 16
 		case regOpLevel:
-			op.keyScaleLevel, op.totalLevel = v/64, v%64
+			op.keyScaleLevel, op.totalLevel = v/levelRange, v%levelRange
 		case regOpAttackDecay:
 			op.attack, op.decay = v/16, v%16
 		case regOpSustain:
@@ -182,11 +194,11 @@ func (op *operator) effectiveRate(r int, c *channel) int {
 	if r == 0 {
 		return 0
 	}
-	keyCode := c.block*2 + c.fnum/512%2
+	keyCode := c.block*2 + c.fnum/fnumTopBit%2
 	if !op.keyScaleRate {
 		keyCode /= 4
 	}
-	return min(r*4+keyCode, 63)
+	return min(r*4+keyCode, maxRate)
 }
 
 // stepEnvelope advances an operator's envelope one sample.
@@ -225,7 +237,7 @@ func (o *opl2) stepEnvelope(op *operator, c *channel) {
 	inc := envelopeIncrement[row][(o.envCounter>>shift)%8]
 	switch op.envState {
 	case envAttack:
-		if r >= 60 {
+		if r >= instantAttackRate {
 			op.envelope = 0
 		} else {
 			op.envelope += (-(op.envelope + 1) * inc) >> 3
@@ -251,7 +263,7 @@ func (o *opl2) stepEnvelope(op *operator, c *channel) {
 func (o *opl2) operatorOutput(op *operator, c *channel, mod, tremolo int) int {
 	att := op.envelope + op.totalLevel*4
 	if op.keyScaleLevel != 0 {
-		if k := keyScaleLevel[c.fnum/64]*4 - (8-c.block)*32; k > 0 {
+		if k := keyScaleLevel[c.fnum/fnumKeyScaleUnit]*4 - (8-c.block)*octaveKeyScaleLevel; k > 0 {
 			att += k >> keyScaleShift[op.keyScaleLevel]
 		}
 	}
@@ -308,7 +320,7 @@ func (o *opl2) operatorOutput(op *operator, c *channel, mod, tremolo int) int {
 func (o *opl2) sample() int {
 	o.sampleCount++
 	o.envCounter++
-	if o.sampleCount%64 == 0 {
+	if o.sampleCount%tremoloPeriod == 0 {
 		o.tremoloPos += o.tremoloDir
 		if o.tremoloPos >= tremoloTop {
 			o.tremoloDir = -1
@@ -316,7 +328,7 @@ func (o *opl2) sample() int {
 			o.tremoloDir = 1
 		}
 	}
-	if o.sampleCount%1024 == 0 {
+	if o.sampleCount%vibratoPeriod == 0 {
 		o.vibratoPos = (o.vibratoPos + 1) % 8
 	}
 	tremolo := o.tremoloPos / 16
@@ -335,7 +347,7 @@ func (o *opl2) sample() int {
 			o.stepEnvelope(op, c)
 			f := c.fnum
 			if op.vibrato {
-				r := f / 128 % 8
+				r := f / vibratoFnumUnit % 8
 				switch {
 				case o.vibratoPos%4 == 0:
 					r = 0

@@ -19,6 +19,11 @@ const (
 	wavedStepDivisor     = 24      // OSI_playWavedNote waits speed/24 passes a step
 	noiseStepShift       = 4       // OSI_playNoise waits speed>>4 passes a step
 	speakerAmplitude     = 6000
+	pcmFullScale         = 32768 // a 16-bit sample's range, for scaling to float
+	noiseSeed            = 30308 // OSI_playNoise's generator at start
+	noiseScramble        = 37448
+	noiseIncrement       = 17
+	noiseMinHz           = 100
 )
 
 // Effect numbers, as the game passes them to MUS_0065. The names describe the sound.
@@ -49,17 +54,81 @@ const (
 	effectDefaultNote = 100
 )
 
-// beeper is the speaker: an on/off gate with a tone, turned into samples as time passes.
-type beeper struct {
-	hz      float64 // 0: speaker off
-	phase   float64 // of the tone, in periods
-	owed    float64 // fractional sample time carried between waits
-	lowpass float64
-	pcm     []float32
-	noise   uint16 // OSI_playNoise's generator state
+// The parameters of the effects in MUS_0065.
+const (
+	effectNoteLength        = 10
+	minToneHz               = 19 // random tones at or below this are silence
+	randomToneSteps         = 40
+	projectileBaseHz        = 2000
+	projectileHzPerDistance = 16
+	projectileSpreadHz      = 200
+	distanceBaseHz          = 1000 // missile and crackle
+	distanceHzPerStep       = 8
+	impactSpreadHz          = 40
+	rumbleMaxHz             = 200
+	splatterBursts          = 20
+	splatterLength          = 350
+	splatterMinHz           = 600
+	splatterMaxHz           = 4800
+	successHz               = 2000
+	whooshFromHz            = 2000
+	whooshToHz              = 20000
+	whooshStepHz            = 1000
+	whooshStep              = 40
+	whooshLength            = 120
+	lowNoteDivisor          = 4
+	lowNoteLength           = 200
+	chimeNoteLength         = 6
+	fanfareNotes            = 50
+	fanfareBaseHz           = 800
+	fanfareHzPerNote        = 16
+	fanfareWidth            = 10000
+	fanfareWidthPerNote     = 64
+	fanfareDeltaPerNote     = 4
+	fanfareSteps            = 1000
+	fanfareEndHz            = 1600
+)
+
+// noiseRecipe, slideRecipe and wavedRecipe are the arguments of playNoise, slide and
+// playWavedNote for one effect.
+type (
+	noiseRecipe struct{ step, length, maxHz int }
+	slideRecipe struct{ fromHz, toHz, stepUnits, length int }
+	wavedRecipe struct{ stepUnits, steps, width, widthDelta int }
+)
+
+var (
+	noiseBurst   = noiseRecipe{1, 800, 10000}
+	impactNoise  = noiseRecipe{1, 800, 3000}
+	hissNoise    = noiseRecipe{1, 7000, 600}
+	sweepShort   = slideRecipe{1200, 2000, 1, 40}
+	sweep        = slideRecipe{800, 2000, 1, 50}
+	swingSlide   = slideRecipe{400, 750, 5, 150}
+	squeakSlide  = slideRecipe{5000, 8000, 1, 100}
+	chimeWave    = wavedRecipe{1, 700, 30000, -25}
+	wavedLowWave = wavedRecipe{1, 6000, 30000, -5}
+	wavedWave    = wavedRecipe{1, 4000, 15000, -3}
+	pluckWave    = wavedRecipe{1, 2000, 20000, -20}
+	fanfareEnd   = wavedRecipe{1, 8000, 0, 8}
+)
+
+func (b *beeper) noise(r noiseRecipe)   { b.playNoise(r.step, r.length, r.maxHz) }
+func (b *beeper) slideBy(r slideRecipe) { b.slide(r.fromHz, r.toHz, r.stepUnits, r.length) }
+func (b *beeper) waved(step int, r wavedRecipe) {
+	b.playWavedNote(step, r.stepUnits, r.steps, r.width, r.widthDelta)
 }
 
-func newBeeper() *beeper { return &beeper{noise: 30308} }
+// beeper is the speaker: an on/off gate with a tone, turned into samples as time passes.
+type beeper struct {
+	hz         float64 // 0: speaker off
+	phase      float64 // of the tone, in periods
+	owed       float64 // fractional sample time carried between waits
+	lowpass    float64
+	pcm        []float32
+	noiseState uint16 // OSI_playNoise's generator state
+}
+
+func newBeeper() *beeper { return &beeper{noiseState: noiseSeed} }
 
 // wait holds the current state for seconds.
 func (b *beeper) wait(seconds float64) {
@@ -77,7 +146,7 @@ func (b *beeper) wait(seconds float64) {
 			b.phase -= float64(int(b.phase))
 		}
 		b.lowpass += (target - b.lowpass) / 2 // the cone is no ideal square
-		b.pcm = append(b.pcm, float32(b.lowpass/32768))
+		b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
 	}
 }
 
@@ -93,7 +162,7 @@ func (b *beeper) level(on bool, seconds float64) {
 	}
 	for range count {
 		b.lowpass += (target - b.lowpass) / 2
-		b.pcm = append(b.pcm, float32(b.lowpass/32768))
+		b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
 	}
 }
 
@@ -128,23 +197,22 @@ func (b *beeper) playNote(hz, duration int) {
 	b.nosound()
 }
 
-// playNoise plays random tones of 100 to maxHz Hz, step units apiece, for length units.
+// playNoise plays random tones of noiseMinHz to maxHz Hz, step units apiece, for length units.
 // C: OSI_playNoise (SOUND4.ASM)
 func (b *beeper) playNoise(step, length, maxHz int) {
 	if step <= 0 {
 		return
 	}
 	for elapsed := 0; elapsed < length; elapsed += step {
-		const scramble = 37448
-		b.noise += scramble
-		b.noise = b.noise>>3 | b.noise<<13 // rotate right by 3
-		b.noise ^= scramble
-		b.noise += 17
-		span := maxHz - 100 + 1
+		b.noiseState += noiseScramble
+		b.noiseState = b.noiseState>>3 | b.noiseState<<13 // rotate right by 3
+		b.noiseState ^= noiseScramble
+		b.noiseState += noiseIncrement
+		span := maxHz - noiseMinHz + 1
 		if span <= 0 {
 			span = 1
 		}
-		b.sound(int(b.noise)%span + 100)
+		b.sound(int(b.noiseState)%span + noiseMinHz)
 		b.wait(float64(step) / (1 << noiseStepShift) / delayPassesPerSecond)
 	}
 	b.nosound()
@@ -191,7 +259,7 @@ func randRange(lo, hi int) int {
 // randomTones is the shared loop of the crackling effects: forty short steps, each a tone
 // pick returns (0: silence).
 func (b *beeper) randomTones(pick func() int) {
-	for range 40 {
+	for range randomToneSteps {
 		if hz := pick(); hz > 0 {
 			b.sound(hz)
 		} else {
@@ -209,32 +277,32 @@ func (b *beeper) effect(kind, param int) {
 	case EffectSilence:
 		b.nosound()
 	case EffectNote:
-		b.playNote(param, 10)
+		b.playNote(param, effectNoteLength)
 	case EffectNoise:
-		b.playNoise(1, 800, 10000)
+		b.noise(noiseBurst)
 	case EffectProjectile:
-		base := 2000 - param*16
+		base := projectileBaseHz - param*projectileHzPerDistance
 		b.randomTones(func() int {
 			if randRange(0, 3) == 0 {
-				if hz := randRange(0, 200) + base - 100; hz > 19 {
+				if hz := randRange(0, projectileSpreadHz) + base - projectileSpreadHz/2; hz > minToneHz {
 					return hz
 				}
 			}
 			return 0
 		})
 	case EffectMissile:
-		base := 1000 - param*8
+		base := distanceBaseHz - param*distanceHzPerStep
 		b.randomTones(func() int {
-			if randRange(0, 1) != 0 && base > 20 {
-				return randRange(19, randRange(20, base))
+			if randRange(0, 1) != 0 && base > minToneHz+1 {
+				return randRange(minToneHz, randRange(minToneHz+1, base))
 			}
 			return 0
 		})
 	case EffectCrackle:
-		base := 1000 - param*8
+		base := distanceBaseHz - param*distanceHzPerStep
 		b.randomTones(func() int {
 			if randRange(0, 7) == 0 {
-				if hz := randRange(0, base*2) + base; hz > 19 {
+				if hz := randRange(0, base*2) + base; hz > minToneHz {
 					return hz
 				}
 			}
@@ -242,53 +310,53 @@ func (b *beeper) effect(kind, param int) {
 		})
 	case EffectImpact:
 		if param < 0 {
-			b.playNoise(1, 800, 3000)
+			b.noise(impactNoise)
 			return
 		}
 		b.randomTones(func() int {
-			if param > 19 && randRange(0, 7) == 0 {
-				return randRange(0, 40) + param
+			if param > minToneHz && randRange(0, 7) == 0 {
+				return randRange(0, impactSpreadHz) + param
 			}
 			return 0
 		})
 	case EffectRumble:
-		b.randomTones(func() int { return randRange(19, 200) })
+		b.randomTones(func() int { return randRange(minToneHz, rumbleMaxHz) })
 	case EffectSweepShort:
-		b.slide(1200, 2000, 1, 40)
+		b.slideBy(sweepShort)
 	case EffectHiss:
-		b.playNoise(1, 7000, 600)
+		b.noise(hissNoise)
 	case EffectSplatter:
-		for range 20 {
-			b.playNoise(1, 350, randRange(600, 4800))
+		for range splatterBursts {
+			b.playNoise(1, splatterLength, randRange(splatterMinHz, splatterMaxHz))
 		}
 	case EffectSweep, EffectFailure:
-		b.slide(800, 2000, 1, 50)
+		b.slideBy(sweep)
 	case EffectSuccess:
-		b.playNote(2000, 10)
+		b.playNote(successHz, effectNoteLength)
 	case EffectWhoosh:
-		for hz := 2000; hz < 20000; hz += 1000 {
-			b.playNoise(40, 120, hz)
+		for hz := whooshFromHz; hz < whooshToHz; hz += whooshStepHz {
+			b.playNoise(whooshStep, whooshLength, hz)
 		}
 	case EffectSwing:
-		b.slide(400, 750, 5, 150)
+		b.slideBy(swingSlide)
 	case EffectChime:
-		b.playNote(param, 6)
-		b.playWavedNote(param, 1, 700, 30000, -25)
+		b.playNote(param, chimeNoteLength)
+		b.waved(param, chimeWave)
 	case EffectWavedLow:
-		b.playWavedNote(param/2, 1, 6000, 30000, -5)
+		b.waved(param/2, wavedLowWave)
 	case EffectWaved:
-		b.playWavedNote(param, 1, 4000, 15000, -3)
+		b.waved(param, wavedWave)
 	case EffectPluck:
-		b.playWavedNote(param/2, 1, 2000, 20000, -20)
+		b.waved(param/2, pluckWave)
 	case EffectLowNote:
-		b.playNote(param/4, 200)
+		b.playNote(param/lowNoteDivisor, lowNoteLength)
 	case EffectFanfare:
-		for i := range 50 {
-			b.playWavedNote(i*16+800, 1, 1000, 10000-i*64, (50-i)*4)
+		for i := range fanfareNotes {
+			b.playWavedNote(i*fanfareHzPerNote+fanfareBaseHz, 1, fanfareSteps, fanfareWidth-i*fanfareWidthPerNote, (fanfareNotes-i)*fanfareDeltaPerNote)
 		}
-		b.playWavedNote(1600, 1, 8000, 0, 8)
+		b.waved(fanfareEndHz, fanfareEnd)
 	case EffectSqueak:
-		b.slide(5000, 8000, 1, 100)
+		b.slideBy(squeakSlide)
 	default:
 		b.playNote(param, effectDefaultNote)
 	}
