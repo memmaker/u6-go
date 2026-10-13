@@ -83,3 +83,37 @@ func TestEffects(t *testing.T) {
 		}
 	}
 }
+
+// inharmonicDB is the power of x away from the harmonics of f0 (aliases folded back from
+// above the Nyquist frequency), in dB of the total.
+func inharmonicDB(x []float32, f0 float64) float64 {
+	var total, off float64
+	for hz := 5.0; hz < outputRate/2; hz += 5 {
+		var re, im float64
+		w := 2 * math.Pi * hz / outputRate
+		for i, v := range x {
+			hann := 0.5 - 0.5*math.Cos(2*math.Pi*float64(i)/float64(len(x)))
+			re += float64(v) * hann * math.Cos(w*float64(i))
+			im += float64(v) * hann * math.Sin(w*float64(i))
+		}
+		total += re*re + im*im
+		if k := math.Round(hz / f0); k < 1 || math.Abs(hz-k*f0) > 25 {
+			off += re*re + im*im
+		}
+	}
+	return 10 * math.Log10(off/total)
+}
+
+func TestSpeakerBandLimited(t *testing.T) {
+	b := newBeeper()
+	b.sound(7000)
+	b.wait(0.2)
+	if db := inharmonicDB(b.pcm[len(b.pcm)/4:], float64(pitClockHz/(pitClockHz/7000))); db > -45 {
+		t.Errorf("7 kHz tone: aliasing at %.1f dB (naive square: -10)", db)
+	}
+	b.effect(EffectChime, 440)
+	b.settle()
+	if end := b.pcm[len(b.pcm)-1]; math.Abs(float64(end)) > 1e-3 {
+		t.Errorf("effect ends at %f, not at rest", end)
+	}
+}

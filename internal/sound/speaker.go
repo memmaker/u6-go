@@ -7,6 +7,7 @@ package sound
 // caller to host.Wait where the original blocked.
 
 import (
+	"math"
 	"math/rand/v2"
 	"time"
 )
@@ -119,52 +120,96 @@ func (b *beeper) waved(step int, r wavedRecipe) {
 }
 
 // beeper is the speaker: an on/off gate with a tone, turned into samples as time passes.
+// The speaker's level is sampled at oversample times the output rate and band-limited by
+// antiAlias before every oversample-th value is kept, so tones above a few kHz and the
+// 37 µs steps of the waved notes do not fold back into the audible band as hiss.
 type beeper struct {
 	hz         float64 // 0: speaker off
 	phase      float64 // of the tone, in periods
-	owed       float64 // fractional sample time carried between waits
+	owed       float64 // fractional sub-sample time carried between waits
+	sub        int     // sub-samples since the last output sample
+	aa         [len(antiAlias)][2]float64
 	lowpass    float64
 	pcm        []float32
 	noiseState uint16 // OSI_playNoise's generator state
 }
 
+const oversample = 8
+
+// antiAlias is an 8th-order Butterworth low-pass at 16 kHz for the oversampled rate, as
+// four biquads (b0 b1 b2 a1 a2), set up by init.
+var antiAlias [4][5]float64
+
+func init() {
+	k := math.Tan(math.Pi * 16000 / (outputRate * oversample))
+	for i := range antiAlias {
+		q := 1 / (2 * math.Cos(math.Pi*float64(2*i+1)/16))
+		n := 1 / (1 + k/q + k*k)
+		b0 := k * k * n
+		antiAlias[i] = [5]float64{b0, 2 * b0, b0, 2 * (k*k - 1) * n, (1 - k/q + k*k) * n}
+	}
+}
+
 func newBeeper() *beeper { return &beeper{noiseState: noiseSeed} }
 
-// wait holds the current state for seconds.
-func (b *beeper) wait(seconds float64) {
-	n := seconds*outputRate + b.owed
+// emit holds the cone at target (or the tone, when target is nil) for seconds.
+func (b *beeper) emit(seconds float64, level float64, tone bool) {
+	n := seconds*outputRate*oversample + b.owed
 	count := int(n)
 	b.owed = n - float64(count)
 	for range count {
-		target := 0.0
-		if b.hz > 0 {
-			target = speakerAmplitude
-			if b.phase >= 0.5 {
-				target = -speakerAmplitude
-			}
-			b.phase += b.hz / outputRate
+		x := level
+		if tone { // the square's mean over the sub-sample, so its edges keep their exact time
+			step := b.hz / (outputRate * oversample)
+			x = speakerAmplitude * (squareArea(b.phase+step) - squareArea(b.phase)) / step
+			b.phase += step
 			b.phase -= float64(int(b.phase))
 		}
-		b.lowpass += (target - b.lowpass) / 2 // the cone is no ideal square
-		b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
+		for i, c := range antiAlias { // transposed direct form II
+			s := &b.aa[i]
+			y := c[0]*x + s[0]
+			s[0] = c[1]*x - c[3]*y + s[1]
+			s[1] = c[2]*x - c[4]*y
+			x = y
+		}
+		if b.sub++; b.sub == oversample {
+			b.sub = 0
+			b.lowpass += (x - b.lowpass) / 2 // the cone is no ideal square
+			b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
+		}
 	}
 }
 
-// level holds the cone fully on or off (the waved notes' pulse width modulation).
+// squareArea is the integral of a ±1 square wave of period 1 from 0 to phase (0 <= phase < 2).
+func squareArea(phase float64) float64 {
+	u := phase - float64(int(phase))
+	return min(u, 1-u)
+}
+
+// wait holds the current state for seconds.
+func (b *beeper) wait(seconds float64) { b.emit(seconds, 0, b.hz > 0) }
+
+// level gates the speaker for the waved notes' pulse width modulation: on, it plays
+// OSI_playWavedNote's 19.9 kHz carrier, which the cone only follows as its mean; off, the
+// cone rests where silence leaves it, so a note starts and ends without a step.
 func (b *beeper) level(on bool, seconds float64) {
 	b.hz = 0
-	n := seconds*outputRate + b.owed
-	count := int(n)
-	b.owed = n - float64(count)
-	target := -speakerAmplitude / 2.0
+	target := 0.0
 	if on {
-		target = speakerAmplitude / 2.0
+		target = speakerAmplitude
 	}
-	for range count {
-		b.lowpass += (target - b.lowpass) / 2
-		b.pcm = append(b.pcm, float32(b.lowpass/pcmFullScale))
+	b.emit(seconds, target, false)
+}
+
+// settle lets the filters ring out after the speaker is turned off, so the queued sound
+// ends at rest rather than cut off mid-swing (a click when the queue runs dry).
+func (b *beeper) settle() {
+	if b.hz == 0 && math.Abs(b.lowpass) > 1 {
+		b.wait(settleSeconds)
 	}
 }
+
+const settleSeconds = 0.003
 
 // C: OSI_sound (SOUND3.ASM)
 func (b *beeper) sound(hz int) {

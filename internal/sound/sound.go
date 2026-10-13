@@ -190,7 +190,7 @@ func queue(f func(b *beeper)) time.Duration {
 // a distance, 0 for most) and returns how long it lasts.
 // C: MUS_0065
 func Effect(kind, param int) time.Duration {
-	return queue(func(b *beeper) { b.effect(kind, param) })
+	return queue(func(b *beeper) { b.effect(kind, param); b.settle() })
 }
 
 // The speaker primitives, for the game's own sequences (ambient object sounds, spells).
@@ -209,17 +209,17 @@ func Delay(scale, count int) time.Duration {
 
 // PlayNote plays hz for duration units. C: OSI_playNote
 func PlayNote(hz, duration int) time.Duration {
-	return queue(func(b *beeper) { b.playNote(hz, duration) })
+	return queue(func(b *beeper) { b.playNote(hz, duration); b.settle() })
 }
 
 // PlayNoise plays random tones up to maxHz. C: OSI_playNoise
 func PlayNoise(step, length, maxHz int) time.Duration {
-	return queue(func(b *beeper) { b.playNoise(step, length, maxHz) })
+	return queue(func(b *beeper) { b.playNoise(step, length, maxHz); b.settle() })
 }
 
 // PlayWavedNote plays a pulse width modulated note. C: OSI_playWavedNote
 func PlayWavedNote(step, stepUnits, steps, width, widthDelta int) time.Duration {
-	return queue(func(b *beeper) { b.playWavedNote(step, stepUnits, steps, width, widthDelta) })
+	return queue(func(b *beeper) { b.playWavedNote(step, stepUnits, steps, width, widthDelta); b.settle() })
 }
 
 // renderMusic adds the song's next stereo frames into out (left and right interleaved).
