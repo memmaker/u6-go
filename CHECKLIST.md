@@ -13,7 +13,7 @@
 - [ ] Game state with readable names (globals, objects, NPCs)
 - [ ] Port GAME.EXE modules (world map, objects, UI/console, commands, combat, AI, magic, conversation, save/load)
 - [ ] Mouse + keyboard input
-- [ ] Sound/music (AdLib driver port)
+- [x] Sound/music (AdLib driver port, internal/sound)
 - [ ] Port U.EXE: title/intro/character creation
 - [ ] Port END.EXE: ending
 - [ ] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program
