@@ -104,6 +104,7 @@ var (
 	mouseFX, mouseFY float64
 	lastX, lastY     int
 	mouseSettle      int
+	swallowClick     bool // the click that captured the mouse, held: not the game's
 )
 
 const settleTicks = 2
@@ -145,7 +146,7 @@ func pollInput(g *game) {
 		ebiten.SetCursorMode(ebiten.CursorModeVisible)
 	case clicked && ebiten.CursorMode() != ebiten.CursorModeCaptured:
 		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
-		mouseSettle = settleTicks
+		mouseSettle, swallowClick = settleTicks, true
 	}
 	if g.scaleX > 0 {
 		if ebiten.CursorMode() == ebiten.CursorModeCaptured {
@@ -165,4 +166,8 @@ func pollInput(g *game) {
 	lastX, lastY = x, y
 	MouseLeft = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	MouseRight = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+	if swallowClick {
+		swallowClick = MouseLeft || MouseRight
+		MouseLeft, MouseRight = false, false
+	}
 }
