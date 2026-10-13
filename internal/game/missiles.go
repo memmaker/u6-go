@@ -141,6 +141,16 @@ func (g *Game) redrawForeground(x0, y0, x1, y1 int) {
 
 func (t *tables) isNoShoot(tile int) bool { return t.TileFlag[tile]&tileNoShoot != 0 }
 
+// missileAngle is the angle of a flight by (dx, dy) tiles. fix: the port's bigger view lets
+// characters shoot farther than the table reaches; such a flight takes the angle of the
+// same direction within it.
+func missileAngle(dx, dy int) int {
+	if far := max(abs(dx), abs(dy)); far > missileReach {
+		dx, dy = dx*missileReach/far, dy*missileReach/far
+	}
+	return int(missileAngles[dy+missileReach][dx+missileReach])
+}
+
 // missiles flies count missiles of tile from (srcX, srcY) to each destination, stopped by
 // what blocks them or by maxRange. Where a missile stopped short its destination is
 // changed; it returns false then. Every character crossed goes to hitList.
@@ -178,7 +188,7 @@ func (g *Game) missiles(srcX, srcY int, dstX, dstY []int, maxRange, tile, attr i
 			g.gr.MakeRotatedSprite(fixedSpriteSlot, tile, 0, missileKinds[0].pivotX, missileKinds[0].pivotY)
 		} else {
 			for d := range count {
-				rot[d] = int(missileAngles[dstY[d]-tileY[0]+missileReach][dstX[d]-tileX[0]+missileReach]) - mk.angle
+				rot[d] = missileAngle(dstX[d]-tileX[0], dstY[d]-tileY[0]) - mk.angle
 				slot := d + saveSlots
 				if attr&missileTrail != 0 {
 					slot = d

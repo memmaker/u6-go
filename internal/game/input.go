@@ -615,6 +615,10 @@ func (g *Game) readCommand() int {
 				g.mousePressCommand = ch
 			} else if g.mousePressCommand != ch {
 				ch = 0
+			} else if ch != 0 {
+				// fix: a held button repeats its command once a tick; a caller that loops on
+				// commands it ignores (a yes/no question, the status commands) spun forever
+				host.Yield()
 			}
 		} else {
 			g.mousePressed, g.mouseTriggered = false, false
