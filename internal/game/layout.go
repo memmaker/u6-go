@@ -181,6 +181,9 @@ func (g *Game) panels() (scrolls []image.Rectangle, panels []panel) {
 	if g.dockOffset > 0 {
 		add(false, iconsPanel, image.Pt((host.ScreenWidth-iconsPanel.Dx())/2, host.ScreenHeight-g.dockOffset))
 	}
+	if g.formationShown {
+		add(true, formationPanel, image.Pt((host.ScreenWidth-formationPanel.Dx())/2, (host.ScreenHeight-formationPanel.Dy())/2))
+	}
 	return scrolls, panels
 }
 

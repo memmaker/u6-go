@@ -394,6 +394,8 @@ func (g *Game) command(ch int) bool {
 		g.gr.Palette = *g.basePalette
 	case keyCtrlV:
 		g.printf(versionMsg)
+	case keyCtrlF:
+		g.chooseFormation()
 	case keyAlt213:
 		g.printf("%s\n", fmt.Sprintf("%02d%02d%02d%03x%03x%1x", g.Karma, g.Hour, g.Minute, g.MapX, g.MapY, g.MapZ))
 		g.peer()

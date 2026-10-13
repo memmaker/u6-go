@@ -1,6 +1,10 @@
 package game
 
-import "github.com/memmaker/u6-go/internal/sound"
+import (
+	"image"
+
+	"github.com/memmaker/u6-go/internal/sound"
+)
 
 // Moving characters: where they can go, how they turn, the party walking and following,
 // and the turn scheduler (seg_1E0F).
@@ -27,6 +31,10 @@ type turns struct {
 	soloLeader int
 	// allowNPCTeleport lets NPCs far away jump to their schedule (AllowNPCTeleport)
 	allowNPCTeleport bool
+	// formation is how the party lines up behind its leader, formationShown is set while
+	// its scroll is up (the port's, formation.go)
+	formation      formation
+	formationShown bool
 }
 
 func (t *turns) initTurns() { t.allowPartySwap = true }
@@ -473,15 +481,22 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 	} else {
 		facing = g.NPCs[n].Direction() & 6
 	}
+	// where each member stood before this move, for the Follow formation's line; the
+	// leader stood a step back
+	var stood [partyMax]image.Point
+	for k := range int(g.PartySize) {
+		p := g.object(int(g.Party[k])).Pos
+		stood[k] = image.Pt(p.X, p.Y)
+	}
+	// the port's formations other than the original's take their places exactly
+	keepFormation = keepFormation || g.formation != formationDefault
 	for pass := range 2 {
 		place := 1
+		front := image.Pt(x-dirStepX[facing], y-dirStepY[facing])
 		for k := range int(g.PartySize) {
 			member := int(g.Party[k])
 			g.followers[place] = byte(member)
-			// fix: the formation has places for ten followers
-			slot := min(place, len(followSide)-1)
-			tx := x - dirStepX[facing]*followBack[slot] - dirStepY[facing]*followSide[slot]
-			ty := y + dirStepX[facing]*followSide[slot] - dirStepY[facing]*followBack[slot]
+			tx, ty := g.formationPlace(place, x, y, facing, front)
 			o := g.object(member)
 			if member == n || o.Pos.Z != int(g.MapZ) || g.NPCs[member].Mode != AIFollow {
 				continue
@@ -527,6 +542,7 @@ func (g *Game) MoveFollowers(n int, keepFormation bool) {
 			}
 			g.NPCs[member].MovePoints = saved
 			g.subMove(int(g.Party[k]), 5)
+			front = stood[k]
 			place++
 		}
 	}
