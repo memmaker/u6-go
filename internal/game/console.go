@@ -583,9 +583,31 @@ func (g *Game) gets(maxLen int) string {
 		ch := 0
 		for ch == 0 {
 			ch = g.prompt()
+			if g.optionPicked { // the port: a click on a conversation option types it
+				g.optionPicked = false
+				for range typed {
+					g.echo('\b')
+				}
+				typed = typed[:0]
+				ch = '\r'
+			}
 		}
 		switch {
+		case (ch == keyUp || ch == keyDown) && len(g.talkOptions) > 0:
+			step := 1
+			if ch == keyUp {
+				step = -1
+			}
+			shown := min(len(g.talkOptions), optionsShownMax)
+			g.talkChoice = (g.talkChoice + step + shown) % shown
+			g.drawTalkOptions()
 		case ch == '\r':
+			if len(typed) == 0 && len(g.talkOptions) > 0 {
+				typed = []byte(g.talkOptions[g.talkChoice])
+				for _, c := range typed {
+					g.echo(int(c))
+				}
+			}
 			g.cancelled = false
 			done = true
 		case ch == keyEscape:

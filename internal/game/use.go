@@ -1736,7 +1736,7 @@ func (g *Game) setUnconscious(n int) {
 			}
 			if classHas(cls, disappears) || classHas(cls, vanishes) {
 				g.DeleteObj(n)
-				if classHas(cls, vanishes) && closeEnough(viewCenter, o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY)) {
+				if classHas(cls, vanishes) && closeEnough(classicViewCenter, o.Pos.X, o.Pos.Y, int(g.MapX), int(g.MapY)) {
 					g.drawMap(true)
 					g.ShowObjects()
 					g.screenFade = true
@@ -2065,8 +2065,8 @@ func (g *Game) feed(i int) bool {
 // C: seg_3200:00D3 (C_3200_00D3)
 func (g *Game) notWilderness() bool {
 	mx, my, mz := int(g.MapX), int(g.MapY), int(g.MapZ)
-	for x := mx - viewCenter; x <= mx+viewCenter; x++ {
-		for y := my - viewCenter; y <= my+viewCenter; y++ {
+	for x := mx - classicViewCenter; x <= mx+classicViewCenter; x++ {
+		for y := my - classicViewCenter; y <= my+classicViewCenter; y++ {
 			tile := g.GetTileAtXYZ(x, y, mz)
 			if g.isWall(tile) && g.TerrainType[tile]&terrainSides != 0 {
 				return true

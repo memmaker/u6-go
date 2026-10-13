@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/memmaker/u6-go/internal/host"
+	"github.com/memmaker/u6-go/internal/vga"
 )
 
 // tholden lives in Lord British's castle; Lord British himself would first ask the copy
@@ -34,10 +35,11 @@ func TestKeywordMatches(t *testing.T) {
 	}
 }
 
-// scrollText reads the message scroll off the screen, matching each cell with the font.
-func scrollText(g *Game) string {
-	frame := g.Frame()
-	c := g.clips[clipMessage]
+// scrollText reads the message clip off the canvas, matching each cell with the font.
+func scrollText(g *Game) string { return clipText(g, g.clips[clipMessage]) }
+
+// clipText reads the characters drawn in c.
+func clipText(g *Game, c clip) string {
 	var lines []string
 	for row := range c.height {
 		var line []byte
@@ -46,7 +48,7 @@ func scrollText(g *Game) string {
 			var cell [cellSize]byte
 			for y := range cellSize {
 				for x := range cellSize {
-					if frame.Pixels[(y0+y)*host.ScreenWidth+x0+x] != c.bg {
+					if g.gr.Screen[(y0+y)*vga.ScreenWidth+x0+x] != c.bg {
 						cell[y] |= 1 << (cellSize - 1 - x)
 					}
 				}
@@ -150,6 +152,8 @@ func TestTalkToTholden(t *testing.T) {
 	say("job")
 	writePNG(t, g, "talk.png")
 	say("bye")
+	// the farewell stays on the speech scroll after the log clip comes back
+	transcript.WriteString(clipText(g, clip{x0: speechX0, y0: speechY0, width: speechColumns, height: speechRows, bg: g.clips[clipMessage].bg}))
 	text := transcript.String()
 	t.Logf("transcript:\n%s", text)
 	if g.InConversation {

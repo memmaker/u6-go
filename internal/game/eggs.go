@@ -268,7 +268,7 @@ func (g *Game) tryTeleport(n int, offScreen bool) bool {
 	for range tries {
 		x := g.rand(1, spread) + g.rand(1, spread) + p.X - spread - 1
 		y := g.rand(1, spread) + g.rand(1, spread) + p.Y - spread - 1
-		if offScreen && closeEnough(viewCenter, x, y, int(g.MapX), int(g.MapY)) {
+		if offScreen && closeEnough(classicViewCenter, x, y, int(g.MapX), int(g.MapY)) {
 			continue
 		}
 		if g.passable(n, x, y) {

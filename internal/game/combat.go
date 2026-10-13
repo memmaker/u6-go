@@ -257,7 +257,7 @@ func (g *Game) interferes(n int) bool {
 
 // tripleDirections are the directions of the side bolts of the triple crossbow for each
 // target around the shooter, the first in the high nibble (D_19AC).
-var tripleDirections = [viewTiles][viewTiles]byte{
+var tripleDirections = [classicViewTiles][classicViewTiles]byte{
 	{66, 82, 82, 82, 82, 98, 99, 99, 99, 99, 100},
 	{65, 66, 82, 82, 82, 98, 99, 99, 99, 100, 116},
 	{65, 65, 66, 82, 82, 98, 99, 99, 100, 116, 116},
@@ -298,7 +298,7 @@ func (g *Game) rangedAttack(a int, x, y *int, w int) bool {
 	}
 	ap := g.object(a).Pos
 	if t == ObjTripleCrossbow {
-		d := tripleDirections[*y-ap.Y+viewCenter][*x-ap.X+viewCenter]
+		d := tripleDirections[*y-ap.Y+classicViewCenter][*x-ap.X+classicViewCenter]
 		d1, d2 := int(d>>nibble), int(d&(1<<nibble-1))
 		g.boltX = [tripleBolts]int{*x, *x + dirStepX[d1], *x + dirStepX[d2]}
 		g.boltY = [tripleBolts]int{*y, *y + dirStepY[d1], *y + dirStepY[d2]}
@@ -419,8 +419,8 @@ func (g *Game) cloneObject(src, dst int) {
 func (g *Game) showHit(n int) {
 	if !g.hideNextHit {
 		p := g.object(n).Pos
-		x, y := p.X-int(g.MapX)+viewCenter, p.Y-int(g.MapY)+viewCenter
-		if x >= 0 && x < viewTiles && y >= 0 && y < viewTiles {
+		x, y := p.X-int(g.MapX)+viewCenterX, p.Y-int(g.MapY)+viewCenterY
+		if x >= 0 && x < viewTilesX && y >= 0 && y < viewTilesY {
 			g.ShowObjects()
 			g.showObject(tileHit, x, y, 1)
 			g.drawMap(true)
@@ -1130,8 +1130,8 @@ func (g *Game) attackWithNext() {
 	if g.weaponIndex < g.weaponCount {
 		g.SelectMode = 1
 		g.SelectRange = g.weaponRange(g.weapons[g.weaponIndex])
-		if g.combatRange(g.AimX, g.AimY, viewCenter, viewCenter) > g.SelectRange {
-			g.AimX, g.AimY = viewCenter, viewCenter
+		if g.combatRange(g.AimX, g.AimY, viewCenterX, viewCenterY) > g.SelectRange {
+			g.AimX, g.AimY = viewCenterX, viewCenterY
 		}
 		g.printf(attackWithMsg, g.objectString(g.weapons[g.weaponIndex]))
 	} else {
@@ -1161,8 +1161,8 @@ func (g *Game) attack() {
 		w = g.weapons[g.weaponIndex]
 	}
 	g.SelectRange = g.weaponRange(w)
-	if g.combatRange(g.AimX, g.AimY, viewCenter, viewCenter) > g.SelectRange {
-		g.AimX, g.AimY = viewCenter, viewCenter
+	if g.combatRange(g.AimX, g.AimY, viewCenterX, viewCenterY) > g.SelectRange {
+		g.AimX, g.AimY = viewCenterX, viewCenterY
 	}
 	ch := g.getch()
 	g.lastTarget = g.Selection.obj
@@ -1484,7 +1484,7 @@ func fleeing(m AIMode) bool { return m == AIRetreat || m == AIShy || m == AIFlee
 
 // onScreen says whether (x, y) is in the map view.
 func (g *Game) onScreen(x, y int) bool {
-	return closeEnough(viewCenter, x, y, int(g.MapX), int(g.MapY))
+	return closeEnough(classicViewCenter, x, y, int(g.MapX), int(g.MapY))
 }
 
 // flank attacks the enemy furthest on n's side.

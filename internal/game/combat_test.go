@@ -103,6 +103,7 @@ func TestEquipmentViewPicks(t *testing.T) {
 			i := slotOf(n)
 			g.PointerX = inventoryX + i%inventoryColumns*tileSize
 			g.PointerY = inventoryY + i/inventoryColumns*tileSize
+			g.pointerOverUI = true
 		}
 		point(dagger)
 		if ch := g.clickEquipmentView(); ch != cmdReady || g.Selection.obj != dagger {

@@ -803,8 +803,8 @@ func (g *Game) MoveObj(n, toX, toY, toZ int) int {
 		return noObject
 	}
 	mx, my := int(g.MapX), int(g.MapY)
-	if mx-viewCenter <= curX && mx+viewCenter >= curX && my-viewCenter <= curY && my+viewCenter >= curY ||
-		mx-viewCenter <= toX && mx+viewCenter >= toX && my-viewCenter <= toY && my+viewCenter >= toY {
+	if mx-viewCenterX <= curX && mx+viewCenterX >= curX && my-viewCenterY <= curY && my+viewCenterY >= curY ||
+		mx-viewCenterX <= toX && mx+viewCenterX >= toX && my-viewCenterY <= toY && my+viewCenterY >= toY {
 		g.viewChanged = true
 	}
 	last := g.lastHeld(n)

@@ -3,9 +3,10 @@ package game
 import (
 	"errors"
 	"fmt"
-	"github.com/memmaker/u6-go/internal/sound"
 	"os"
 	"time"
+
+	"github.com/memmaker/u6-go/internal/sound"
 
 	"github.com/memmaker/u6-go/internal/host"
 	"github.com/memmaker/u6-go/internal/vga"
@@ -88,8 +89,10 @@ func New(dir string) (*Game, error) {
 	g.createClip(clipScreen, 0, 0, screenCellsX, screenCellsY)
 	if paper, err := vga.LoadPixmap(files, "PAPER.BMP"); err == nil {
 		g.gr.DrawPixmap(paper, 0, 0)
+		g.paper = paper
 	}
 	g.createClip(clipParty, partyClipX0, partyClipY0, partyClipX1, partyClipY1)
+	g.createClip(clipOptions, optionsX0, optionsY0, optionsX0+optionsColumns*optionWidth-1, optionsY0+optionsRows-1)
 	g.createClip(clipMessage, messageClipX0, messageClipY0, messageX1, messageY1)
 	g.setClip(clipMessage)
 	g.current.attr |= clipWordWrap | clipScroll | clipUppercase
@@ -124,9 +127,6 @@ func New(dir string) (*Game, error) {
 	return g, nil
 }
 
-// Frame returns the screen for the host.
-func (g *Game) Frame() *host.Frame { return g.gr.Frame() }
-
 // commandKeys are the letters of the commands that ask for a target, with how the target
 // is picked: the select mode and range.
 var commandKeys = map[int]struct{ command, mode, rng int }{
@@ -144,21 +144,23 @@ func (g *Game) Play() {
 		if g.MouseMode == 0 {
 			g.allowMouseMove = true
 		}
+		g.atMainPrompt = true
 		ch := g.getch()
+		g.atMainPrompt = false
 		g.allowMouseMove = false
 		if k, ok := commandKeys[ch]; ok {
 			ch = k.command
 			g.drawStatusCursor(0)
 			g.selectByTab = false
 			g.SelectMode = k.mode
-			g.AimX, g.AimY = viewCenter, viewCenter
+			g.AimX, g.AimY = viewCenterX, viewCenterY
 			g.SelectRange = k.rng
 			if ch == cmdAttack && g.lastTarget >= 0 {
 				p := g.object(g.lastTarget).Pos
-				g.AimX = p.X&byteMask - int(g.MapX) + viewCenter
-				g.AimY = p.Y&byteMask - int(g.MapY) + viewCenter
-				if g.AimX < 0 || g.AimX >= viewTiles || g.AimY < 0 || g.AimY >= viewTiles {
-					g.AimX, g.AimY = viewCenter, viewCenter
+				g.AimX = p.X&byteMask - int(g.MapX) + viewCenterX
+				g.AimY = p.Y&byteMask - int(g.MapY) + viewCenterY
+				if g.AimX < 0 || g.AimX >= viewTilesX || g.AimY < 0 || g.AimY >= viewTilesY {
+					g.AimX, g.AimY = viewCenterX, viewCenterY
 				}
 			}
 			if ch == cmdDrop {

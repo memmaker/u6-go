@@ -192,10 +192,9 @@ func TestPlayHeadless(t *testing.T) {
 func testGetAndUse(t *testing.T, g *Game, press func(...host.Key), snap func(string)) {
 	p := g.object(int(g.Party[g.Active])).Pos
 	click := func(dx, dy int) {
-		// The left quarter of a tile: where the drawn tile and the pointer's tile agree.
-		const mapLeft, inTile = 8, 4
-		host.MouseX = mapLeft + (p.X+dx-int(g.MapX)+viewCenter)*tileSize + inTile
-		host.MouseY = mapLeft + (p.Y+dy-int(g.MapY)+viewCenter)*tileSize + inTile
+		const inTile = 4
+		host.MouseX = (p.X+dx-int(g.MapX)+viewCenterX)*tileSize + inTile - viewCropX
+		host.MouseY = (p.Y+dy-int(g.MapY)+viewCenterY)*tileSize + inTile - viewCropY
 		for _, down := range []bool{true, false} {
 			host.MouseLeft = down
 			for range 30 {
