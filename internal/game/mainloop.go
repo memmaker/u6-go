@@ -311,9 +311,15 @@ func (g *Game) command(ch int) bool {
 			// TODO(port): C_1944_4C2F (cast)
 			g.printf(whatMsg)
 		} else if g.getch() == cmdSelected {
-			// TODO(port): C_27A1_0C67 look, C_27A1_14DA drop, C_27A1_18F5 get,
-			// C_27A1_1E8B move, C_27A1_6179 use, TALK_talkTo
-			g.printf(whatMsg)
+			switch g.pendingCommand {
+			case cmdTalk:
+				g.talkTo(int(g.Active), g.Selection.obj, true)
+				g.playAreaSong()
+			default:
+				// TODO(port): C_27A1_0C67 look, C_27A1_14DA drop, C_27A1_18F5 get,
+				// C_27A1_1E8B move, C_27A1_6179 use
+				g.printf(whatMsg)
+			}
 		} else {
 			g.printf(whatMsg)
 		}

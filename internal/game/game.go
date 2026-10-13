@@ -207,6 +207,7 @@ type Game struct {
 	clock
 	turns
 	status
+	talk
 	colours colours
 
 	random randomState
