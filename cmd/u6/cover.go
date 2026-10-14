@@ -14,9 +14,15 @@ import (
 const (
 	coverWidth  = 320
 	coverHeight = 200
-	// the title logo: TITLES.SHP's first shape, on the main menu's palette (PALETTES.INT's first)
-	titleLibrary = "TITLES.SHP"
-	titleShape   = 0
+	// the title logo and its tagline ("The False Prophet"): TITLES.SHP's first two shapes,
+	// placed as the main menu places them, on its palette (PALETTES.INT's first)
+	titleLibrary  = "TITLES.SHP"
+	titleShape    = 0
+	subtitleShape = 1
+	titleX        = 19 // the menu's hot spots of the two (internal/intro)
+	titleY        = 0
+	subtitleX     = 59
+	subtitleY     = 47
 	paletteFile  = "PALETTES.INT"
 	paletteSize  = 256
 	// PALETTES.INT packs four 6-bit components into three bytes
@@ -28,7 +34,7 @@ const (
 )
 
 // writeCover writes dir/COVER.PNG, the picture goplay shows on the game's floppy label: the
-// Ultima VI title logo, centred on black.
+// Ultima VI title logo with its tagline, centred on black.
 func writeCover(dir string) error {
 	files := os.DirFS(dir)
 	shapes, err := vga.LoadShapes(files, titleLibrary)
@@ -52,12 +58,24 @@ func writeCover(dir string) error {
 		palette[i] = color.RGBA{level(0), level(1), level(2), math.MaxUint8}
 	}
 
-	logo := shapes[titleShape]
+	// the two as the menu shows them, then that picture's drawn part centred
+	menu := make([]byte, coverWidth*coverHeight)
+	surface := vga.Surface{Pixels: menu, Width: coverWidth, Right: coverWidth - 1, Bottom: coverHeight - 1}
+	surface.DrawShape(titleX, titleY, shapes[titleShape])
+	if subtitleShape < len(shapes) {
+		surface.DrawShape(subtitleX, subtitleY, shapes[subtitleShape])
+	}
+	drawn := image.Rectangle{}
+	for at, c := range menu {
+		if c != 0 {
+			drawn = drawn.Union(image.Rect(at%coverWidth, at/coverWidth, at%coverWidth+1, at/coverWidth+1))
+		}
+	}
 	pixels := make([]byte, coverWidth*coverHeight)
-	surface := vga.Surface{Pixels: pixels, Width: coverWidth, Right: coverWidth - 1, Bottom: coverHeight - 1}
-	x := (coverWidth-logo.Width())/2 + logo.Left
-	y := (coverHeight-logo.Height())/2 + logo.Up
-	surface.DrawShape(x, y, logo)
+	dx, dy := (coverWidth-drawn.Dx())/2-drawn.Min.X, (coverHeight-drawn.Dy())/2-drawn.Min.Y
+	for y := drawn.Min.Y; y < drawn.Max.Y; y++ {
+		copy(pixels[(y+dy)*coverWidth+drawn.Min.X+dx:], menu[y*coverWidth+drawn.Min.X:y*coverWidth+drawn.Max.X])
+	}
 
 	img := &image.Paletted{Pix: pixels, Stride: coverWidth, Rect: image.Rect(0, 0, coverWidth, coverHeight), Palette: palette}
 	f, err := os.Create(filepath.Join(dir, "COVER.PNG"))
