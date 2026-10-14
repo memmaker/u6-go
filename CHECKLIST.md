@@ -18,7 +18,7 @@
   - [x] conversation engine (talkdr)
   - [x] phase 4: remaining TODOs: no `TODO(port)` left; 439/476 fns (the other 37 are DOS disk/mouse/driver/cfg glue, the chunk cache and dead code; see internal/game/PORT_STATUS.md)
 - [x] Mouse + keyboard input
-- [x] Sound/music (AdLib driver port, internal/sound)
+- [x] Sound/music (AdLib driver port, internal/sound, on github.com/memmaker/opl2; MT-32 asks for the original MT-32's ROMs first, then a CM-32L's)
 - [x] Port U.EXE: title/intro/character creation (internal/intro)
 - [x] Port END.EXE: ending (internal/ending)
 - [x] Launcher flow (ULTIMA6 -> U -> GAME -> END) inside one Go program

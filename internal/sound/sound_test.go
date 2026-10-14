@@ -59,7 +59,7 @@ func TestRenderSongs(t *testing.T) {
 			t.Fatal(name, err)
 		}
 		pcm := make([]float32, outChannels*4*outputRate)
-		tickDue, chipDue = 0, 0
+		tickDue = 0
 		renderMusic(newPlayer(b, newAdlib(b)), pcm)
 		if err := writeWAV(filepath.Join(t.TempDir(), name+".wav"), pcm); err != nil {
 			t.Fatal(err)

@@ -2,11 +2,14 @@ package sound
 
 // The AdLib side of the .M player (song.go): U6ADLIB.DRV (an LZW-packed 1.6 KB driver), which
 // plays the song's voices on the OPL2's nine channels and steps their frequency slides,
-// vibrato and volume slides every tick.
+// vibrato and volume slides every tick, on the emulated chip of github.com/memmaker/opl2.
+
+import "github.com/memmaker/opl2"
 
 const (
-	regKeyboardSplit = 8  // composite sine mode and note select
-	instrumentSize   = 11 // 5 modulator registers, 5 carrier registers, feedback
+	waveSelect       = 1 << 5 // in the test register: the waveform select registers work
+	byteRange        = 256    // one register's worth of the frequency word
+	instrumentSize   = 11     // 5 modulator registers, 5 carrier registers, feedback
 	maxLevel         = 63
 	keyOnBit         = 1 << 13 // in the channel's frequency word: bit 5 of register B0
 	blockShift       = 10      // the block (octave) sits above the 10-bit frequency number
@@ -15,8 +18,8 @@ const (
 
 // The operator register offsets of each channel's modulator and carrier.
 var (
-	modulatorOffset = [channels]int{0, 1, 2, 8, 9, 10, 16, 17, 18}
-	carrierOffset   = [channels]int{3, 4, 5, 11, 12, 13, 19, 20, 21}
+	modulatorOffset = [opl2.Channels]int{0, 1, 2, 8, 9, 10, 16, 17, 18}
+	carrierOffset   = [opl2.Channels]int{3, 4, 5, 11, 12, 13, 19, 20, 21}
 )
 
 // fnumTable is the driver's frequency numbers for the pitch index of a note byte: rests and
@@ -41,17 +44,19 @@ type adlibChannel struct {
 
 // adlib is U6ADLIB.DRV's state: the chip and its channels.
 type adlib struct {
-	chip *opl2
-	song []byte // for the instrument definitions
-	ch   [channels]adlibChannel
+	chip *opl2.Chip
+	out  *opl2.Resampler // the chip at the output rate
+	song []byte          // for the instrument definitions
+	ch   [opl2.Channels]adlibChannel
 }
 
 // C: U6ADLIB.DRV:0320 (init) — enable waveform select, clear rhythm and the CSM bits.
 func newAdlib(song []byte) *adlib {
-	a := &adlib{chip: newOPL2(), song: song}
-	a.chip.write(regTest, bit5)
-	a.chip.write(regRhythm, 0)
-	a.chip.write(regKeyboardSplit, 0)
+	a := &adlib{chip: opl2.New(), song: song}
+	a.out = opl2.NewResampler(a.chip, outputRate)
+	a.chip.Write(opl2.RegTest, waveSelect)
+	a.chip.Write(opl2.RegRhythm, 0)
+	a.chip.Write(opl2.RegKeyboardSplit, 0)
 	return a
 }
 
@@ -68,24 +73,24 @@ func noteFreq(note int) int {
 
 // C: U6ADLIB.DRV:0274
 func (a *adlib) writeFreq(c, freq int) {
-	a.chip.write(regFreqLow+c, byte(freq%byteRange))
-	a.chip.write(regFreqHigh+c, byte(freq/byteRange))
+	a.chip.Write(opl2.RegFreqLow+c, byte(freq%byteRange))
+	a.chip.Write(opl2.RegFreqHigh+c, byte(freq/byteRange))
 }
 
 // C: U6ADLIB.DRV:026C
 func (a *adlib) writeCarrierLevel(c int) {
-	a.chip.write(regOpLevel+carrierOffset[c], byte(a.ch[c].carrierLevel))
+	a.chip.Write(opl2.RegOpLevel+carrierOffset[c], byte(a.ch[c].carrierLevel))
 }
 
 func (a *adlib) noteOff(c, note int) {
-	if c < channels {
+	if c < opl2.Channels {
 		a.ch[c].freq = noteFreq(note)
 		a.writeFreq(c, a.ch[c].freq)
 	}
 }
 
 func (a *adlib) noteOn(c, note int) {
-	if c >= channels {
+	if c >= opl2.Channels {
 		return
 	}
 	ch := &a.ch[c]
@@ -97,14 +102,14 @@ func (a *adlib) noteOn(c, note int) {
 }
 
 func (a *adlib) tie(c, note int) {
-	if c < channels {
+	if c < opl2.Channels {
 		a.ch[c].freq = noteFreq(note) | keyOnBit
 		a.writeFreq(c, a.ch[c].freq)
 	}
 }
 
 func (a *adlib) carrierLevel(c, level int) {
-	if c < channels {
+	if c < opl2.Channels {
 		a.ch[c].volumeSlide = 0
 		a.ch[c].carrierLevel = level
 		a.writeCarrierLevel(c)
@@ -112,19 +117,19 @@ func (a *adlib) carrierLevel(c, level int) {
 }
 
 func (a *adlib) modulatorLevel(c, level int) {
-	if c < channels {
-		a.chip.write(regOpLevel+modulatorOffset[c], byte(level))
+	if c < opl2.Channels {
+		a.chip.Write(opl2.RegOpLevel+modulatorOffset[c], byte(level))
 	}
 }
 
 func (a *adlib) freqSlide(c, slide int) {
-	if c < channels {
+	if c < opl2.Channels {
 		a.ch[c].freqSlide = slide
 	}
 }
 
 func (a *adlib) vibrato(c, v int) {
-	if c < channels {
+	if c < opl2.Channels {
 		a.ch[c].vibratoDepth, a.ch[c].vibratoMult = v>>vibratoMultShift, v%16
 	}
 }
@@ -132,21 +137,21 @@ func (a *adlib) vibrato(c, v int) {
 // instrument loads the instrument defined at song position at.
 // C: U6ADLIB.DRV:0287
 func (a *adlib) instrument(c, number, at int) {
-	if c >= channels || at < 0 || at+instrumentSize > len(a.song) {
+	if c >= opl2.Channels || at < 0 || at+instrumentSize > len(a.song) {
 		return
 	}
-	regs := [...]int{regOpFlags, regOpLevel, regOpAttackDecay, regOpSustain, regWaveform}
+	regs := [...]int{opl2.RegOpFlags, opl2.RegOpLevel, opl2.RegOpAttackDecay, opl2.RegOpSustainRelease, opl2.RegWaveform}
 	for _, op := range [...]int{modulatorOffset[c], carrierOffset[c]} {
 		for _, r := range regs {
-			a.chip.write(r+op, a.song[at])
+			a.chip.Write(r+op, a.song[at])
 			at++
 		}
 	}
-	a.chip.write(regFeedback+c, a.song[at])
+	a.chip.Write(opl2.RegFeedback+c, a.song[at])
 }
 
 func (a *adlib) volumeSlide(c, direction, period int) {
-	if c >= channels {
+	if c >= opl2.Channels {
 		return
 	}
 	ch := &a.ch[c]
@@ -160,7 +165,7 @@ func (a *adlib) startTick() {}
 // endTick steps each channel's slides and vibrato, channel 8 down to 0.
 // C: U6ADLIB.DRV:0568
 func (a *adlib) endTick() {
-	for c := channels - 1; c >= 0; c-- {
+	for c := opl2.Channels - 1; c >= 0; c-- {
 		ch := &a.ch[c]
 		if ch.freqSlide != 0 {
 			ch.freq = (ch.freq + ch.freqSlide) & (1<<16 - 1)

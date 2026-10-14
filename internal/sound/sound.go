@@ -62,8 +62,7 @@ var (
 	mtFrames   []int16
 	current    string
 	speaker    = newBeeper()
-	chipDue    float64 // chip samples owed to the output
-	tickDue    int     // output samples until the next driver tick
+	tickDue    int // output samples until the next driver tick
 )
 
 // playerBuffer is how much audio the host player queues ahead.
@@ -231,7 +230,7 @@ func renderMusic(p *songPlayer, out []float32) {
 		renderMIDI(p, out)
 		return
 	}
-	chip := p.driver.(*adlib).chip
+	chip := p.driver.(*adlib).out
 	const samplesPerTick = outputRate / driverTickHz
 	for i := 0; i < len(out); i += outChannels {
 		if tickDue == 0 {
@@ -239,11 +238,7 @@ func renderMusic(p *songPlayer, out []float32) {
 			tickDue = samplesPerTick
 		}
 		tickDue--
-		chipDue += float64(oplRate) / outputRate
-		v := 0
-		for ; chipDue >= 1; chipDue-- {
-			v = chip.sample()
-		}
+		v := chip.Next()
 		out[i] += float32(v) * musicGain
 		out[i+1] += float32(v) * musicGain
 	}
