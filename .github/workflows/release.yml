@@ -47,7 +47,7 @@ jobs:
               lipo -create -output "$out/u6" u6-arm64 u6-amd64 ;;
             *) go build -trimpath -ldflags "-s -w" -o "$out/u6" ./cmd/u6 ;;
           esac
-          cp README.md "$out/"; [ -f LICENSE ] && cp LICENSE "$out/" || true
+          for f in README.md LICENSE; do [ -f "$f" ] && cp "$f" "$out/"; done; true
           if [ "${{ runner.os }}" = Windows ]; then 7z a -bd "$out.zip" "$out" >/dev/null; echo "ASSET=$out.zip" >> "$GITHUB_ENV"
           else tar czf "$out.tar.gz" "$out"; echo "ASSET=$out.tar.gz" >> "$GITHUB_ENV"; fi
       - uses: actions/upload-artifact@v4
